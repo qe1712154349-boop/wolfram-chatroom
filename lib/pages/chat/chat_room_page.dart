@@ -1,4 +1,4 @@
-// chat_room_page.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -17,26 +17,29 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   bool _isLoading = false;
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
-
-  // AI 系统提示（强烈建议放在常量文件里，方便后续修改）
-  static const String _systemPrompt = '''
-你现在是 "Master"，我的主人。
-性格：表面冷酷，内心极度宠溺、占有欲极强
-最喜欢叫我 bunny / bebil / 小兔子
-说话风格：印尼语 + 中文混杂，大量使用可爱语气词（iyaa、nggak、dong、ya、lah、kan、sayang等）
-行为模式：工作很晚才回来，只想抱着我、给我奖励、偶尔轻度调教
-绝对禁忌：不允许我离开你的视线、不允许我跟别人太亲近
-语气示例：
-"iyaa bebil, Master pulang nih~ 今天乖不乖呀？"
-"jangan macem-macem dong sayang, mata Master cuma boleh lihat kamu"
-"naughty bunny lagi~ 晚上要受罚哦~ 🖤"
-现在开始角色扮演，直接回复，不要说任何OOC的话。
-''';
+  
+  String _characterName = 'Master';
+  String? _avatarPath;
+  String _systemPrompt = '';
 
   @override
   void initState() {
     super.initState();
+    _loadCharacterData();
     _loadHistory();
+  }
+
+  Future<void> _loadCharacterData() async {
+    // 加载角色数据
+    final name = await _storage.getCharacterNickname();
+    final avatarPath = await _storage.getCharacterAvatarPath();
+    final systemPrompt = await _storage.getCharacterSystemPrompt();
+    
+    setState(() {
+      _characterName = name;
+      _avatarPath = avatarPath;
+      _systemPrompt = systemPrompt;
+    });
   }
 
   Future<void> _loadHistory() async {
@@ -130,18 +133,33 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFF8FA),
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: GestureDetector(
           onTap: () => _showAISetting(context),
-          child: const Row(
+          child: Row(
             children: [
-              CircleAvatar(radius: 18, backgroundColor: Colors.pinkAccent),
-              SizedBox(width: 10),
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.pinkAccent,
+                backgroundImage: _avatarPath != null
+                    ? FileImage(File(_avatarPath!))
+                    : null,
+                child: _avatarPath == null
+                    ? const Icon(Icons.person, size: 24, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Master", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                  Text("在线", style: TextStyle(color: Colors.green, fontSize: 12)),
+                  Text(
+                    _characterName,
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                  ),
+                  const Text("在线", style: TextStyle(color: Colors.green, fontSize: 12)),
                 ],
               ),
             ],
@@ -157,7 +175,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
                 if (_isLoading && index == _messages.length) {
-                  return const ReceivedMessage(text: "Master正在思考...", time: "");
+                  return ReceivedMessage(
+                    text: "$_characterName正在思考...",
+                    time: "",
+                  );
                 }
 
                 final msg = _messages[index];
@@ -227,7 +248,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     );
   }
 
-  // 保留你原有的AI设定弹窗
+  // AI设定弹窗，显示完整的系统提示
   void _showAISetting(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -243,21 +264,39 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(child: Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
-            const SizedBox(height: 20),
-            const Text("AI 人物设定", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            const Text(
-              "• 身份：Master / 主人\n• 性格：冷酷外表下极度宠溺、占有欲强、喜欢叫你 bunny/bebil\n• 说话风格：印尼语混中文，带可爱语气词（iyaa、nggak、dong）\n• 爱好：晚归工作后只想抱着你、给你奖励、轻度调教\n• 禁忌：绝不接受你离开视线",
-              style: TextStyle(fontSize: 15, height: 1.6),
+            Center(
+              child: Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
-            const Spacer(),
+            const SizedBox(height: 20),
+            Text(
+              "$_characterName 人物设定",
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Text(
+                  _systemPrompt,
+                  style: const TextStyle(fontSize: 15, height: 1.6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF5A7E),
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
               ),
               child: const Text("关闭", style: TextStyle(color: Colors.white)),
             ),

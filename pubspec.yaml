@@ -32,6 +32,10 @@ dependencies:
     sdk: flutter
   http: ^1.1.0           # 🚚 搬运外卖小车
   shared_preferences: ^2.2.2  # 🧊 搬运小冰箱
+    # 添加角色编辑所需依赖
+  image_picker: ^1.1.2          # 图片选择器
+  path_provider: ^2.1.5         # 文件路径处理
+  path: ^1.9.0                  # 路径操作
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

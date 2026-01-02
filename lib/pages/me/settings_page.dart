@@ -24,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final baseUrl = await _storage.getApiBaseUrl();
     final apiKey = await _storage.getApiKey();
     setState(() {
-      _baseUrlController.text = baseUrl ?? 'https://api.deepseek.com';
+      _baseUrlController.text = baseUrl;   // 直接赋值，因为它不可能 null
       _apiKeyController.text = apiKey ?? '';
     });
   }
