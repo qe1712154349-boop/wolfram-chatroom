@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';  // 添加这行用于时间格式化
+import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import 'chat_components.dart';
@@ -12,10 +12,12 @@ class ChatRoomPage extends StatefulWidget {
   State<ChatRoomPage> createState() => _ChatRoomPageState();
 }
 
-class _ChatRoomPageState extends State<ChatRoomPage> {
+class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [];  // 改为dynamic，因为要存储时间戳
+  final ScrollController _scrollController = ScrollController();
+  final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
+  bool _showScrollToBottomButton = false;  // 控制"滚动到底部"按钮的显示
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
@@ -27,8 +29,63 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);  // 添加键盘监听
     _loadCharacterData();
     _loadHistory();
+    
+    // 监听滚动位置，显示/隐藏"滚动到底部"按钮
+    _scrollController.addListener(() {
+      final double maxScroll = _scrollController.position.maxScrollExtent;
+      final double currentScroll = _scrollController.position.pixels;
+      
+      // 如果距离底部超过300像素，显示"滚动到底部"按钮
+      if ((maxScroll - currentScroll) > 300.0) {
+        if (!_showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = true;
+          });
+        }
+      } else {
+        if (_showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = false;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);  // 移除键盘监听
+    _scrollController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // 键盘状态变化时调整滚动位置
+  @override
+  void didChangeMetrics() {
+    // 键盘弹出/收起时，如果有新消息，滚动到底部
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients && _messages.isNotEmpty) {
+        _scrollToBottom();
+      }
+    });
+    super.didChangeMetrics();
+  }
+
+  // 滚动到最新消息的方法
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadCharacterData() async {
@@ -49,6 +106,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       setState(() {
         _messages.addAll(history);
       });
+      // 加载历史后滚动到底部
+      _scrollToBottom();
     }
   }
 
@@ -76,13 +135,15 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
-      _systemPrompt = systemPrompt;  // 更新系统提示
+      _systemPrompt = systemPrompt;
     });
 
+    // 发送消息后立即滚动到底部
+    _scrollToBottom();
     await _saveHistory();
 
     try {
-      // 构建发送给API的完整上下文：系统提示（包含当前时间）+ 最近50条
+      // 构建发送给API的完整上下文
       List<Map<String, String>> apiMessages = [
         {'role': 'system', 'content': systemPrompt},
       ];
@@ -108,6 +169,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       });
 
       await _saveHistory();
+      // AI回复后也滚动到底部
+      _scrollToBottom();
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
       setState(() {
@@ -118,6 +181,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         });
       });
       await _saveHistory();
+      // 出错时也滚动到底部
+      _scrollToBottom();
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -196,67 +261,83 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         ),
         actions: const [Icon(Icons.more_vert)],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.only(bottom: 80),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (_isLoading && index == _messages.length) {
-                  return ReceivedMessage(
-                    text: "$_characterName正在思考...",
-                    time: DateFormat('HH:mm').format(DateTime.now()),
-                    avatarPath: _avatarPath,
-                  );
-                }
+          Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(bottom: 80),
+                  itemCount: _messages.length + (_isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (_isLoading && index == _messages.length) {
+                      return ReceivedMessage(
+                        text: "$_characterName正在思考...",
+                        time: DateFormat('HH:mm').format(DateTime.now()),
+                        avatarPath: _avatarPath,
+                      );
+                    }
 
-                final msg = _messages[index];
-                final isUser = msg['role'] == 'user';
+                    final msg = _messages[index];
+                    final isUser = msg['role'] == 'user';
 
-                return GestureDetector(
-                  onLongPress: () => _showDeleteDialog(index),
-                  child: isUser
-                      ? SentMessage(
-                          text: msg['content']! as String, 
-                          time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
-                          avatarPath: _userAvatarPath,
-                        )
-                      : ReceivedMessage(
-                          text: msg['content']! as String, 
-                          time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
-                          avatarPath: _avatarPath,
+                    return GestureDetector(
+                      onLongPress: () => _showDeleteDialog(index),
+                      child: isUser
+                          ? SentMessage(
+                              text: msg['content']! as String, 
+                              time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
+                              avatarPath: _userAvatarPath,
+                            )
+                          : ReceivedMessage(
+                              text: msg['content']! as String, 
+                              time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
+                              avatarPath: _avatarPath,
+                            ),
+                    );
+                  },
+                ),
+              ),
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: SafeArea(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: TextField(
+                            controller: _controller,
+                            maxLines: 5,
+                            minLines: 1,
+                            textInputAction: TextInputAction.newline,
+                            decoration: const InputDecoration(
+                              hintText: "跟Master说点什么吧...",
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onSubmitted: (value) {
+                              final text = _controller.text.trim();
+                              if (text.isNotEmpty) {
+                                _sendMessage(text);
+                                _controller.clear();
+                              }
+                            },
+                          ),
                         ),
-                );
-              },
-            ),
-          ),
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: SafeArea(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 48),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(24),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: TextField(
-                        controller: _controller,
-                        maxLines: 5,
-                        minLines: 1,
-                        textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
-                          hintText: "跟Master说点什么吧...",
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onSubmitted: (value) {
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.send_rounded, color: Color(0xFFFF5A7E)),
+                        onPressed: () {
                           final text = _controller.text.trim();
                           if (text.isNotEmpty) {
                             _sendMessage(text);
@@ -264,23 +345,24 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                           }
                         },
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send_rounded, color: Color(0xFFFF5A7E)),
-                    onPressed: () {
-                      final text = _controller.text.trim();
-                      if (text.isNotEmpty) {
-                        _sendMessage(text);
-                        _controller.clear();
-                      }
-                    },
-                  ),
-                ],
+                ),
+              ),
+            ],
+          ),
+          // "滚动到底部"按钮
+          if (_showScrollToBottomButton)
+            Positioned(
+              bottom: 100,  // 放在输入框上方
+              right: 20,
+              child: FloatingActionButton(
+                mini: true,
+                backgroundColor: const Color(0xFFFF5A7E),
+                onPressed: _scrollToBottom,
+                child: const Icon(Icons.arrow_downward, color: Colors.white),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -341,11 +423,5 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 }
