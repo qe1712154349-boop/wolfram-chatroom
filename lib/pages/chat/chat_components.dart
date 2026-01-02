@@ -1,4 +1,4 @@
-import 'dart:io';  // 添加这行
+import 'dart:io';  // 这行必须添加在顶部
 import 'package:flutter/material.dart';
 
 class ReceivedMessage extends StatelessWidget {
@@ -6,12 +6,12 @@ class ReceivedMessage extends StatelessWidget {
     super.key, 
     required this.text, 
     required this.time,
-    this.avatarPath,  // 添加可选参数
+    this.avatarPath,
   });
 
   final String text;
   final String time;
-  final String? avatarPath;  // 添加这个
+  final String? avatarPath;
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +20,8 @@ class ReceivedMessage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 修改头像部分
-          avatarPath != null && File(avatarPath!).existsSync()
+          // 修改头像部分 - 移除了 existsSync() 调用
+          avatarPath != null
               ? CircleAvatar(
                   radius: 18,
                   backgroundColor: Colors.pinkAccent,
@@ -85,17 +85,12 @@ class SentMessage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // 使用用户头像，如果没有则使用默认头像
+          // 使用用户头像，如果没有则使用默认头像 - 移除了 existsSync() 调用
           avatarPath != null 
               ? CircleAvatar(
                   radius: 18,
                   backgroundColor: Colors.pink,
-                  backgroundImage: File(avatarPath!).existsSync() 
-                      ? FileImage(File(avatarPath!)) 
-                      : null,
-                  child: !File(avatarPath!).existsSync()
-                      ? const Icon(Icons.person, size: 20, color: Colors.white)
-                      : null,
+                  backgroundImage: FileImage(File(avatarPath!)),
                 )
               : CircleAvatar(
                   radius: 18, 

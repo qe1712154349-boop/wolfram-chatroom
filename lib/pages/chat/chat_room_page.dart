@@ -181,6 +181,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                   return ReceivedMessage(
                     text: "$_characterName正在思考...",
                     time: "",
+                    avatarPath: _avatarPath,  // 添加这行，传递AI头像
                   );
                 }
 
