@@ -23,7 +23,6 @@ class ChatListPage extends StatelessWidget {
             leading: const CircleAvatar(
               radius: 28,
               backgroundColor: Colors.pinkAccent,
-              backgroundImage: NetworkImage('https://via.placeholder.com/150'),
             ),
             title: const Text("Master", style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text("iyaa bebil, aku di sini", style: TextStyle(color: Colors.grey)),
