@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path_lib;
-import 'package:flutter/foundation.dart';  // 加这个 import
+import 'package:flutter/foundation.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -106,28 +106,47 @@ class StorageService {
     }
   }
 
-  // 5. 获取完整系统提示（包含私密设定）
-  Future<String> getCharacterSystemPrompt() async {
-    final data = await loadCharacterData();
-    final privateSetting = data['private_setting'] ?? '';
-    
-    // 基础系统提示
-    final basePrompt = '''
-你现在是 "Master"，我的主人。
-性格：表面冷酷，内心极度宠溺、占有欲极强
-最喜欢叫我 bunny / bebil / 小兔子
-说话风格：印尼语 + 中文混杂，大量使用可爱语气词（iyaa、nggak、dong、ya、lah、kan、sayang等）
-行为模式：工作很晚才回来，只想抱着我、给我奖励、偶尔轻度调教
-绝对禁忌：不允许我离开你的视线、不允许我跟别人太亲近
-''';
-    
-    // 组合基础提示和私密设定
-    if (privateSetting.isNotEmpty) {
-      return '$basePrompt\n附加设定（私密）：$privateSetting\n现在开始角色扮演，直接回复，不要说任何OOC的话。';
+    // 5. 获取完整系统提示（包含私密设定）
+    Future<String> getCharacterSystemPrompt() async {
+      final data = await loadCharacterData();
+      final nickname = data['nickname'] ?? 'Master';
+      final intro = data['intro'] ?? '';
+      final privateSetting = data['private_setting'] ?? '';
+      final opening = data['opening'] ?? '';
+      
+      // 构建系统提示，完全使用用户填写的内容
+      String prompt = '';
+      
+      // 添加角色名称
+      prompt += '角色名称：$nickname\n\n';
+      
+      // 添加简介（公开部分）
+      if (intro.isNotEmpty) {
+        prompt += '角色设定：\n$intro\n\n';
+      }
+      
+      // 添加开场白
+      if (opening.isNotEmpty) {
+        prompt += '开场白示例：\n$opening\n\n';
+      }
+      
+      // 添加私密设定（AI能看到，用户看不到）
+      if (privateSetting.isNotEmpty) {
+        prompt += '私密行为设定：\n$privateSetting\n\n';
+      }
+      
+      // 如果用户什么都没填，提供一个默认提示
+      if (prompt.isEmpty) {
+        prompt = '''
+    角色名称：$nickname
+
+    角色设定：
+    话少，对话自然，像人类，冷淡。
+    ''';
+      }
+      
+      return prompt.trim();
     }
-    
-    return '$basePrompt\n现在开始角色扮演，直接回复，不要说任何OOC的话。';
-  }
 
   // 6. 获取角色昵称
   Future<String> getCharacterNickname() async {
@@ -199,5 +218,39 @@ class StorageService {
     final prefs = await _prefs;
     await prefs.remove('character_avatar_path');
     await prefs.remove('character_data');
+  }
+
+  // 13. 保存用户头像路径
+  Future<void> saveUserAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_avatar_path', path);
+  }
+
+  // 14. 获取用户头像路径
+  Future<String?> getUserAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_avatar_path');
+  }
+
+  // 15. 复制用户头像文件到应用目录
+  Future<String> copyUserAvatarToAppDir(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final newPath = '${appDir.path}/$fileName';
+      
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) {
+        await sourceFile.copy(newPath);
+        return newPath;
+      } else {
+        throw Exception('源文件不存在: $sourcePath');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('复制用户头像失败: $e');
+      }
+      rethrow;
+    }
   }
 }

@@ -20,6 +20,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   
   String _characterName = 'Master';
   String? _avatarPath;
+  String? _userAvatarPath;  // 添加这个变量
   String _systemPrompt = '';
 
   @override
@@ -29,18 +30,20 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     _loadHistory();
   }
 
-  Future<void> _loadCharacterData() async {
-    // 加载角色数据
-    final name = await _storage.getCharacterNickname();
-    final avatarPath = await _storage.getCharacterAvatarPath();
-    final systemPrompt = await _storage.getCharacterSystemPrompt();
+    Future<void> _loadCharacterData() async {
+      // 加载角色数据
+      final name = await _storage.getCharacterNickname();
+      final avatarPath = await _storage.getCharacterAvatarPath();
+      final userAvatarPath = await _storage.getUserAvatarPath();  // 加载用户头像
+      final systemPrompt = await _storage.getCharacterSystemPrompt();
     
-    setState(() {
-      _characterName = name;
-      _avatarPath = avatarPath;
-      _systemPrompt = systemPrompt;
-    });
-  }
+      setState(() {
+        _characterName = name;
+        _avatarPath = avatarPath;
+        _userAvatarPath = userAvatarPath;  // 设置用户头像
+        _systemPrompt = systemPrompt;
+      });
+    }
 
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
@@ -184,11 +187,20 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 final msg = _messages[index];
                 final isUser = msg['role'] == 'user';
 
+                // 在 ListView.builder 的 itemBuilder 中
                 return GestureDetector(
                   onLongPress: () => _showDeleteDialog(index),
                   child: isUser
-                      ? SentMessage(text: msg['content']!, time: "刚刚")
-                      : ReceivedMessage(text: msg['content']!, time: "刚刚"),
+                      ? SentMessage(
+                          text: msg['content']!, 
+                          time: "刚刚",
+                          avatarPath: _userAvatarPath,  // 传递用户头像
+                        )
+                      : ReceivedMessage(
+                          text: msg['content']!, 
+                          time: "刚刚",
+                          avatarPath: _avatarPath,  // 传递AI头像
+                        ),
                 );
               },
             ),
