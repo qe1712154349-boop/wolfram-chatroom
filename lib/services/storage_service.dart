@@ -30,35 +30,38 @@ class StorageService {
     await prefs.setString('api_key', apiKey.trim());
   }
 
-  // ── 新增：保存聊天记录 ──
-  Future<void> saveChatHistory(List<Map<String, String>> history) async {
-    final prefs = await _prefs;
-    final jsonString = jsonEncode(history);
-    await prefs.setString('chat_history_master', jsonString);
-  }
+// storage_service.dart 中修改以下两个方法
 
-  // ── 新增：读取聊天记录 ──
-  Future<List<Map<String, String>>> loadChatHistory() async {
-    final prefs = await _prefs;
-    final jsonString = prefs.getString('chat_history_master');
-    if (jsonString == null || jsonString.isEmpty) {
-      return [];
-    }
-    try {
-      final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.cast<Map<String, dynamic>>().map((e) {
-        return {
-          'role': e['role'] as String,
-          'content': e['content'] as String,
-        };
-      }).toList();
-    } catch (e) {
-      if (kDebugMode) {
-       debugPrint('角色数据解析失败: $e');
-      }
-      return [];
-    }
+// ── 修改：保存聊天记录（包含时间戳）──
+Future<void> saveChatHistory(List<Map<String, dynamic>> history) async {
+  final prefs = await _prefs;
+  final jsonString = jsonEncode(history);
+  await prefs.setString('chat_history_master', jsonString);
+}
+
+// ── 修改：读取聊天记录（包含时间戳）──
+Future<List<Map<String, dynamic>>> loadChatHistory() async {
+  final prefs = await _prefs;
+  final jsonString = prefs.getString('chat_history_master');
+  if (jsonString == null || jsonString.isEmpty) {
+    return [];
   }
+  try {
+    final List<dynamic> decoded = jsonDecode(jsonString);
+    return decoded.cast<Map<String, dynamic>>().map((e) {
+      return {
+        'role': e['role'] as String,
+        'content': e['content'] as String,
+        'timestamp': e['timestamp'] ?? '',  // 添加时间戳
+      };
+    }).toList();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('聊天记录解析失败: $e');
+    }
+    return [];
+  }
+}
 
   // 可选：清空聊天记录（调试或用户需要时使用）
   Future<void> clearChatHistory() async {
@@ -107,7 +110,8 @@ class StorageService {
   }
 
     // 5. 获取完整系统提示（包含私密设定）
-    Future<String> getCharacterSystemPrompt() async {
+   // 修改 getCharacterSystemPrompt 方法，添加时间参数
+  Future<String> getCharacterSystemPrompt({String? currentTime}) async {
       final data = await loadCharacterData();
       final nickname = data['nickname'] ?? 'Master';
       final intro = data['intro'] ?? '';
@@ -116,6 +120,11 @@ class StorageService {
       
       // 构建系统提示，完全使用用户填写的内容
       String prompt = '';
+      
+      // 添加当前时间（如果提供了）
+      if (currentTime != null && currentTime.isNotEmpty) {
+        prompt += '当前时间：$currentTime\n\n';
+      }
       
       // 添加角色名称
       prompt += '角色名称：$nickname\n\n';

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';  // 添加这行用于时间格式化
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import 'chat_components.dart';
@@ -13,14 +14,14 @@ class ChatRoomPage extends StatefulWidget {
 
 class _ChatRoomPageState extends State<ChatRoomPage> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];  // 改为dynamic，因为要存储时间戳
   bool _isLoading = false;
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
   String _characterName = 'Master';
   String? _avatarPath;
-  String? _userAvatarPath;  // 添加这个变量
+  String? _userAvatarPath;
   String _systemPrompt = '';
 
   @override
@@ -30,20 +31,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     _loadHistory();
   }
 
-    Future<void> _loadCharacterData() async {
-      // 加载角色数据
-      final name = await _storage.getCharacterNickname();
-      final avatarPath = await _storage.getCharacterAvatarPath();
-      final userAvatarPath = await _storage.getUserAvatarPath();  // 加载用户头像
-      final systemPrompt = await _storage.getCharacterSystemPrompt();
+  Future<void> _loadCharacterData() async {
+    final name = await _storage.getCharacterNickname();
+    final avatarPath = await _storage.getCharacterAvatarPath();
+    final userAvatarPath = await _storage.getUserAvatarPath();
     
-      setState(() {
-        _characterName = name;
-        _avatarPath = avatarPath;
-        _userAvatarPath = userAvatarPath;  // 设置用户头像
-        _systemPrompt = systemPrompt;
-      });
-    }
+    setState(() {
+      _characterName = name;
+      _avatarPath = avatarPath;
+      _userAvatarPath = userAvatarPath;
+    });
+  }
 
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
@@ -61,35 +59,63 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty || _isLoading) return;
 
-    final userMessage = {'role': 'user', 'content': text};
+    // 获取当前时间
+    final now = DateTime.now();
+    final timestamp = DateFormat('HH:mm').format(now);
+
+    // 获取包含当前时间的系统提示
+    final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
+    final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
+
+    final userMessage = {
+      'role': 'user', 
+      'content': text,
+      'timestamp': timestamp,
+    };
 
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
+      _systemPrompt = systemPrompt;  // 更新系统提示
     });
 
-    await _saveHistory(); // 每次发送都存一次（简单可靠）
+    await _saveHistory();
 
     try {
-      // 构建发送给API的完整上下文：系统提示 + 最近50条
+      // 构建发送给API的完整上下文：系统提示（包含当前时间）+ 最近50条
       List<Map<String, String>> apiMessages = [
-        {'role': 'system', 'content': _systemPrompt},
+        {'role': 'system', 'content': systemPrompt},
       ];
 
-      // 取最后50条（不含本次刚刚加的user消息也可以，但包含更自然）
+      // 取最后50条
       final recent = _messages.length > 50 ? _messages.sublist(_messages.length - 50) : _messages;
-      apiMessages.addAll(recent);
+      apiMessages.addAll(recent.map((msg) => {
+        'role': msg['role']! as String,
+        'content': msg['content']! as String,
+      }));
 
       final aiReply = await _apiService.sendChatMessage(apiMessages);
 
+      // AI回复的时间
+      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+
       setState(() {
-        _messages.add({'role': 'assistant', 'content': aiReply ?? '…'});
+        _messages.add({
+          'role': 'assistant', 
+          'content': aiReply ?? '…',
+          'timestamp': aiTimestamp,
+        });
       });
 
       await _saveHistory();
     } catch (e) {
+      final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
       setState(() {
-        _messages.add({'role': 'assistant', 'content': '出错啦… $e'});
+        _messages.add({
+          'role': 'assistant', 
+          'content': '出错啦… $e',
+          'timestamp': errorTimestamp,
+        });
       });
       await _saveHistory();
     } finally {
@@ -180,27 +206,26 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 if (_isLoading && index == _messages.length) {
                   return ReceivedMessage(
                     text: "$_characterName正在思考...",
-                    time: "",
-                    avatarPath: _avatarPath,  // 添加这行，传递AI头像
+                    time: DateFormat('HH:mm').format(DateTime.now()),
+                    avatarPath: _avatarPath,
                   );
                 }
 
                 final msg = _messages[index];
                 final isUser = msg['role'] == 'user';
 
-                // 在 ListView.builder 的 itemBuilder 中
                 return GestureDetector(
                   onLongPress: () => _showDeleteDialog(index),
                   child: isUser
                       ? SentMessage(
-                          text: msg['content']!, 
-                          time: "刚刚",
-                          avatarPath: _userAvatarPath,  // 传递用户头像
+                          text: msg['content']! as String, 
+                          time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
+                          avatarPath: _userAvatarPath,
                         )
                       : ReceivedMessage(
-                          text: msg['content']!, 
-                          time: "刚刚",
-                          avatarPath: _avatarPath,  // 传递AI头像
+                          text: msg['content']! as String, 
+                          time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
+                          avatarPath: _avatarPath,
                         ),
                 );
               },
@@ -261,7 +286,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     );
   }
 
-  // AI设定弹窗，显示完整的系统提示
   void _showAISetting(BuildContext context) {
     showModalBottomSheet(
       context: context,
