@@ -1,3 +1,4 @@
+// 修改后的 lib/app/theme.dart
 import 'package:flutter/material.dart';
 
 class AppTheme {
@@ -35,16 +36,17 @@ class AppTheme {
   static const Color primaryText = Color(0xFF1D1D1F);
   static const Color secondaryText = Color(0xFF8E8E93);
   static const Color narrationText = Color(0xFF6D6D6F);
+  static const Color userTextColor = Color(0xFFBB2D71); // 添加：右边用户气泡文字色
   
   // 气泡圆角
   static const double bubbleBorderRadius = 18.0;
   
   // 旁白样式
   static const TextStyle narrationStyle = TextStyle(
-    fontSize: 14,
+    fontSize: 13,             // 从14改为13
     color: narrationText,
     fontStyle: FontStyle.italic,
-    height: 1.4,
+    height: 1.35,             // 从1.4改为1.35
     fontWeight: FontWeight.w400,
   );
   

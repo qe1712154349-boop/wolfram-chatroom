@@ -57,9 +57,9 @@ class MyBunnyApp extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\app\theme.dart
 
-Size: 623 bytes
+Size: 2558 bytes
 
-Modified: 01/02/2026 17:42:58
+Modified: 01/04/2026 03:40:37
 
 ========================================
 
@@ -67,18 +67,72 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData get lightTheme => ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+        scaffoldBackgroundColor: const Color(0xFFFDF7F7), // 全部页面背景 #FDF7F7
         primaryColor: const Color(0xFFFF5A7E),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           selectedItemColor: Color(0xFFFF5A7E),
           type: BottomNavigationBarType.fixed,
         ),
+        // 添加字体配置
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(
+            fontFamily: 'System',
+            fontSize: 16,
+            fontWeight: FontWeight.normal,
+            height: 1.4,
+          ),
+        ),
       );
 
+  // 新的纯色方案
+  static const Color appBackground = Color(0xFFFDF7F7); // 全部页面背景
   static const Color pinkAccent = Color(0xFFFF5A7E);
-  static const Color lightPink = Color(0xFFFFF0F3);
-  static const Color chatPink = Color(0xFFFFF5F8);
-  static const Color bubblePink = Color(0xFFFFD1DC);
+  static const Color aiBubbleColor = Color(0xFFFFFFFF); // AI气泡背景
+  static const Color aiBubbleBorder = Color(0xFFF1DCDE); // AI气泡边框
+  static const Color userBubbleColor = Color(0xFFFFEAEF); // 用户气泡背景
+  static const Color userBubbleBorder = Color(0xFFEDD8DD); // 用户气泡边框
+  static const Color chatRoomTop = Color(0xFFFCECEF); // 聊天室顶部颜色
+  static const Color messageInputBackground = Color(0xFFFBDCE1); // 底部发消息大矩形
+  static const Color messageFieldBackground = Color(0xFFFFFFFF); // 发消息框内背景
+  static const Color messageFieldBorder = Color(0xFFB1A9AB); // 发消息框边框
+  
+  // 文字颜色
+  static const Color primaryText = Color(0xFF1D1D1F);
+  static const Color secondaryText = Color(0xFF8E8E93);
+  static const Color narrationText = Color(0xFF6D6D6F);
+  
+  // 气泡圆角
+  static const double bubbleBorderRadius = 18.0;
+  
+  // 旁白样式
+  static const TextStyle narrationStyle = TextStyle(
+    fontSize: 14,
+    color: narrationText,
+    fontStyle: FontStyle.italic,
+    height: 1.4,
+    fontWeight: FontWeight.w400,
+  );
+  
+  // 对话样式
+  static const TextStyle dialogueStyle = TextStyle(
+    fontSize: 16,
+    color: primaryText,
+    height: 1.4,
+    fontWeight: FontWeight.normal,
+  );
+  
+  // 系统时间样式
+  static const TextStyle systemTimeStyle = TextStyle(
+    fontSize: 12,
+    color: secondaryText,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.3,
+  );
+  
+  // 辅助方法：创建带透明度的颜色
+  static Color withOpacity(Color color, double opacity) {
+    return color.withValues(alpha: (opacity * 255).toDouble());
+  }
 }
 
 
@@ -382,9 +436,9 @@ Modified: 01/02/2026 16:38:14
 
 File: D:\D\my_new_app\lib\pages\main_screen.dart
 
-Size: 1368 bytes
+Size: 1489 bytes
 
-Modified: 01/02/2026 17:42:57
+Modified: 01/04/2026 03:40:37
 
 ========================================
 
@@ -393,6 +447,7 @@ import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
 import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
+import '../app/theme.dart'; // 导入主题
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -414,6 +469,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -440,15 +496,16 @@ class _MainScreenState extends State<MainScreen> {
 
 File: D:\D\my_new_app\lib\pages\vow_page.dart
 
-Size: 3589 bytes
+Size: 3669 bytes
 
-Modified: 01/02/2026 17:42:58
+Modified: 01/04/2026 03:40:37
 
 ========================================
 
 import 'package:flutter/material.dart';
 import '../components/mood_day.dart';
 import '../components/order_card.dart';
+import '../app/theme.dart'; // 导入主题
 
 class VowPage extends StatelessWidget {
   const VowPage({super.key});
@@ -456,7 +513,7 @@ class VowPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFFFF0F3),
+      color: AppTheme.appBackground, // 使用统一的背景色 #FDF7F7
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
@@ -999,15 +1056,16 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
 
-Size: 4473 bytes
+Size: 7592 bytes
 
-Modified: 01/04/2026 02:39:04
+Modified: 01/04/2026 03:40:37
 
 ========================================
 
 // lib/pages/chat/chat_components.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
+import '../../app/theme.dart'; // 导入主题
 
 class ReceivedMessage extends StatelessWidget {
   final String text;
@@ -1022,35 +1080,65 @@ class ReceivedMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFFFD2DD),
-            backgroundImage: avatarPath != null
-                ? FileImage(File(avatarPath!))
-                : null,
-            child: avatarPath == null
-                ? const Icon(Icons.person, size: 20, color: Colors.white)
-                : null,
+          // AI头像
+          Container(
+            width: 36,
+            height: 36,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(
+                color: AppTheme.aiBubbleBorder, // 使用AI气泡边框色
+                width: 1,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.transparent,
+              backgroundImage: avatarPath != null
+                  ? FileImage(File(avatarPath!))
+                  : null,
+              child: avatarPath == null
+                  ? Icon(
+                      Icons.person,
+                      size: 18,
+                      color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                    )
+                  : null,
+            ),
           ),
-          const SizedBox(width: 8),
+          // AI气泡 - 纯色无阴影，带细边框
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
+                minWidth: 40,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFD2DD),
-                borderRadius: BorderRadius.circular(18),
+                color: AppTheme.aiBubbleColor, // AI气泡背景 #FFFFFF
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
+                ),
+                border: Border.all(
+                  color: AppTheme.aiBubbleBorder, // AI气泡边框 #F1DCDE
+                  width: 1,
+                ),
               ),
               child: Text(
                 text,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                  height: 1.4,
-                ),
+                style: AppTheme.dialogueStyle,
               ),
             ),
           ),
@@ -1075,50 +1163,69 @@ class SentMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // 用户气泡 - 纯色无阴影，带细边框
           Flexible(
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
+                minWidth: 40,
               ),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: (0.05 * 255).toDouble()),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: AppTheme.userBubbleColor, // 用户气泡背景 #FFEAEF
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  topRight: Radius.circular(4),
+                  bottomLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
+                ),
+                border: Border.all(
+                  color: AppTheme.userBubbleBorder, // 用户气泡边框 #EDD8DD
+                  width: 1,
+                ),
               ),
               child: Text(
                 text,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                  height: 1.4,
-                ),
+                style: AppTheme.dialogueStyle,
               ),
             ),
           ),
           const SizedBox(width: 8),
           // 用户头像（根据设置显示或隐藏）
           if (showUserAvatar)
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.grey[200],
-              backgroundImage: userAvatarPath != null
-                  ? FileImage(File(userAvatarPath!))
-                  : null,
-              child: userAvatarPath == null
-                  ? const Icon(Icons.person, size: 20, color: Colors.grey)
-                  : null,
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: AppTheme.userBubbleBorder, // 使用用户气泡边框色
+                  width: 1,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.transparent,
+                backgroundImage: userAvatarPath != null
+                    ? FileImage(File(userAvatarPath!))
+                    : null,
+                child: userAvatarPath == null
+                    ? Icon(
+                        Icons.person_outline,
+                        size: 18,
+                        color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                      )
+                    : null,
+              ),
             ),
         ],
       ),
@@ -1137,22 +1244,61 @@ class SystemTimeMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: (0.1 * 255).toDouble()),
+            color: const Color(0xFFF0F0F5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             text,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTheme.systemTimeStyle,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// 旁白消息组件
+class NarrationMessage extends StatelessWidget {
+  final String text;
+  final bool isAI;
+  final bool isCentered;
+
+  const NarrationMessage({
+    super.key,
+    required this.text,
+    this.isAI = false,
+    this.isCentered = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * (isCentered ? 0.8 : 0.6),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFE0E0E0),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          text,
+          textAlign: isCentered ? TextAlign.center : TextAlign.left,
+          style: AppTheme.narrationStyle,
         ),
       ),
     );
@@ -1165,17 +1311,18 @@ class SystemTimeMessage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
-Size: 3763 bytes
+Size: 3683 bytes
 
-Modified: 01/03/2026 00:12:14
+Modified: 01/04/2026 03:40:37
 
 ========================================
 
 import 'package:flutter/material.dart';
-import 'dart:io';                      // 新增
+import 'dart:io';
 import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
 import '../../services/storage_service.dart';
+import '../../app/theme.dart'; // 导入主题
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -1211,9 +1358,9 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF5F8),
+      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF5F8),
+        backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "聊天",
@@ -1238,14 +1385,12 @@ class _ChatListPageState extends State<ChatListPage> {
             },
             leading: GestureDetector(
               onTap: () {
-                // 点击头像跳转到编辑页面
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const ChatCharacterEditPage(),
                   ),
                 ).then((_) {
-                  // 从编辑页面返回后刷新数据
                   _loadCharacterData();
                 });
               },
@@ -1298,9 +1443,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 26062 bytes
+Size: 25446 bytes
 
-Modified: 01/04/2026 02:42:52
+Modified: 01/04/2026 03:46:14
 
 ========================================
 
@@ -1313,9 +1458,10 @@ import 'package:xml/xml.dart' as xml;
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
+import '../../app/theme.dart'; // 添加导入
 import 'chat_components.dart';
-import 'xml_message_parser.dart';
 import 'chat_room_settings_page.dart';
+// 移除 xml_message_parser.dart 导入，因为不再需要
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -1704,65 +1850,57 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     );
   }
 
-  /// 构建消息Widget - 使用正确的组件
-  Widget _buildMessageWidget(Message msg) {
-    // 根据messageType渲染，使用正确的UI组件
-    switch (msg.messageType) {
-      case MessageType.user_narration:
-        // 用户旁白 - 使用xml_message_parser构建旁白气泡
-        final widgets = XmlMessageParser.parseXmlMessage(
-          xmlContent: '<message><narration>${msg.content}</narration></message>',
-          context: context,
-          avatarPath: null,
-          characterName: '你',
-          isAI: false,
-          showUserAvatar: _showUserAvatar,
-        );
-        return widgets.isNotEmpty ? widgets.first : Container();
+ /// 构建消息Widget - 使用正确的组件
+Widget _buildMessageWidget(Message msg) {
+  // 根据messageType渲染，使用正确的UI组件
+  switch (msg.messageType) {
+    case MessageType.user_narration:
+      // 用户旁白 - 使用新的旁白组件
+      return NarrationMessage(
+        text: msg.content,
+        isAI: false,
+        isCentered: false, // 用户旁白偏右
+      );
 
-      case MessageType.ai_narration:
-        // AI旁白 - 使用xml_message_parser构建旁白气泡
-        final widgets = XmlMessageParser.parseXmlMessage(
-          xmlContent: '<message><narration>${msg.content}</narration></message>',
-          context: context,
-          avatarPath: _avatarPath,
-          characterName: _characterName,
-          isAI: true,
-          showUserAvatar: _showUserAvatar,
-        );
-        return widgets.isNotEmpty ? widgets.first : Container();
-        
-      case MessageType.user_dialogue:
-        // 用户对话
-        return SentMessage(
-          text: msg.content,
-          userAvatarPath: _userAvatarPath,
-          showUserAvatar: _showUserAvatar,
-        );
-        
-      case MessageType.ai_dialogue:
-        // AI对话
-        return ReceivedMessage(
-          text: msg.content,
-          avatarPath: _avatarPath,
-        );
-        
-      case MessageType.system_time:
-        // 系统时间消息
-        return SystemTimeMessage(text: msg.content);
-        
-      case MessageType.system_state:
-        // 系统状态消息（当前未实现）
-        return Container();
-    }
+    case MessageType.ai_narration:
+      // AI旁白 - 使用新的旁白组件
+      return NarrationMessage(
+        text: msg.content,
+        isAI: true,
+        isCentered: true, // AI旁白居中
+      );
+      
+    case MessageType.user_dialogue:
+      // 用户对话
+      return SentMessage(
+        text: msg.content,
+        userAvatarPath: _userAvatarPath,
+        showUserAvatar: _showUserAvatar,
+      );
+      
+    case MessageType.ai_dialogue:
+      // AI对话
+      return ReceivedMessage(
+        text: msg.content,
+        avatarPath: _avatarPath,
+      );
+      
+    case MessageType.system_time:
+      // 系统时间消息
+      return SystemTimeMessage(text: msg.content);
+      
+    case MessageType.system_state:
+      // 系统状态消息（当前未实现）
+      return Container();
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.appBackground, // 使用应用背景色
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.chatRoomTop, // 聊天室顶部颜色 #FCECEF
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -1884,8 +2022,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                     },
                   ),
                 ),
+                // 底部输入区域
                 Container(
-                  color: Colors.white,
+                  color: AppTheme.messageInputBackground, // 底部发消息大矩形 #FBDCE1
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: SafeArea(
                     top: false,
@@ -1896,8 +2035,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                           child: Container(
                             constraints: const BoxConstraints(minHeight: 40),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF2F2F7),
+                              color: AppTheme.messageFieldBackground, // 发消息框内背景 #FFFFFF
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.messageFieldBorder, // 发消息框边框 #B1A9AB
+                                width: 1,
+                              ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             child: TextField(
@@ -1926,6 +2069,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                           ),
                         ),
                         const SizedBox(width: 8),
+                        // 发送按钮
                         Container(
                           width: 40,
                           height: 40,
@@ -1934,13 +2078,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF5A7E).withValues(alpha: (0.3 * 255).toDouble()),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           child: IconButton(
                             icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
@@ -1959,6 +2096,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 ),
               ],
             ),
+            // 滚动到底部按钮
             if (_showScrollToBottomButton)
               Positioned(
                 bottom: 90,
@@ -1968,20 +2106,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                   height: 44,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFFFD2DD).withValues(alpha: (0.2 * 255).toDouble()),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: (0.1 * 255).toDouble()),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: Colors.white,
+                    border: Border.all(
+                      color: AppTheme.aiBubbleBorder,
+                      width: 1,
+                    ),
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
                     onPressed: () {
                       _scrollToBottom();
-                      // 点击后隐藏按钮
                       setState(() {
                         _showScrollToBottomButton = false;
                       });
@@ -2284,16 +2418,17 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\xml_message_parser.dart
 
-Size: 7485 bytes
+Size: 3183 bytes
 
-Modified: 01/04/2026 02:39:04
+Modified: 01/04/2026 03:40:32
 
 ========================================
 
 // lib/pages/chat/xml_message_parser.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:xml/xml.dart' as xml;
+import '../../app/theme.dart'; // 修复导入路径
+import 'chat_components.dart'; // 导入新的旁白组件
 
 class XmlMessageParser {
   /// 解析XML消息，返回对应的Widget列表
@@ -2315,16 +2450,27 @@ class XmlMessageParser {
       return children.map((node) {
         final text = node.innerText.trim();
         if (node.name.local == 'narration') {
-          return _buildNarrationBubble(text);
-        } else if (node.name.local == 'dialogue') {
-          return _buildDialogueBubble(
+          // 使用新的旁白组件
+          return NarrationMessage(
             text: text,
-            context: context,
-            avatarPath: avatarPath,
-            characterName: characterName,
             isAI: isAI,
-            showUserAvatar: showUserAvatar,
+            isCentered: true, // 旁白默认居中
           );
+        } else if (node.name.local == 'dialogue') {
+          if (isAI) {
+            // AI对话
+            return ReceivedMessage(
+              text: text,
+              avatarPath: avatarPath,
+            );
+          } else {
+            // 用户对话
+            return SentMessage(
+              text: text,
+              userAvatarPath: null, // 用户旁白不显示头像
+              showUserAvatar: false,
+            );
+          }
         } else {
           return _buildDefaultBubble(text, isAI, context);
         }
@@ -2334,166 +2480,24 @@ class XmlMessageParser {
     }
   }
 
-  /// 构建旁白气泡
-  static Widget _buildNarrationBubble(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.grey[50]!.withValues(alpha: (0.9 * 255).toDouble()),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontSize: 13,
-            fontStyle: FontStyle.italic,
-            height: 1.4,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 构建对话气泡
-  static Widget _buildDialogueBubble({
-    required String text,
-    required BuildContext context,
-    required String? avatarPath,
-    required String characterName,
-    required bool isAI,
-    bool showUserAvatar = true,
-  }) {
-    if (isAI) {
-      // AI的对话气泡
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 头像
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: const Color(0xFFFFD2DD),
-              backgroundImage: avatarPath != null
-                  ? FileImage(File(avatarPath))
-                  : null,
-              child: avatarPath == null
-                  ? const Icon(Icons.person, size: 20, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: 8),
-            // 消息气泡
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFD2DD),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // 用户的对话气泡
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            // 消息气泡
-            Flexible(
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.7,
-                ),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: (0.05 * 255).toDouble()),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // 用户头像（根据设置显示或隐藏）
-            if (showUserAvatar)
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.grey[200],
-                backgroundImage: avatarPath != null
-                    ? FileImage(File(avatarPath))
-                    : null,
-                child: avatarPath == null
-                    ? const Icon(Icons.person, size: 20, color: Colors.grey)
-                    : null,
-              ),
-          ],
-        ),
-      );
-    }
-  }
-
   /// 构建默认气泡（用于解析失败的情况）
   static Widget _buildDefaultBubble(String text, bool isAI, BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isAI ? const Color(0xFFFFD2DD) : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: !isAI
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: (0.05 * 255).toDouble()),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          color: isAI ? AppTheme.aiBubbleColor : AppTheme.userBubbleColor,
+          borderRadius: BorderRadius.circular(AppTheme.bubbleBorderRadius),
+          // 移除阴影，使用边框
+          border: Border.all(
+            color: isAI ? AppTheme.aiBubbleBorder : AppTheme.userBubbleBorder,
+            width: 1,
+          ),
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.black87,
-            height: 1.4,
-          ),
+          style: AppTheme.dialogueStyle,
         ),
       ),
     );

@@ -1,4 +1,4 @@
-// lib/pages/chat/chat_components.dart
+// 修改后的 lib/pages/chat/chat_components.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../../app/theme.dart'; // 导入主题
@@ -29,7 +29,7 @@ class ReceivedMessage extends StatelessWidget {
               shape: BoxShape.circle,
               color: Colors.white,
               border: Border.all(
-                color: AppTheme.aiBubbleBorder, // 使用AI气泡边框色
+                color: AppTheme.aiBubbleBorder,
                 width: 1,
               ),
             ),
@@ -60,7 +60,7 @@ class ReceivedMessage extends StatelessWidget {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.aiBubbleColor, // AI气泡背景 #FFFFFF
+                color: AppTheme.aiBubbleColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(AppTheme.bubbleBorderRadius),
@@ -68,7 +68,7 @@ class ReceivedMessage extends StatelessWidget {
                   bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
                 border: Border.all(
-                  color: AppTheme.aiBubbleBorder, // AI气泡边框 #F1DCDE
+                  color: AppTheme.aiBubbleBorder,
                   width: 1,
                 ),
               ),
@@ -116,7 +116,7 @@ class SentMessage extends StatelessWidget {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.userBubbleColor, // 用户气泡背景 #FFEAEF
+                color: AppTheme.userBubbleColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppTheme.bubbleBorderRadius),
                   topRight: Radius.circular(4),
@@ -124,13 +124,15 @@ class SentMessage extends StatelessWidget {
                   bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
                 border: Border.all(
-                  color: AppTheme.userBubbleBorder, // 用户气泡边框 #EDD8DD
+                  color: AppTheme.userBubbleBorder,
                   width: 1,
                 ),
               ),
               child: Text(
                 text,
-                style: AppTheme.dialogueStyle,
+                style: AppTheme.dialogueStyle.copyWith(
+                  color: AppTheme.userTextColor, // 添加用户文字颜色
+                ),
               ),
             ),
           ),
@@ -144,7 +146,7 @@ class SentMessage extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.white,
                 border: Border.all(
-                  color: AppTheme.userBubbleBorder, // 使用用户气泡边框色
+                  color: AppTheme.userBubbleBorder,
                   width: 1,
                 ),
               ),
@@ -214,27 +216,37 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 24.0), // 上下间距从8改为2
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * (isCentered ? 0.8 : 0.6),
+          maxWidth: MediaQuery.of(context).size.width * 0.75, // 从0.8改为0.75
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
+          horizontal: 14,  // 从16改为14
+          vertical: 8,     // 从10改为8
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F7),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFFFFF0F3),  // 改为极浅粉色
+          borderRadius: BorderRadius.circular(24), // 从12改为24
           border: Border.all(
-            color: const Color(0xFFE0E0E0),
-            width: 1,
+            color: const Color(0xFFFFD1DC),
+            width: 1.2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha:0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Text(
           text,
           textAlign: isCentered ? TextAlign.center : TextAlign.left,
-          style: AppTheme.narrationStyle,
+          style: AppTheme.narrationStyle.copyWith(
+            fontSize: 13,  // 确保使用13号字
+            height: 1.35,  // 确保使用1.35行高
+          ),
         ),
       ),
     );
