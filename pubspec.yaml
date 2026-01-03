@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  xml: ^6.4.2  # 添加这行
   flutter:
     sdk: flutter
   http: ^1.1.0           # 🚚 搬运外卖小车

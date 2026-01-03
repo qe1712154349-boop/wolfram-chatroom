@@ -56,7 +56,30 @@ class StorageService {
   // ── 聊天记录相关 ──
   Future<void> saveChatHistory(List<Map<String, dynamic>> history) async {
     final prefs = await _prefs;
-    final jsonString = jsonEncode(history);
+    
+    // 转换数据，确保可以序列化
+    final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
+      final Map<String, dynamic> serialized = {
+        'role': msg['role'] as String? ?? '',
+        'content': msg['content'] as String? ?? '',
+        'timestamp': msg['timestamp']?.toString() ?? '',
+      };
+      
+      // 添加额外字段（如果有）
+      if (msg['type'] != null) {
+        serialized['type'] = msg['type'] as String;
+      }
+      if (msg['displayText'] != null) {
+        serialized['displayText'] = msg['displayText'] as String;
+      }
+      if (msg['parsed'] != null) {
+        serialized['parsed'] = msg['parsed'] as bool;
+      }
+      
+      return serialized;
+    }).toList();
+    
+    final jsonString = jsonEncode(serializableHistory);
     await prefs.setString('chat_history_master', jsonString);
   }
 
@@ -68,11 +91,15 @@ class StorageService {
     }
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.cast<Map<String, dynamic>>().map((e) {
+      return decoded.map<Map<String, dynamic>>((e) {
+        final map = e as Map<String, dynamic>;
         return {
-          'role': e['role'] as String,
-          'content': e['content'] as String,
-          'timestamp': e['timestamp'] ?? '',
+          'role': map['role'] as String? ?? '',
+          'content': map['content'] as String? ?? '',
+          'timestamp': map['timestamp']?.toString() ?? '',
+          'type': map['type'] as String?,
+          'displayText': map['displayText'] as String?,
+          'parsed': map['parsed'] as bool? ?? false,
         };
       }).toList();
     } catch (e) {
@@ -148,12 +175,45 @@ class StorageService {
       prompt += '私密行为设定：\n$privateSetting\n\n';
     }
     
+    // 添加XML格式要求
+    prompt += '''
+===重要格式指令===
+你必须严格按照以下XML格式回复，任何时候都不准打破结构：
+<message>
+  <narration>这里是旁白、动作、环境描述</narration>
+  <dialogue>这里是角色说的话语</dialogue>
+</message>
+
+规则：
+1. 所有内容必须放在<message>标签里
+2. 不准出现标签以外的任何文字
+3. <narration>用于叙述、动作、心理、环境描述
+4. <dialogue>只用于角色直接说的话
+5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
+6. 确保每个<dialogue>都是完整的对话，不要截断
+''';
+    
     if (prompt.isEmpty) {
       prompt = '''
 角色名称：$nickname
 
 角色设定：
 话少，对话自然，像人类，冷淡。
+
+===重要格式指令===
+你必须严格按照以下XML格式回复，任何时候都不准打破结构：
+<message>
+  <narration>这里是旁白、动作、环境描述</narration>
+  <dialogue>这里是角色说的话语</dialogue>
+</message>
+
+规则：
+1. 所有内容必须放在<message>标签里
+2. 不准出现标签以外的任何文字
+3. <narration>用于叙述、动作、心理、环境描述
+4. <dialogue>只用于角色直接说的话
+5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
+6. 确保每个<dialogue>都是完整的对话，不要截断
 ''';
     }
     

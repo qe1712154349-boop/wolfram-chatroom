@@ -1,9 +1,11 @@
+// lib/pages/chat/chat_room_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import 'chat_components.dart';
+import 'xml_message_parser.dart'; // 新增导入
 // 导入新的聊天室设置页面
 import 'chat_room_settings_page.dart';  // 确保这个文件存在且正确导出类
 
@@ -25,7 +27,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   
   String _characterName = 'Master';
   String? _avatarPath;
-  String? _userAvatarPath;
+  // 删除未使用的 _userAvatarPath 字段
   String _systemPrompt = '';
 
   @override
@@ -94,13 +96,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
     final avatarPath = await _storage.getCharacterAvatarPath();
-    final userAvatarPath = await _storage.getUserAvatarPath();
-    
+    // 不再加载未使用的用户头像路径
     if (mounted) {
       setState(() {
         _characterName = name;
         _avatarPath = avatarPath;
-        _userAvatarPath = userAvatarPath;
       });
     }
   }
@@ -132,6 +132,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty || _isLoading) return;
 
+    // 解析用户输入
+    final userInput = XmlMessageParser.parseUserInput(text);
+    
     // 获取当前时间
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
@@ -142,7 +145,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
 
     final userMessage = {
       'role': 'user', 
-      'content': text,
+      'content': userInput['content']!, // 去掉/前缀的内容
+      'displayText': userInput['displayText']!,
+      'type': userInput['type'], // 旁白或对话
       'timestamp': timestamp,
     };
 
@@ -163,7 +168,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         {'role': 'system', 'content': systemPrompt},
       ];
 
-      // 优化：减少历史消息数量，防止重复问题
+      // 只添加对话内容给AI，不包括类型信息
       final int historyLimit = 20;
       final recent = _messages.length > historyLimit 
           ? _messages.sublist(_messages.length - historyLimit) 
@@ -171,7 +176,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
 
       apiMessages.addAll(recent.map((msg) => {
         'role': msg['role']! as String,
-        'content': msg['content']! as String,
+        'content': msg['content']! as String, // 只发送内容
       }));
 
       // 从StorageService获取选择的模型
@@ -189,6 +194,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
             'role': 'assistant', 
             'content': aiReply ?? '…',
             'timestamp': aiTimestamp,
+            'parsed': true, // 标记为需要解析
           });
         });
       }
@@ -203,6 +209,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
             'role': 'assistant', 
             'content': '出错啦… $e',
             'timestamp': errorTimestamp,
+            'parsed': false,
           });
         });
       }
@@ -244,6 +251,60 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
           ),
         ],
       ),
+    );
+  }
+
+  /// 构建消息Widget
+  Widget _buildMessageWidget(Map<String, dynamic> msg, bool isUser) {
+    final content = msg['content']?.toString() ?? '';
+    final timestamp = msg['timestamp']?.toString() ?? '';
+    final type = msg['type']?.toString();
+    final parsed = msg['parsed'] as bool? ?? false;
+
+    // AI消息且需要解析
+    if (!isUser && parsed && XmlMessageParser.isValidXml(content)) {
+      final widgets = XmlMessageParser.parseXmlMessage(
+        xmlContent: content,
+        timestamp: timestamp,
+        avatarPath: _avatarPath,
+        characterName: _characterName,
+        isAI: true,
+      );
+      
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: widgets,
+      );
+    }
+    
+    // 用户消息
+    if (isUser) {
+      if (type == 'narration') {
+        // 用户旁白
+        return XmlMessageParser.parseXmlMessage(
+          xmlContent: XmlMessageParser.createUserNarrationXml(msg['displayText']?.toString() ?? content),
+          timestamp: timestamp,
+          avatarPath: _avatarPath,
+          characterName: '你',
+          isAI: false,
+        ).first;
+      } else {
+        // 用户对话
+        return XmlMessageParser.parseXmlMessage(
+          xmlContent: XmlMessageParser.createUserDialogueXml(msg['displayText']?.toString() ?? content),
+          timestamp: timestamp,
+          avatarPath: _avatarPath,
+          characterName: '你',
+          isAI: false,
+        ).first;
+      }
+    }
+    
+    // 默认的AI消息显示（用于解析失败的情况）
+    return ReceivedMessage(
+      text: content,
+      time: timestamp,
+      avatarPath: _avatarPath,
     );
   }
 
@@ -332,17 +393,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
 
                     return GestureDetector(
                       onLongPress: () => _showDeleteDialog(index),
-                      child: isUser
-                          ? SentMessage(
-                              text: msg['content']! as String, 
-                              time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
-                              avatarPath: _userAvatarPath,
-                            )
-                          : ReceivedMessage(
-                              text: msg['content']! as String, 
-                              time: msg['timestamp']?.toString() ?? DateFormat('HH:mm').format(DateTime.now()),
-                              avatarPath: _avatarPath,
-                            ),
+                      child: _buildMessageWidget(msg, isUser),
                     );
                   },
                 ),
@@ -368,7 +419,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                             minLines: 1,
                             textInputAction: TextInputAction.newline,
                             decoration: const InputDecoration(
-                              hintText: "跟Master说点什么吧...",
+                              hintText: "输入消息（以/开头表示旁白）...",
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.zero,
                             ),
