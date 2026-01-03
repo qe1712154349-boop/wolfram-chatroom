@@ -5,7 +5,7 @@ import 'storage_service.dart';
 class ApiService {
   final StorageService _storage = StorageService();
 
-  Future<String?> sendChatMessage(List<Map<String, String>> messages) async {
+  Future<String?> sendChatMessage(List<Map<String, String>> messages, String modelName) async {
     final apiKey = await _storage.getApiKey();
     final baseUrl = await _storage.getApiBaseUrl();
     
@@ -21,9 +21,9 @@ class ApiService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'deepseek-chat',
+          'model': modelName, // 使用传入的模型名称
           'messages': messages.map((m) => {'role': m['role'], 'content': m['content']}).toList(),
-          'temperature': 0.7,
+          'temperature': 0.9, // 调高到 0.9，让回复更活泼
           'stream': false,
         }),
       );

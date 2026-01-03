@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import 'chat_components.dart';
+// 导入新的聊天室设置页面
+import 'chat_room_settings_page.dart';  // 确保这个文件存在且正确导出类
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -17,7 +19,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
-  bool _showScrollToBottomButton = false;  // 控制"滚动到底部"按钮的显示
+  bool _showScrollToBottomButton = false;
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
@@ -29,24 +31,24 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);  // 添加键盘监听
+    WidgetsBinding.instance.addObserver(this);
     _loadCharacterData();
     _loadHistory();
     
-    // 监听滚动位置，显示/隐藏"滚动到底部"按钮
     _scrollController.addListener(() {
+      if (!mounted) return; // 添加检查
+      
       final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
       
-      // 如果距离底部超过300像素，显示"滚动到底部"按钮
       if ((maxScroll - currentScroll) > 300.0) {
-        if (!_showScrollToBottomButton) {
+        if (!_showScrollToBottomButton && mounted) {
           setState(() {
             _showScrollToBottomButton = true;
           });
         }
       } else {
-        if (_showScrollToBottomButton) {
+        if (_showScrollToBottomButton && mounted) {
           setState(() {
             _showScrollToBottomButton = false;
           });
@@ -57,28 +59,29 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);  // 移除键盘监听
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  // 键盘状态变化时调整滚动位置
   @override
   void didChangeMetrics() {
-    // 键盘弹出/收起时，如果有新消息，滚动到底部
+    if (!mounted) return; // 添加检查
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && _messages.isNotEmpty) {
+      if (_scrollController.hasClients && _messages.isNotEmpty && mounted) {
         _scrollToBottom();
       }
     });
     super.didChangeMetrics();
   }
 
-  // 滚动到最新消息的方法
   void _scrollToBottom() {
+    if (!mounted) return;
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients && mounted) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -93,26 +96,37 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     final avatarPath = await _storage.getCharacterAvatarPath();
     final userAvatarPath = await _storage.getUserAvatarPath();
     
-    setState(() {
-      _characterName = name;
-      _avatarPath = avatarPath;
-      _userAvatarPath = userAvatarPath;
-    });
+    if (mounted) {
+      setState(() {
+        _characterName = name;
+        _avatarPath = avatarPath;
+        _userAvatarPath = userAvatarPath;
+      });
+    }
   }
 
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty && mounted) {
       setState(() {
+        _messages.clear();
         _messages.addAll(history);
       });
-      // 加载历史后滚动到底部
       _scrollToBottom();
     }
   }
 
   Future<void> _saveHistory() async {
     await _storage.saveChatHistory(_messages);
+  }
+
+  Future<void> _clearAllMessages() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _messages.clear();
+    });
+    await _storage.clearChatHistory();
   }
 
   Future<void> _sendMessage(String text) async {
@@ -132,13 +146,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
       'timestamp': timestamp,
     };
 
+    if (!mounted) return;
+    
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
       _systemPrompt = systemPrompt;
     });
 
-    // 发送消息后立即滚动到底部
     _scrollToBottom();
     await _saveHistory();
 
@@ -148,40 +163,50 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         {'role': 'system', 'content': systemPrompt},
       ];
 
-      // 取最后50条
-      final recent = _messages.length > 50 ? _messages.sublist(_messages.length - 50) : _messages;
+      // 优化：减少历史消息数量，防止重复问题
+      final int historyLimit = 20;
+      final recent = _messages.length > historyLimit 
+          ? _messages.sublist(_messages.length - historyLimit) 
+          : _messages;
+
       apiMessages.addAll(recent.map((msg) => {
         'role': msg['role']! as String,
         'content': msg['content']! as String,
       }));
 
-      final aiReply = await _apiService.sendChatMessage(apiMessages);
+      // 从StorageService获取选择的模型
+      final selectedModel = await _storage.getSelectedModel();
+      
+      // 调用API时传入当前选择的模型
+      final aiReply = await _apiService.sendChatMessage(apiMessages, selectedModel);
 
       // AI回复的时间
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
-      setState(() {
-        _messages.add({
-          'role': 'assistant', 
-          'content': aiReply ?? '…',
-          'timestamp': aiTimestamp,
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            'role': 'assistant', 
+            'content': aiReply ?? '…',
+            'timestamp': aiTimestamp,
+          });
         });
-      });
+      }
 
       await _saveHistory();
-      // AI回复后也滚动到底部
       _scrollToBottom();
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
-      setState(() {
-        _messages.add({
-          'role': 'assistant', 
-          'content': '出错啦… $e',
-          'timestamp': errorTimestamp,
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            'role': 'assistant', 
+            'content': '出错啦… $e',
+            'timestamp': errorTimestamp,
+          });
         });
-      });
+      }
       await _saveHistory();
-      // 出错时也滚动到底部
       _scrollToBottom();
     } finally {
       if (mounted) {
@@ -191,6 +216,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   }
 
   void _deleteMessage(int index) {
+    if (!mounted) return;
+    
     setState(() {
       _messages.removeAt(index);
     });
@@ -259,7 +286,28 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
             ],
           ),
         ),
-        actions: const [Icon(Icons.more_vert)],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () async {
+              // 跳转到聊天室设置页面
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatRoomSettingsPage(
+                    characterName: _characterName,
+                    avatarPath: _avatarPath,
+                  ),
+                ),
+              );
+              
+              // 如果返回true，表示清空了聊天记录，需要刷新界面
+              if (result == true && mounted) {
+                await _clearAllMessages();
+              }
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -351,10 +399,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
               ),
             ],
           ),
-          // "滚动到底部"按钮
           if (_showScrollToBottomButton)
             Positioned(
-              bottom: 100,  // 放在输入框上方
+              bottom: 100,
               right: 20,
               child: FloatingActionButton(
                 mini: true,
