@@ -72,13 +72,11 @@ class ReceivedMessage extends StatelessWidget {
 class SentMessage extends StatelessWidget {
   final String text;
   final String time;
-  final String? avatarPath;
-
+  // 移除 avatarPath 参数，因为不再需要用户头像
   const SentMessage({
     super.key,
     required this.text,
     required this.time,
-    this.avatarPath,
   });
 
   @override
@@ -89,24 +87,26 @@ class SentMessage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Expanded(
+          // 用户消息气泡（移除头像后的版本）
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.7,
+            ),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFBBDEFB)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFBBDEFB)),
-                  ),
-                  child: Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      height: 1.4,
-                    ),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -120,12 +120,7 @@ class SentMessage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: const Color(0xFFE3F2FD),
-            child: const Icon(Icons.person, size: 18, color: Colors.blue),
-          ),
+          const SizedBox(width: 8), // 保持一些右边距，让气泡不贴边
         ],
       ),
     );

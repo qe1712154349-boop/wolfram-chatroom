@@ -83,13 +83,13 @@ class XmlMessageParser {
     required bool isAI,
   }) {
     if (isAI) {
-      // AI的对话气泡
+      // AI的对话气泡（保留头像）
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 头像
+            // AI头像
             CircleAvatar(
               radius: 16,
               backgroundColor: const Color(0xFFFFD1DC),
@@ -101,7 +101,7 @@ class XmlMessageParser {
                   : null,
             ),
             const SizedBox(width: 8),
-            // 消息气泡
+            // AI消息气泡
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,32 +146,33 @@ class XmlMessageParser {
         ),
       );
     } else {
-      // 用户的对话气泡
+      // 用户的对话气泡（移除头像）
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // 消息气泡
-            Expanded(
+            // 用户消息气泡（移除头像后的版本）
+            Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQueryData.fromWindow(WidgetsBinding.instance.window).size.width * 0.7,
+              ),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE3F2FD),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFBBDEFB)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFBBDEFB)),
-                    ),
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                        height: 1.4,
-                      ),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -185,13 +186,7 @@ class XmlMessageParser {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            // 用户头像
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: const Color(0xFFE3F2FD),
-              child: const Icon(Icons.person, size: 18, color: Colors.blue),
-            ),
+            const SizedBox(width: 8), // 保持一些右边距，让气泡不贴边
           ],
         ),
       );

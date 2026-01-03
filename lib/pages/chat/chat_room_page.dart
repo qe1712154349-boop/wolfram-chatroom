@@ -27,7 +27,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   
   String _characterName = 'Master';
   String? _avatarPath;
-  // 删除未使用的 _userAvatarPath 字段
   String _systemPrompt = '';
 
   @override
@@ -96,7 +95,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
     final avatarPath = await _storage.getCharacterAvatarPath();
-    // 不再加载未使用的用户头像路径
+    
     if (mounted) {
       setState(() {
         _characterName = name;
@@ -284,7 +283,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         return XmlMessageParser.parseXmlMessage(
           xmlContent: XmlMessageParser.createUserNarrationXml(msg['displayText']?.toString() ?? content),
           timestamp: timestamp,
-          avatarPath: _avatarPath,
+          avatarPath: null, // 用户旁白不需要头像
           characterName: '你',
           isAI: false,
         ).first;
@@ -293,7 +292,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         return XmlMessageParser.parseXmlMessage(
           xmlContent: XmlMessageParser.createUserDialogueXml(msg['displayText']?.toString() ?? content),
           timestamp: timestamp,
-          avatarPath: _avatarPath,
+          avatarPath: null, // 用户对话不需要头像
           characterName: '你',
           isAI: false,
         ).first;
