@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path_lib;
 import 'package:flutter/foundation.dart';
 import 'api_config.dart'; // 新增导入
+import '../models/message.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -54,61 +55,38 @@ class StorageService {
   }
 
   // ── 聊天记录相关 ──
-  Future<void> saveChatHistory(List<Map<String, dynamic>> history) async {
-    final prefs = await _prefs;
-    
-    // 转换数据，确保可以序列化
-    final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
-      final Map<String, dynamic> serialized = {
-        'role': msg['role'] as String? ?? '',
-        'content': msg['content'] as String? ?? '',
-        'timestamp': msg['timestamp']?.toString() ?? '',
-      };
-      
-      // 添加额外字段（如果有）
-      if (msg['type'] != null) {
-        serialized['type'] = msg['type'] as String;
-      }
-      if (msg['displayText'] != null) {
-        serialized['displayText'] = msg['displayText'] as String;
-      }
-      if (msg['parsed'] != null) {
-        serialized['parsed'] = msg['parsed'] as bool;
-      }
-      
-      return serialized;
-    }).toList();
-    
-    final jsonString = jsonEncode(serializableHistory);
-    await prefs.setString('chat_history_master', jsonString);
-  }
+// 修改 saveChatHistory 方法：
+Future<void> saveChatHistory(List<Message> history) async {
+  final prefs = await _prefs;
+  
+  // 转换为Map列表
+  final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
+    return msg.toMap();
+  }).toList();
+  
+  final jsonString = jsonEncode(serializableHistory);
+  await prefs.setString('chat_history_master', jsonString);
+}
 
-  Future<List<Map<String, dynamic>>> loadChatHistory() async {
-    final prefs = await _prefs;
-    final jsonString = prefs.getString('chat_history_master');
-    if (jsonString == null || jsonString.isEmpty) {
-      return [];
-    }
-    try {
-      final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.map<Map<String, dynamic>>((e) {
-        final map = e as Map<String, dynamic>;
-        return {
-          'role': map['role'] as String? ?? '',
-          'content': map['content'] as String? ?? '',
-          'timestamp': map['timestamp']?.toString() ?? '',
-          'type': map['type'] as String?,
-          'displayText': map['displayText'] as String?,
-          'parsed': map['parsed'] as bool? ?? false,
-        };
-      }).toList();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('聊天记录解析失败: $e');
-      }
-      return [];
-    }
+// 修改 loadChatHistory 方法：
+Future<List<Message>> loadChatHistory() async {
+  final prefs = await _prefs;
+  final jsonString = prefs.getString('chat_history_master');
+  if (jsonString == null || jsonString.isEmpty) {
+    return [];
   }
+  try {
+    final List<dynamic> decoded = jsonDecode(jsonString);
+    return decoded.map<Message>((e) {
+      return Message.fromMap(e as Map<String, dynamic>);
+    }).toList();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('聊天记录解析失败: $e');
+    }
+    return [];
+  }
+}
 
   Future<void> clearChatHistory() async {
     final prefs = await _prefs;
@@ -314,6 +292,51 @@ class StorageService {
         debugPrint('复制用户头像失败: $e');
       }
       rethrow;
+    }
+  }
+
+  // ── 用户资料相关 ──（新增部分，添加在这里）
+  Future<void> saveUserName(String userName) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_name', userName);
+  }
+
+  Future<String> getUserName() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_name') ?? '尘不言'; // 默认值
+  }
+
+  Future<void> saveShowUserAvatar(bool show) async {
+    final prefs = await _prefs;
+    await prefs.setBool('show_user_avatar', show);
+  }
+
+  Future<bool> getShowUserAvatar() async {
+    final prefs = await _prefs;
+    return prefs.getBool('show_user_avatar') ?? true; // 默认显示
+  }
+
+  Future<Map<String, dynamic>> getUserProfile() async {
+    final name = await getUserName();
+    final avatarPath = await getUserAvatarPath();
+    final showAvatar = await getShowUserAvatar();
+    
+    return {
+      'name': name,
+      'avatarPath': avatarPath,
+      'showAvatar': showAvatar,
+    };
+  }
+
+  Future<void> saveUserProfile(Map<String, dynamic> profile) async {
+    if (profile['name'] != null) {
+      await saveUserName(profile['name'] as String);
+    }
+    if (profile['avatarPath'] != null) {
+      await saveUserAvatarPath(profile['avatarPath'] as String);
+    }
+    if (profile['showAvatar'] != null) {
+      await saveShowUserAvatar(profile['showAvatar'] as bool);
     }
   }
 

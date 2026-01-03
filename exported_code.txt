@@ -1,0 +1,4373 @@
+﻿
+========================================
+
+File: D:\D\my_new_app\lib\main.dart
+
+Size: 109 bytes
+
+Modified: 01/02/2026 17:42:57
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'app/app.dart';
+
+void main() => runApp(const MyBunnyApp());
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\app\app.dart
+
+Size: 772 bytes
+
+Modified: 01/03/2026 23:31:42
+
+========================================
+
+// lib/app/app.dart
+import 'package:flutter/material.dart';
+import 'theme.dart';
+import '../pages/main_screen.dart';
+import '../pages/chat/chat_character_edit_page.dart'; // 导入角色编辑页面
+import '../pages/me/profile_settings_page.dart'; // 导入用户资料设置页面
+
+class MyBunnyApp extends StatelessWidget {
+  const MyBunnyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      home: const MainScreen(),
+      // 添加路由配置
+      routes: {
+        '/character-edit': (context) => const ChatCharacterEditPage(),
+        '/profile-settings': (context) => const ProfileSettingsPage(),
+      },
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\app\theme.dart
+
+Size: 623 bytes
+
+Modified: 01/02/2026 17:42:58
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class AppTheme {
+  static ThemeData get lightTheme => ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+        primaryColor: const Color(0xFFFF5A7E),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          selectedItemColor: Color(0xFFFF5A7E),
+          type: BottomNavigationBarType.fixed,
+        ),
+      );
+
+  static const Color pinkAccent = Color(0xFFFF5A7E);
+  static const Color lightPink = Color(0xFFFFF0F3);
+  static const Color chatPink = Color(0xFFFFF5F8);
+  static const Color bubblePink = Color(0xFFFFD1DC);
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\custom_list_tile.dart
+
+Size: 0 bytes
+
+Modified: 01/02/2026 16:37:05
+
+========================================
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\image_placeholder.dart
+
+Size: 1024 bytes
+
+Modified: 01/02/2026 21:38:39
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class ImagePlaceholder extends StatelessWidget {
+  final double size;
+  final Color color;
+  final IconData? icon;
+  final String? text;
+
+  const ImagePlaceholder({
+    super.key,
+    this.size = 40,
+    this.color = const Color(0xFFFF5A7E),
+    this.icon = Icons.person,
+    this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: text != null
+            ? Text(
+                text!,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.4,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
+            : Icon(
+                icon,
+                color: Colors.white,
+                size: size * 0.6,
+              ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\mood_day.dart
+
+Size: 888 bytes
+
+Modified: 01/02/2026 17:42:57
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class MoodDay extends StatelessWidget {
+  const MoodDay({  // 确保有 const 关键字
+    super.key,
+    required this.day,
+    required this.emoji,
+    required this.hasMood,
+  });
+
+  final String day;
+  final String emoji;
+  final bool hasMood;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(day, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: hasMood ? const Color(0xFFFFD1DC) : Colors.grey[200],
+            shape: BoxShape.circle,
+          ),
+          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\order_card.dart
+
+Size: 1652 bytes
+
+Modified: 01/02/2026 17:42:57
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class OrderCard extends StatelessWidget {
+  const OrderCard({  // 确保有 const 关键字
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.isLocked,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool isLocked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isLocked ? Colors.white : Colors.white.withValues(alpha:0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Row(
+        children: [
+          Icon(isLocked ? Icons.lock_outline : Icons.check_circle, color: const Color(0xFFFFD1DC)),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    decoration: isLocked ? null : TextDecoration.lineThrough,
+                    color: isLocked ? Colors.black87 : Colors.grey,
+                  )),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+              ],
+            ),
+          ),
+          const Icon(Icons.radio_button_unchecked, color: Color(0xFFF2F2F2)),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\models\message.dart
+
+Size: 2667 bytes
+
+Modified: 01/04/2026 01:12:39
+
+========================================
+
+// lib/models/message.dart
+import 'package:flutter/foundation.dart';
+
+/// 消息类型枚举 - 严格按照架构约束定义
+// 注意：使用下划线命名法以满足架构约束要求
+// ignore: constant_identifier_names
+enum MessageType {
+  // ignore: constant_identifier_names
+  user_dialogue,    // 用户对话
+  // ignore: constant_identifier_names
+  user_narration,   // 用户旁白
+  // ignore: constant_identifier_names
+  ai_dialogue,      // AI对话
+  // ignore: constant_identifier_names
+  ai_narration,     // AI旁白
+  // ignore: constant_identifier_names
+  system_time,      // 系统时间
+  // ignore: constant_identifier_names
+  system_state,     // 系统状态（仅瞬时UI）
+}
+
+/// 聊天消息模型
+@immutable
+class Message {
+  final String id;
+  final String role;           // 'user' 或 'assistant'
+  final String content;
+  final String timestamp;
+  final MessageType messageType;  // 核心：显式类型字段
+  final Map<String, dynamic>? metadata;
+
+  const Message({
+    required this.id,
+    required this.role,
+    required this.content,
+    required this.timestamp,
+    required this.messageType,
+    this.metadata,
+  });
+
+  /// 转换为Map（用于存储）
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'role': role,
+      'content': content,
+      'timestamp': timestamp,
+      'messageType': messageType.name,
+      'metadata': metadata,
+    };
+  }
+
+  /// 从Map创建
+  factory Message.fromMap(Map<String, dynamic> map) {
+    return Message(
+      id: map['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      role: map['role'] as String? ?? '',
+      content: map['content'] as String? ?? '',
+      timestamp: map['timestamp'] as String? ?? '',
+      messageType: _parseMessageType(map['messageType'] as String?),
+      metadata: map['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  /// 解析消息类型
+  static MessageType _parseMessageType(String? typeStr) {
+    if (typeStr == null) return MessageType.user_dialogue;
+    
+    for (final type in MessageType.values) {
+      if (type.name == typeStr) return type;
+    }
+    
+    return MessageType.user_dialogue;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Message &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'Message(id: $id, role: $role, type: $messageType, content: ${content.length > 20 ? '${content.substring(0, 20)}...' : content})';
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\models\mood.dart
+
+Size: 0 bytes
+
+Modified: 01/02/2026 16:38:14
+
+========================================
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\main_screen.dart
+
+Size: 1368 bytes
+
+Modified: 01/02/2026 17:42:57
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'vow_page.dart';
+import 'chat/chat_list_page.dart';
+import 'entrance/entrance_main_page.dart';
+import 'me/me_page.dart';
+
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = const [
+    VowPage(),
+    ChatListPage(),
+    EntranceMainPage(),
+    MePage(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFFFF5A7E),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '心事'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: '聊天'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: '入口'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\vow_page.dart
+
+Size: 3589 bytes
+
+Modified: 01/02/2026 17:42:58
+
+========================================
+
+import 'package:flutter/material.dart';
+import '../components/mood_day.dart';
+import '../components/order_card.dart';
+
+class VowPage extends StatelessWidget {
+  const VowPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFFFF0F3),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          const SizedBox(height: 60),
+          _buildTopHeader(),
+          const SizedBox(height: 25),
+          const Text("MOOD CALENDAR",
+              style: TextStyle(letterSpacing: 1.5, color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: const [
+                MoodDay(day: "Mon", emoji: "😊", hasMood: true),
+                MoodDay(day: "Tue", emoji: "😴", hasMood: false),
+                MoodDay(day: "Wed", emoji: "💖", hasMood: true),
+                MoodDay(day: "Thu", emoji: "😶", hasMood: false),
+                MoodDay(day: "Fri", emoji: "？", hasMood: false),
+              ],
+            ),
+          ),
+          const SizedBox(height: 30),
+          const Text("ORDERS", style: TextStyle(letterSpacing: 1.5, color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 15),
+          const OrderCard(title: "Wear the collar for 1 hour", subtitle: "Or else: No dessert", isLocked: true),
+          const OrderCard(title: "Drink 2L of water", subtitle: "Stay hydrated", isLocked: false),
+          const SizedBox(height: 20),
+          _buildRewardsAccumulator(),
+          const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: const [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("The Vow", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
+            Text("☁ Collar Time: 12 days", style: TextStyle(color: Color(0xFFFF5A7E))),
+          ],
+        ),
+        SizedBox(
+          width: 120,
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Text("MASTER'S STATUS\nWorking late.", style: TextStyle(fontSize: 10, color: Colors.grey)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRewardsAccumulator() {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("REWARDS ACCUMULATOR", style: TextStyle(color: Colors.white70, fontSize: 10)),
+              Text("0 Kisses Owed", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Icon(Icons.favorite, color: Colors.white30, size: 40),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
+
+Size: 13761 bytes
+
+Modified: 01/03/2026 00:07:29
+
+========================================
+
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../services/storage_service.dart';
+
+class ChatCharacterEditPage extends StatefulWidget {
+  const ChatCharacterEditPage({super.key});
+
+  @override
+  State<ChatCharacterEditPage> createState() => _ChatCharacterEditPageState();
+}
+
+class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
+  final StorageService _storage = StorageService();
+  final ImagePicker _picker = ImagePicker();
+  
+  String? _avatarPath;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  
+  final TextEditingController _nicknameController = TextEditingController();
+  final TextEditingController _introController = TextEditingController();
+  final TextEditingController _privateSettingController = TextEditingController();
+  final TextEditingController _openingController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCharacterData();
+  }
+
+  Future<void> _loadCharacterData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // 加载头像路径
+      final avatarPath = await _storage.getCharacterAvatarPath();
+      
+      // 加载角色数据
+      final characterData = await _storage.loadCharacterData();
+      
+      setState(() {
+        _avatarPath = avatarPath;
+        _nicknameController.text = characterData['nickname'] ?? 'Master';
+        _introController.text = characterData['intro'] ?? '';
+        _privateSettingController.text = characterData['private_setting'] ?? '';
+        _openingController.text = characterData['opening'] ?? '';
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('加载角色数据失败: $e');
+      }
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _isSaving = true;
+        });
+        
+        // 复制文件到应用目录
+        final newPath = await _storage.copyFileToAppDir(image.path);
+        
+        // 保存新路径
+        await _storage.saveCharacterAvatarPath(newPath);
+        
+        setState(() {
+          _avatarPath = newPath;
+          _isSaving = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('头像已更新'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('选择图片失败: $e');
+      }
+      setState(() {
+        _isSaving = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('选择图片失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveCharacterData() async {
+    if (_isSaving) return;
+    
+    setState(() {
+      _isSaving = true;
+    });
+    
+    try {
+      final characterData = <String, String>{
+        'nickname': _nicknameController.text.trim(),
+        'intro': _introController.text.trim(),
+        'private_setting': _privateSettingController.text.trim(),
+        'opening': _openingController.text.trim(),
+      };
+      
+      await _storage.saveCharacterData(characterData);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('角色设定已保存'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('保存角色数据失败: $e');
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  Widget _buildAvatarSection() {
+    return Center(
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _isSaving ? null : _pickImageFromGallery,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 60,
+                  backgroundColor: const Color(0xFFFFD1DC),
+                  backgroundImage: _avatarPath != null
+                      ? FileImage(File(_avatarPath!))
+                      : null,
+                  child: _avatarPath == null
+                      ? const Icon(
+                          Icons.person,
+                          size: 70,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+                if (_isSaving)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(60),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                if (!_isSaving)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF5A7E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '点击更换头像',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    int maxLines = 1,
+    bool required = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            if (required)
+              const Text(
+                ' *',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          minLines: 1,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.all(16),
+            hintText: '请输入${label.replaceAll('*', '').trim()}',
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFFF8FA),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFFF8FA),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            '编辑 Master 人设',
+            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF8FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFF8FA),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          '编辑 Master 人设',
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 头像部分
+            _buildAvatarSection(),
+            const SizedBox(height: 32),
+
+            // 昵称
+            _buildTextField(
+              label: '昵称',
+              controller: _nicknameController,
+              required: true,
+            ),
+            const SizedBox(height: 24),
+
+            // 简介
+            _buildTextField(
+              label: '简介（对其他人展示）',
+              controller: _introController,
+              maxLines: 4,
+              required: true,
+            ),
+            const SizedBox(height: 24),
+
+            // 附加设定（私密）
+            _buildTextField(
+              label: '附加设定（私密，不对外展示）',
+              controller: _privateSettingController,
+              maxLines: 8,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '这些设定会作为AI的系统提示，影响Master的性格和行为',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // 开场白
+            _buildTextField(
+              label: '开场白（对话开始时使用）',
+              controller: _openingController,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 32),
+
+            // 保存按钮
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _saveCharacterData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5A7E),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : const Text(
+                        '保存设置',
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 提示信息
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF0F5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFFD1DC), width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.pink[300], size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '提示',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFD81B60),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• 昵称和简介会显示在聊天列表中\n• 附加设定会影响AI的行为和性格\n• 修改后需要重启聊天才能生效',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 13,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
+
+Size: 4473 bytes
+
+Modified: 01/04/2026 02:39:04
+
+========================================
+
+// lib/pages/chat/chat_components.dart
+import 'package:flutter/material.dart';
+import 'dart:io';
+
+class ReceivedMessage extends StatelessWidget {
+  final String text;
+  final String? avatarPath;
+
+  const ReceivedMessage({
+    super.key,
+    required this.text,
+    this.avatarPath,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFFFFD2DD),
+            backgroundImage: avatarPath != null
+                ? FileImage(File(avatarPath!))
+                : null,
+            child: avatarPath == null
+                ? const Icon(Icons.person, size: 20, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD2DD),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SentMessage extends StatelessWidget {
+  final String text;
+  final String? userAvatarPath;
+  final bool showUserAvatar;
+
+  const SentMessage({
+    super.key,
+    required this.text,
+    this.userAvatarPath,
+    this.showUserAvatar = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
+              ),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: (0.05 * 255).toDouble()),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // 用户头像（根据设置显示或隐藏）
+          if (showUserAvatar)
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: userAvatarPath != null
+                  ? FileImage(File(userAvatarPath!))
+                  : null,
+              child: userAvatarPath == null
+                  ? const Icon(Icons.person, size: 20, color: Colors.grey)
+                  : null,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class SystemTimeMessage extends StatelessWidget {
+  final String text;
+
+  const SystemTimeMessage({
+    super.key,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: (0.1 * 255).toDouble()),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
+
+Size: 3763 bytes
+
+Modified: 01/03/2026 00:12:14
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'dart:io';                      // 新增
+import 'chat_room_page.dart';
+import 'chat_character_edit_page.dart';
+import '../../services/storage_service.dart';
+
+class ChatListPage extends StatefulWidget {
+  const ChatListPage({super.key});
+
+  @override
+  State<ChatListPage> createState() => _ChatListPageState();
+}
+
+class _ChatListPageState extends State<ChatListPage> {
+  final StorageService _storage = StorageService();
+  String _characterName = 'Master';
+  String _characterIntro = 'iyaa bebil, aku di sini';
+  String? _avatarPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCharacterData();
+  }
+
+  Future<void> _loadCharacterData() async {
+    final name = await _storage.getCharacterNickname();
+    final intro = await _storage.getCharacterIntro();
+    final avatarPath = await _storage.getCharacterAvatarPath();
+    
+    setState(() {
+      _characterName = name;
+      _characterIntro = intro.isNotEmpty ? intro : 'iyaa bebil, aku di sini';
+      _avatarPath = avatarPath;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF5F8),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFF5F8),
+        elevation: 0,
+        title: const Text(
+          "聊天",
+          style: TextStyle(
+            color: Color(0xFF4A4A4A),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: const [
+          Icon(Icons.search, color: Color(0xFFFF5A7E)),
+        ],
+      ),
+      body: ListView(
+        children: [
+          ListTile(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatRoomPage()),
+              );
+            },
+            leading: GestureDetector(
+              onTap: () {
+                // 点击头像跳转到编辑页面
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ChatCharacterEditPage(),
+                  ),
+                ).then((_) {
+                  // 从编辑页面返回后刷新数据
+                  _loadCharacterData();
+                });
+              },
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.pinkAccent,
+                backgroundImage: _avatarPath != null
+                    ? FileImage(File(_avatarPath!))
+                    : null,
+                child: _avatarPath == null
+                    ? const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 32,
+                      )
+                    : null,
+              ),
+            ),
+            title: Text(
+              _characterName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              _characterIntro,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            trailing: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "22:04",
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                SizedBox(height: 4),
+                CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 80),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
+
+Size: 26062 bytes
+
+Modified: 01/04/2026 02:42:52
+
+========================================
+
+// lib/pages/chat/chat_room_page.dart
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:xml/xml.dart' as xml;
+import '../../services/api_service.dart';
+import '../../services/storage_service.dart';
+import '../../models/message.dart';
+import 'chat_components.dart';
+import 'xml_message_parser.dart';
+import 'chat_room_settings_page.dart';
+
+class ChatRoomPage extends StatefulWidget {
+  const ChatRoomPage({super.key});
+
+  @override
+  State<ChatRoomPage> createState() => _ChatRoomPageState();
+}
+
+class _ChatRoomPageState extends State<ChatRoomPage>
+    with WidgetsBindingObserver {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final List<Message> _messages = [];
+  bool _isLoading = false;
+  bool _showScrollToBottomButton = false;
+  Timer? _scrollButtonTimer;
+  final ApiService _apiService = ApiService();
+  final StorageService _storage = StorageService();
+  
+  String _characterName = 'Master';
+  String? _avatarPath;
+  String? _userAvatarPath;
+  bool _showUserAvatar = true;
+  String _systemPrompt = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadCharacterData();
+    _loadUserSettings();
+    _loadHistory();
+    
+    _scrollController.addListener(() {
+      if (!mounted) return;
+      
+      final double maxScroll = _scrollController.position.maxScrollExtent;
+      final double currentScroll = _scrollController.position.pixels;
+      
+      if ((maxScroll - currentScroll) > 300.0) {
+        if (!_showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = true;
+          });
+          // 启动3秒后隐藏计时器
+          _scrollButtonTimer?.cancel();
+          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted && _showScrollToBottomButton) {
+              setState(() {
+                _showScrollToBottomButton = false;
+              });
+            }
+          });
+        }
+      } else {
+        if (_showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = false;
+          });
+          _scrollButtonTimer?.cancel();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.dispose();
+    _controller.dispose();
+    _scrollButtonTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients && _messages.isNotEmpty) {
+        _scrollToBottom();
+      }
+    });
+    super.didChangeMetrics();
+  }
+
+  void _scrollToBottom() {
+    if (!mounted) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _loadCharacterData() async {
+    final name = await _storage.getCharacterNickname();
+    final avatarPath = await _storage.getCharacterAvatarPath();
+    
+    if (mounted) {
+      setState(() {
+        _characterName = name;
+        _avatarPath = avatarPath;
+      });
+    }
+  }
+
+  Future<void> _loadUserSettings() async {
+    final showAvatar = await _storage.getShowUserAvatar();
+    final userAvatarPath = await _storage.getUserAvatarPath();
+    
+    if (mounted) {
+      setState(() {
+        _showUserAvatar = showAvatar;
+        _userAvatarPath = userAvatarPath;
+      });
+    }
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await _storage.loadChatHistory();
+    if (history.isNotEmpty) {
+      // 检查是否需要添加时间戳消息
+      final List<Message> messagesWithTime = [];
+      
+      for (final msg in history) {
+        // 由于消息没有存储准确时间，我们暂时不添加时间戳
+        messagesWithTime.add(msg);
+      }
+      
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          _messages.addAll(messagesWithTime);
+        });
+        _scrollToBottom();
+      }
+    }
+  }
+
+  Future<void> _saveHistory() async {
+    await _storage.saveChatHistory(_messages);
+  }
+
+  Future<void> _clearAllMessages() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _messages.clear();
+    });
+    await _storage.clearChatHistory();
+  }
+
+  /// 检查并插入时间戳消息
+  void _checkAndInsertTimestampMessage(DateTime currentTime) {
+    if (_messages.isEmpty) return;
+    
+    // 这里应该比较最后一条消息的时间
+    // 由于我们没有存储准确时间，暂时跳过时间戳插入逻辑
+    
+    // 如果要实现时间戳，可以这样添加：
+    // if (shouldInsertTimestamp) {
+    //   final timestampMessage = Message(
+    //     id: 'timestamp_${currentTime.millisecondsSinceEpoch}',
+    //     role: 'system',
+    //     content: DateFormat('HH:mm').format(currentTime),
+    //     timestamp: DateFormat('HH:mm').format(currentTime),
+    //     messageType: MessageType.system_time,
+    //   );
+    //   _messages.add(timestampMessage);
+    // }
+  }
+
+  /// 解析AI回复，生成对应的Message对象
+  List<Message> _parseAiResponse(String xmlContent, String timestamp) {
+    final List<Message> messages = [];
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    try {
+      final document = xml.XmlDocument.parse(xmlContent);
+      final messageElement = document.findElements('message').first;
+      final children = messageElement.children
+          .whereType<xml.XmlElement>()
+          .toList();
+
+      for (int i = 0; i < children.length; i++) {
+        final node = children[i];
+        final text = node.innerText.trim();
+        final String content = text;
+        
+        if (node.name.local == 'narration') {
+          // AI旁白
+          messages.add(Message(
+            id: 'ai_${now}_narration_$i',
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            messageType: MessageType.ai_narration,
+          ));
+        } else if (node.name.local == 'dialogue') {
+          // AI对话
+          messages.add(Message(
+            id: 'ai_${now}_dialogue_$i',
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            messageType: MessageType.ai_dialogue,
+          ));
+        }
+      }
+    } catch (e) {
+      // 解析失败时，创建一个默认的AI对话消息
+      messages.add(Message(
+        id: 'ai_${now}_fallback',
+        role: 'assistant',
+        content: xmlContent,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      ));
+    }
+    
+    return messages;
+  }
+
+  Future<void> _sendMessage(String text) async {
+    if (text.trim().isEmpty || _isLoading) return;
+
+    final now = DateTime.now();
+    final timestamp = DateFormat('HH:mm').format(now);
+    
+    // 检查是否需要添加时间戳消息
+    _checkAndInsertTimestampMessage(now);
+    
+    // 根据架构规则确定消息类型（核心逻辑）
+    final MessageType messageType;
+    final String role = 'user';
+    String displayContent = text.trim();
+    
+    if (displayContent.startsWith('/')) {
+      // 以/开头 → user_narration
+      messageType = MessageType.user_narration;
+      displayContent = displayContent.substring(1).trim();
+    } else {
+      // 否则 → user_dialogue
+      messageType = MessageType.user_dialogue;
+    }
+    
+    // 创建Message对象（必须包含显式messageType）
+    final userMessage = Message(
+      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+      role: role,
+      content: displayContent,
+      timestamp: timestamp,
+      messageType: messageType,
+      metadata: {
+        'originalText': text,
+      },
+    );
+
+    if (!mounted) return;
+    
+    setState(() {
+      _messages.add(userMessage);
+      _isLoading = true;
+    });
+
+    _scrollToBottom();
+    await _saveHistory();
+
+    try {
+      // 获取包含当前时间的系统提示
+      final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
+      final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
+      _systemPrompt = systemPrompt;
+
+      // 构建发送给API的完整上下文
+      List<Map<String, String>> apiMessages = [
+        {'role': 'system', 'content': systemPrompt},
+      ];
+
+      // 只添加对话内容给AI，不包括类型信息
+      final int historyLimit = 20;
+      final recent = _messages.length > historyLimit 
+          ? _messages.sublist(_messages.length - historyLimit) 
+          : _messages;
+
+      apiMessages.addAll(recent.map((msg) => {
+        'role': msg.role,
+        'content': msg.content,
+      }));
+
+      // 从StorageService获取选择的模型
+      final selectedModel = await _storage.getSelectedModel();
+      
+      // 调用API时传入当前选择的模型
+      final aiReply = await _apiService.sendChatMessage(apiMessages, model: selectedModel);
+
+      // AI回复的时间
+      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+
+      if (mounted) {
+        // 解析AI回复，生成多个Message
+        final aiMessages = _parseAiResponse(aiReply ?? '', aiTimestamp);
+        setState(() {
+          _messages.addAll(aiMessages);
+        });
+      }
+
+      await _saveHistory();
+      _scrollToBottom();
+    } catch (e) {
+      final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      if (mounted) {
+        setState(() {
+          _messages.add(Message(
+            id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
+            role: 'assistant',
+            content: '出错啦… $e',
+            timestamp: errorTimestamp,
+            messageType: MessageType.ai_dialogue,
+          ));
+        });
+      }
+      await _saveHistory();
+      _scrollToBottom();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _deleteMessage(int index) {
+    if (!mounted) return;
+    
+    setState(() {
+      _messages.removeAt(index);
+    });
+    _saveHistory();
+  }
+
+  void _showDeleteDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        title: const Text(
+          "删除消息",
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: const Text(
+          "确定要删除这条消息吗？",
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "取消",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              _deleteMessage(index);
+              Navigator.pop(context);
+            },
+            child: const Text(
+              "删除",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建消息Widget - 使用正确的组件
+  Widget _buildMessageWidget(Message msg) {
+    // 根据messageType渲染，使用正确的UI组件
+    switch (msg.messageType) {
+      case MessageType.user_narration:
+        // 用户旁白 - 使用xml_message_parser构建旁白气泡
+        final widgets = XmlMessageParser.parseXmlMessage(
+          xmlContent: '<message><narration>${msg.content}</narration></message>',
+          context: context,
+          avatarPath: null,
+          characterName: '你',
+          isAI: false,
+          showUserAvatar: _showUserAvatar,
+        );
+        return widgets.isNotEmpty ? widgets.first : Container();
+
+      case MessageType.ai_narration:
+        // AI旁白 - 使用xml_message_parser构建旁白气泡
+        final widgets = XmlMessageParser.parseXmlMessage(
+          xmlContent: '<message><narration>${msg.content}</narration></message>',
+          context: context,
+          avatarPath: _avatarPath,
+          characterName: _characterName,
+          isAI: true,
+          showUserAvatar: _showUserAvatar,
+        );
+        return widgets.isNotEmpty ? widgets.first : Container();
+        
+      case MessageType.user_dialogue:
+        // 用户对话
+        return SentMessage(
+          text: msg.content,
+          userAvatarPath: _userAvatarPath,
+          showUserAvatar: _showUserAvatar,
+        );
+        
+      case MessageType.ai_dialogue:
+        // AI对话
+        return ReceivedMessage(
+          text: msg.content,
+          avatarPath: _avatarPath,
+        );
+        
+      case MessageType.system_time:
+        // 系统时间消息
+        return SystemTimeMessage(text: msg.content);
+        
+      case MessageType.system_state:
+        // 系统状态消息（当前未实现）
+        return Container();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: GestureDetector(
+          onTap: () => _showAISetting(context),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: const Color(0xFFFFD2DD),
+                backgroundImage: _avatarPath != null
+                    ? FileImage(File(_avatarPath!))
+                    : null,
+                child: _avatarPath == null
+                    ? const Icon(Icons.person, size: 18, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _characterName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Text(
+                    "在线",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_horiz, size: 24),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatRoomSettingsPage(
+                    characterName: _characterName,
+                    avatarPath: _avatarPath,
+                  ),
+                ),
+              );
+              
+              if (result == true) {
+                await _clearAllMessages();
+              }
+            },
+          ),
+        ],
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isLoading && index == _messages.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFFFFD2DD),
+                                backgroundImage: _avatarPath != null
+                                    ? FileImage(File(_avatarPath!))
+                                    : null,
+                                child: _avatarPath == null
+                                    ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD2DD),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Text(
+                                  "正在输入...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final msg = _messages[index];
+                      return GestureDetector(
+                        onLongPress: () => _showDeleteDialog(index),
+                        child: _buildMessageWidget(msg),
+                      );
+                    },
+                  ),
+                ),
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 40),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF2F2F7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            child: TextField(
+                              controller: _controller,
+                              maxLines: 5,
+                              minLines: 1,
+                              textInputAction: TextInputAction.send,
+                              keyboardType: TextInputType.multiline,
+                              decoration: const InputDecoration(
+                                hintText: "输入消息...（以 / 开头表示旁白）",
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintStyle: TextStyle(color: Color(0xFF8E8E93)),
+                              ),
+                              onSubmitted: (value) {
+                                final text = _controller.text.trim();
+                                if (text.isNotEmpty) {
+                                  _sendMessage(text);
+                                  _controller.clear();
+                                }
+                              },
+                              onChanged: (value) {
+                                // 可以在这里添加实时搜索或其他功能
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF5A7E).withValues(alpha: (0.3 * 255).toDouble()),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                            onPressed: () {
+                              final text = _controller.text.trim();
+                              if (text.isNotEmpty) {
+                                _sendMessage(text);
+                                _controller.clear();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_showScrollToBottomButton)
+              Positioned(
+                bottom: 90,
+                right: 16,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFFFD2DD).withValues(alpha: (0.2 * 255).toDouble()),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: (0.1 * 255).toDouble()),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                    onPressed: () {
+                      _scrollToBottom();
+                      // 点击后隐藏按钮
+                      setState(() {
+                        _showScrollToBottomButton = false;
+                      });
+                      _scrollButtonTimer?.cancel();
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAISetting(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC7C7CC),
+                  borderRadius: BorderRadius.circular(2.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              "$_characterName 人物设定",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Text(
+                  _systemPrompt,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.6,
+                    color: Color(0xFF3C3C43),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF5A7E),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                "关闭",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\chat\chat_room_settings_page.dart
+
+Size: 6288 bytes
+
+Modified: 01/03/2026 17:32:34
+
+========================================
+
+import 'dart:io';
+import 'package:flutter/material.dart';
+import '../../services/storage_service.dart';
+
+class ChatRoomSettingsPage extends StatefulWidget {
+  final String characterName;
+  final String? avatarPath;
+
+  const ChatRoomSettingsPage({
+    super.key,
+    required this.characterName,
+    this.avatarPath,
+  });
+
+  @override
+  State<ChatRoomSettingsPage> createState() => _ChatRoomSettingsPageState();
+}
+
+class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
+  final StorageService _storage = StorageService();
+
+  Future<void> _clearChatHistory() async {
+    final bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("清空聊天记录"),
+        content: const Text("确定要清空所有聊天记录吗？此操作不可恢复。"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("取消"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("清空", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _storage.clearChatHistory();
+      if (mounted) {
+        Navigator.pop(context, true); // 返回true表示已清空
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF8FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFF8FA),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "${widget.characterName} 设置",
+          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        children: [
+          // 头像和名称展示
+          Container(
+            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withAlpha(26),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: Colors.pinkAccent,
+                  backgroundImage: widget.avatarPath != null
+                      ? FileImage(File(widget.avatarPath!))
+                      : null,
+                  child: widget.avatarPath == null
+                      ? const Icon(Icons.person, size: 36, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.characterName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "AI角色设置",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.pinkAccent),
+                  onPressed: () {
+                    // 这里可以跳转到角色编辑页面
+                    // Navigator.push(...)
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // 设置选项
+          _buildSettingItem(
+            icon: Icons.delete_outline,
+            title: "清空聊天记录",
+            subtitle: "删除所有聊天消息",
+            color: Colors.red,
+            onTap: _clearChatHistory,
+          ),
+          _buildSettingItem(
+            icon: Icons.block,
+            title: "屏蔽此角色",
+            subtitle: "不再接收来自此角色的消息",
+            color: Colors.grey,
+            onTap: () {},
+          ),
+          _buildSettingItem(
+            icon: Icons.report_problem,
+            title: "举报",
+            subtitle: "举报此角色存在不当内容",
+            color: Colors.orange,
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+             color: Colors.grey.withAlpha(26), // 0.1 opacity ≈ 26 alpha (255 * 0.1 ≈ 26)
+            spreadRadius: 1,
+            blurRadius: 3,
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withAlpha(26),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\chat\xml_message_parser.dart
+
+Size: 7485 bytes
+
+Modified: 01/04/2026 02:39:04
+
+========================================
+
+// lib/pages/chat/xml_message_parser.dart
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:xml/xml.dart' as xml;
+
+class XmlMessageParser {
+  /// 解析XML消息，返回对应的Widget列表
+  static List<Widget> parseXmlMessage({
+    required String xmlContent,
+    required BuildContext context,
+    required String? avatarPath,
+    required String characterName,
+    bool isAI = true,
+    bool showUserAvatar = true,
+  }) {
+    try {
+      final document = xml.XmlDocument.parse(xmlContent);
+      final messageElement = document.findElements('message').first;
+      final children = messageElement.children
+          .whereType<xml.XmlElement>()
+          .toList();
+
+      return children.map((node) {
+        final text = node.innerText.trim();
+        if (node.name.local == 'narration') {
+          return _buildNarrationBubble(text);
+        } else if (node.name.local == 'dialogue') {
+          return _buildDialogueBubble(
+            text: text,
+            context: context,
+            avatarPath: avatarPath,
+            characterName: characterName,
+            isAI: isAI,
+            showUserAvatar: showUserAvatar,
+          );
+        } else {
+          return _buildDefaultBubble(text, isAI, context);
+        }
+      }).toList();
+    } catch (e) {
+      return [_buildDefaultBubble(xmlContent, isAI, context)];
+    }
+  }
+
+  /// 构建旁白气泡
+  static Widget _buildNarrationBubble(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50]!.withValues(alpha: (0.9 * 255).toDouble()),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontSize: 13,
+            fontStyle: FontStyle.italic,
+            height: 1.4,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建对话气泡
+  static Widget _buildDialogueBubble({
+    required String text,
+    required BuildContext context,
+    required String? avatarPath,
+    required String characterName,
+    required bool isAI,
+    bool showUserAvatar = true,
+  }) {
+    if (isAI) {
+      // AI的对话气泡
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 头像
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: const Color(0xFFFFD2DD),
+              backgroundImage: avatarPath != null
+                  ? FileImage(File(avatarPath))
+                  : null,
+              child: avatarPath == null
+                  ? const Icon(Icons.person, size: 20, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            // 消息气泡
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD2DD),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // 用户的对话气泡
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            // 消息气泡
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                ),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: (0.05 * 255).toDouble()),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // 用户头像（根据设置显示或隐藏）
+            if (showUserAvatar)
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.grey[200],
+                backgroundImage: avatarPath != null
+                    ? FileImage(File(avatarPath))
+                    : null,
+                child: avatarPath == null
+                    ? const Icon(Icons.person, size: 20, color: Colors.grey)
+                    : null,
+              ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// 构建默认气泡（用于解析失败的情况）
+  static Widget _buildDefaultBubble(String text, bool isAI, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isAI ? const Color(0xFFFFD2DD) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: !isAI
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: (0.05 * 255).toDouble()),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 判断是否为有效的XML格式
+  static bool isValidXml(String content) {
+    try {
+      xml.XmlDocument.parse(content);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 解析用户输入：返回处理后的文本（移除/前缀）
+  static String parseUserInputOnlyContent(String input) {
+    final trimmedInput = input.trim();
+    if (trimmedInput.startsWith('/')) {
+      // 移除/前缀，交给上层决定类型
+      return trimmedInput.substring(1).trim();
+    }
+    return trimmedInput;
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\entrance\entrance_main_page.dart
+
+Size: 1826 bytes
+
+Modified: 01/02/2026 17:42:58
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'moments_detail_page.dart';
+
+class EntranceMainPage extends StatelessWidget {
+  const EntranceMainPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          Container(
+            height: MediaQuery.of(context).padding.top + 100,
+            color: const Color(0xFFFFE4E9),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search, color: Colors.white70, size: 28),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MomentsDetailPage()));
+                      },
+                      child: const Row(
+                        children: [
+                          Text("朋友圈", style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold)),
+                          SizedBox(width: 8),
+                          Icon(Icons.chevron_right, color: Colors.black54),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const Expanded(
+            child: Center(
+              child: Text(
+                "这里是入口页面\n后续功能可以在这里添加",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\entrance\moments_detail_page.dart
+
+Size: 5410 bytes
+
+Modified: 01/02/2026 21:36:27
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class MomentsDetailPage extends StatelessWidget {
+  const MomentsDetailPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: ListView(
+        children: [
+          Stack(
+            children: [
+              Container(
+                height: 300,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage('https://via.placeholder.com/800x400?text=Moments+Cover'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+                      IconButton(icon: const Icon(Icons.camera_alt, color: Colors.white), onPressed: () {}),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                right: 20,
+                child: Row(
+                  children: [
+                    const Text("尘不言", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, shadows: [Shadow(blurRadius: 10, color: Colors.black45)])),
+                    const SizedBox(width: 15),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 3),
+                        borderRadius: BorderRadius.circular(8),
+                        image: const DecorationImage(image: NetworkImage('https://via.placeholder.com/150'), fit: BoxFit.cover),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildMomentItem(
+            avatar: 'https://via.placeholder.com/150',
+            name: '尘不言',
+            content: '这聊的太爽了',
+            images: ['https://via.placeholder.com/300x400'],
+            time: '3天前',
+          ),
+          _buildMomentItem(
+            avatar: 'https://via.placeholder.com/150',
+            name: '尘不言',
+            content: '这聊的太爽了',
+            images: List.generate(4, (_) => 'https://via.placeholder.com/200'),
+            time: '4天前',
+          ),
+          _buildMomentItem(
+            avatar: 'https://via.placeholder.com/150',
+            name: '尘不言',
+            content: '我++',
+            images: [],
+            time: '4天前',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMomentItem({
+    required String avatar,
+    required String name,
+    required String content,
+    required List<String> images,
+    required String time,
+  }) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(radius: 24, backgroundImage: NetworkImage(avatar)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(color: Color(0xFFFF5A7E), fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(content, style: const TextStyle(fontSize: 15)),
+                if (images.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: images.length == 1 ? 1 : 3,
+                      crossAxisSpacing: 4,
+                      mainAxisSpacing: 4,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: images.length > 9 ? 9 : images.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          image: DecorationImage(image: NetworkImage(images[index]), fit: BoxFit.cover),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(time, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    IconButton(icon: const Icon(Icons.more_horiz, color: Colors.grey), onPressed: () {}),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\me\me_page.dart
+
+Size: 7829 bytes
+
+Modified: 01/03/2026 23:31:42
+
+========================================
+
+// lib/pages/me/me_page.dart
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'settings_page.dart';
+import 'profile_settings_page.dart'; // 新增导入
+import '../../services/storage_service.dart';
+
+class MePage extends StatefulWidget {
+  const MePage({super.key});
+
+  @override
+  State<MePage> createState() => _MePageState();
+}
+
+class _MePageState extends State<MePage> {
+  final StorageService _storage = StorageService();
+  final ImagePicker _picker = ImagePicker();
+  String? _userAvatarPath;
+  String _userName = '尘不言';
+  bool _isLoadingAvatar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    // 并行加载头像和用户名
+    final avatarPath = await _storage.getUserAvatarPath();
+    final name = await _storage.getUserName();
+    
+    setState(() {
+      _userAvatarPath = avatarPath;
+      _userName = name;
+    });
+  }
+
+  Future<void> _pickUserAvatar() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _isLoadingAvatar = true;
+        });
+        
+        // 复制文件到应用目录
+        final newPath = await _storage.copyUserAvatarToAppDir(image.path);
+        
+        // 保存新路径
+        await _storage.saveUserAvatarPath(newPath);
+        
+        setState(() {
+          _userAvatarPath = newPath;
+          _isLoadingAvatar = false;
+        });
+        
+        // 显示成功提示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('头像已更新'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('选择用户头像失败: $e');
+      }
+      setState(() {
+        _isLoadingAvatar = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('选择头像失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        // 用户信息卡片
+        GestureDetector(
+          onTap: () {
+            // 点击整个卡片跳转到资料设置页面
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+            ).then((_) {
+              // 返回时刷新数据
+              _loadUserData();
+            });
+          },
+          child: Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
+            child: Row(
+              children: [
+                // 头像部分（可点击更换）
+                GestureDetector(
+                  onTap: _pickUserAvatar,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.pink,
+                        backgroundImage: _userAvatarPath != null
+                            ? FileImage(File(_userAvatarPath!))
+                            : null,
+                        child: _userAvatarPath == null
+                            ? const Icon(Icons.person, size: 36, color: Colors.white)
+                            : null,
+                      ),
+                      if (_isLoadingAvatar)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(32),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      if (!_isLoadingAvatar)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Colors.pink,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _userName,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "微信号: likeme9543",
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+                // 右侧箭头
+                const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        
+        // 功能列表
+        _buildListTile(Icons.wechat_outlined, "服务", Colors.green),
+        const Divider(height: 1, indent: 60),
+        _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
+        const Divider(height: 1, indent: 60),
+        _buildListTile(Icons.photo_outlined, "朋友圈", Colors.blue),
+        const Divider(height: 1, indent: 60),
+        _buildListTile(Icons.credit_card_outlined, "卡包", Colors.blueAccent),
+        const Divider(height: 1, indent: 60),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "表情", Colors.amber),
+        
+        const SizedBox(height: 10),
+        
+        // 设置入口
+        ListTile(
+          leading: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
+          title: const Text("设置"),
+          trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsPage()),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListTile(IconData icon, String title, Color iconColor) {
+    return Container(
+      color: Colors.white,
+      child: ListTile(
+        leading: Icon(icon, color: iconColor),
+        title: Text(title),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        onTap: () {
+          // 这里可以添加对应的功能
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$title 功能开发中...')),
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
+
+Size: 9121 bytes
+
+Modified: 01/04/2026 01:12:39
+
+========================================
+
+// lib/pages/me/profile_settings_page.dart
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../services/storage_service.dart';
+
+class ProfileSettingsPage extends StatefulWidget {
+  const ProfileSettingsPage({super.key});
+
+  @override
+  State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
+}
+
+class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
+  final StorageService _storage = StorageService();
+  final ImagePicker _picker = ImagePicker();
+  
+  String? _userAvatarPath;
+  String _userName = '尘不言';
+  bool _showUserAvatar = true;
+  bool _isLoading = false;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final profile = await _storage.getUserProfile();
+      
+      setState(() {
+        _userAvatarPath = profile['avatarPath'];
+        _userName = profile['name'] ?? '尘不言';
+        _showUserAvatar = profile['showAvatar'] ?? true;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _pickUserAvatar() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _isSaving = true;
+        });
+        
+        // 复制文件到应用目录
+        final newPath = await _storage.copyUserAvatarToAppDir(image.path);
+        
+        // 保存新路径
+        await _storage.saveUserAvatarPath(newPath);
+        
+        setState(() {
+          _userAvatarPath = newPath;
+          _isSaving = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('头像已更新'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('选择头像失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveUserName(String newName) async {
+    if (newName.trim().isEmpty) return;
+    
+    setState(() {
+      _isSaving = true;
+    });
+    
+    try {
+      await _storage.saveUserName(newName.trim());
+      
+      setState(() {
+        _userName = newName.trim();
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('名字已保存'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  Future<void> _toggleShowUserAvatar(bool value) async {
+    try {
+      await _storage.saveShowUserAvatar(value);
+      setState(() {
+        _showUserAvatar = value;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('设置失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditNameDialog() {
+    final TextEditingController nameController = TextEditingController(text: _userName);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('修改名字'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          maxLength: 20,
+          decoration: const InputDecoration(
+            hintText: '请输入名字',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.trim().isNotEmpty) {
+                _saveUserName(nameController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5A7E),
+            ),
+            child: const Text('保存', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('个人资料'),
+          backgroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('个人资料'),
+        backgroundColor: Colors.white,
+        actions: [
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: ListView(
+        children: [
+          // 头像设置
+          ListTile(
+            leading: const Text('头像', style: TextStyle(fontSize: 16)),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: _pickUserAvatar,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.pink,
+                        backgroundImage: _userAvatarPath != null
+                            ? FileImage(File(_userAvatarPath!))
+                            : null,
+                        child: _userAvatarPath == null
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
+                      ),
+                      if (_isSaving)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+            onTap: _pickUserAvatar,
+          ),
+          const Divider(indent: 16),
+          
+          // 名字设置
+          ListTile(
+            leading: const Text('名字', style: TextStyle(fontSize: 16)),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_userName, style: const TextStyle(fontSize: 16)),
+                const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+            onTap: _showEditNameDialog,
+          ),
+          const Divider(indent: 16),
+          
+          // 头像显示开关 - 修复：使用 activeThumbColor 替代 activeColor
+          ListTile(
+            leading: const Text('头像显示', style: TextStyle(fontSize: 16)),
+            title: Switch(
+              value: _showUserAvatar,
+              onChanged: _toggleShowUserAvatar,
+              activeThumbColor: const Color(0xFFFF5A7E), // 修复这里
+            ),
+          ),
+          const Divider(indent: 16),
+          
+          // 说明文字
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              '关闭"头像显示"后，在聊天界面中将不会显示您的头像',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\me\settings_page.dart
+
+Size: 16784 bytes
+
+Modified: 01/03/2026 23:21:22
+
+========================================
+
+// lib/pages/me/settings_page.dart
+import 'package:flutter/material.dart';
+import '../../services/storage_service.dart';
+import '../../services/api_config.dart';
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final TextEditingController _apiKeyController = TextEditingController();
+  bool _obscureKey = true;
+  final StorageService _storage = StorageService();
+  
+  // 状态变量
+  String _selectedProviderId = ApiConfig.defaultProviderId;
+  String _selectedModel = '';
+  ApiProvider? _currentProvider;
+  List<String> _availableModels = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    // 1. 加载用户选择的服务商
+    final providerId = await _storage.getSelectedProvider();
+    final provider = ApiConfig.getProvider(providerId) ?? ApiConfig.defaultProvider;
+    
+    // 2. 加载该服务商的API Key
+    final apiKey = await _storage.getProviderApiKey(provider.id);
+    
+    // 3. 加载该服务商保存的模型选择
+    final savedModel = await _storage.getSelectedModel();
+    
+    // 4. 获取去重后的模型列表
+    final uniqueModels = provider.availableModels.toSet().toList();
+    
+    setState(() {
+      _selectedProviderId = provider.id;
+      _currentProvider = provider;
+      _availableModels = uniqueModels;
+      
+      // 确保保存的模型在可用模型中，否则使用默认模型
+      if (savedModel.isNotEmpty && uniqueModels.contains(savedModel)) {
+        _selectedModel = savedModel;
+      } else {
+        _selectedModel = provider.defaultModel;
+      }
+      
+      _apiKeyController.text = apiKey ?? '';
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    if (_currentProvider == null) return;
+    
+    // 1. 保存服务商选择
+    await _storage.saveSelectedProvider(_selectedProviderId);
+    
+    // 2. 保存该服务商的API Key
+    if (_apiKeyController.text.isNotEmpty) {
+      await _storage.saveProviderApiKey(_currentProvider!.id, _apiKeyController.text);
+    }
+    
+    // 3. 保存模型选择
+    if (_selectedModel.isNotEmpty) {
+      await _storage.saveSelectedModel(_selectedModel);
+    }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('设置已保存')),
+      );
+    }
+  }
+
+  void _onProviderChanged(String? newProviderId) {
+    if (newProviderId == null || newProviderId == _selectedProviderId) return;
+    
+    final newProvider = ApiConfig.getProvider(newProviderId);
+    if (newProvider == null) return;
+    
+    // 获取去重后的模型列表
+    final uniqueModels = newProvider.availableModels.toSet().toList();
+    
+    setState(() {
+      _selectedProviderId = newProviderId;
+      _currentProvider = newProvider;
+      _availableModels = uniqueModels;
+      _selectedModel = newProvider.defaultModel;
+      _apiKeyController.text = ''; // 切换服务商时清空Key输入框
+    });
+    
+    // 加载新服务商保存的Key
+    _loadProviderApiKey(newProviderId);
+  }
+
+  Future<void> _loadProviderApiKey(String providerId) async {
+    final apiKey = await _storage.getProviderApiKey(providerId);
+    if (mounted && apiKey != null) {
+      setState(() {
+        _apiKeyController.text = apiKey;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2),
+      appBar: AppBar(
+        title: const Text("设置"), 
+        backgroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // 服务商选择
+          const Text(
+            "AI 服务商", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "选择AI服务提供商：",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                DropdownButton<String>(
+                  value: _selectedProviderId,
+                  isExpanded: true,
+                  underline: Container(height: 0),
+                  onChanged: _onProviderChanged,
+                  items: ApiConfig.providers.entries.map((entry) {
+                    final provider = entry.value;
+                    return DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            provider.name,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          if (provider.requiresProxy)
+                            Text(
+                              '可能需要VPN',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.orange[700],
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          // 服务商信息卡片
+          if (_currentProvider != null) _buildProviderInfoCard(),
+          
+          const SizedBox(height: 24),
+          
+          // API Key 输入
+          const Text(
+            "API 配置", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _apiKeyController,
+            obscureText: _obscureKey,
+            decoration: InputDecoration(
+              labelText: "API Key",
+              hintText: "请输入您的API密钥",
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureKey ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey[600],
+                ),
+                onPressed: () => setState(() => _obscureKey = !_obscureKey),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // 模型选择
+          const Text(
+            "AI 模型", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "选择对话模型：",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                DropdownButton<String>(
+                  value: _selectedModel.isNotEmpty && _availableModels.contains(_selectedModel)
+                      ? _selectedModel
+                      : (_currentProvider?.defaultModel ?? ''),
+                  isExpanded: true,
+                  underline: Container(height: 0),
+                  onChanged: (String? newValue) {
+                    if (newValue != null && _availableModels.contains(newValue)) {
+                      setState(() {
+                        _selectedModel = newValue;
+                      });
+                    }
+                  },
+                  items: _availableModels.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(
+                        value,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // 模型说明
+          if (_currentProvider != null) _buildModelDescription(),
+          
+          const SizedBox(height: 30),
+          
+          // 保存按钮
+          ElevatedButton(
+            onPressed: _saveSettings,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5A7E), 
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              "保存所有设置", 
+              style: TextStyle(fontSize: 16, color: Colors.white)
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // 设置指南
+          if (_currentProvider != null) _buildSetupGuide(),
+          
+          const SizedBox(height: 40),
+          
+          // 其他设置项
+          const Text(
+            "其他设置", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 16),
+          
+          // 在 _SettingsPageState 类中找到角色设置的 ListTile，修改 onTap 方法
+          ListTile(
+            title: const Text("角色设置"),
+            subtitle: const Text("编辑AI角色人设和头像"),
+            leading: const Icon(Icons.person, color: Color(0xFFFF5A7E)),
+            onTap: () {
+              Navigator.pushNamed(context, '/character-edit');
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: const Text("聊天记录"),
+            subtitle: const Text("管理聊天历史记录"),
+            leading: const Icon(Icons.chat, color: Colors.green),
+            onTap: () {
+              _showNotImplementedSnackbar("聊天记录管理");
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: const Text("关于应用"),
+            subtitle: const Text("版本信息和帮助"),
+            leading: const Icon(Icons.info, color: Colors.blue),
+            onTap: () {
+              _showNotImplementedSnackbar("关于页面");
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F8FF),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.api,
+                color: Colors.blue[700],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _currentProvider!.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'API地址：${_currentProvider!.baseUrl}',
+            style: const TextStyle(fontSize: 13),
+          ),
+          if (_currentProvider!.requiresProxy) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.vpn_lock, size: 14, color: Colors.orange[700]),
+                  const SizedBox(width: 6),
+                  Text(
+                    '此服务可能需要VPN/代理才能访问',
+                    style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModelDescription() {
+    final modelDescriptions = {
+      'deepseek-chat': '通用聊天模型，性价比高，适合日常对话',
+      'deepseek-coder': '代码专用模型，编程助手',
+      'deepseek-reasoner': '推理能力更强的模型',
+      'claude-3-5-haiku-20241022': '快速响应，适合测试和简单对话',
+      'claude-3-5-haiku-latest': '最新版Claude快速模型',
+      'gpt-4o-mini': 'OpenAI轻量模型，响应快成本低',
+      'gpt-4-turbo': 'OpenAI强大模型，智能程度高',
+      'gpt-3.5-turbo': 'OpenAI经典模型，性价比高',
+      'claude-3-opus': 'Anthropic最强大模型，适合复杂任务',
+    };
+    
+    final currentModel = _selectedModel.isNotEmpty ? _selectedModel : _currentProvider?.defaultModel ?? '';
+    final description = modelDescriptions[currentModel] ?? '未找到模型描述';
+    
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              description,
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupGuide() {
+    final lines = _currentProvider!.setupGuide.split('\n');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF0F3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFD1DC), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFFF5A7E)),
+              const SizedBox(width: 8),
+              Text(
+                "设置指南 - ${_currentProvider!.name}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  color: Color(0xFFFF5A7E)
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...lines.map((line) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                line,
+                style: const TextStyle(fontSize: 13),
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          if (_currentProvider!.requiresProxy)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                '💡 提示：如果连接失败，请检查设备网络设置，确保可以访问国际服务',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotImplementedSnackbar(String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("$feature 功能开发中..."),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\api_config.dart
+
+Size: 2435 bytes
+
+Modified: 01/03/2026 17:37:21
+
+========================================
+
+// lib/services/api_config.dart
+class ApiProvider {
+  final String id;
+  final String name;
+  final String baseUrl;
+  final List<String> availableModels;
+  final String defaultModel;
+  final bool requiresProxy; // 仅用于提示用户，App不控制代理
+  final String setupGuide;
+
+  const ApiProvider({
+    required this.id,
+    required this.name,
+    required this.baseUrl,
+    required this.availableModels,
+    required this.defaultModel,
+    this.requiresProxy = false,
+    required this.setupGuide,
+  });
+}
+
+class ApiConfig {
+  // 所有可用的服务商
+  static final Map<String, ApiProvider> providers = {
+    'deepseek': ApiProvider(
+      id: 'deepseek',
+      name: 'DeepSeek',
+      baseUrl: 'https://api.deepseek.com',
+      availableModels: [
+        'deepseek-chat',
+        'deepseek-coder',
+        'deepseek-reasoner',
+      ],
+      defaultModel: 'deepseek-chat',
+      requiresProxy: false,
+      setupGuide: '1. 访问 https://platform.deepseek.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方',
+    ),
+    'ohmygpt': ApiProvider(
+      id: 'ohmygpt',
+      name: 'OhMyGPT',
+      baseUrl: 'https://api.ohmygpt.com/v1',
+      availableModels: [
+        'claude-3-5-haiku-20241022',
+        'gpt-4o-mini',
+        'gpt-4-turbo',
+        'claude-3-opus',
+      ],
+      defaultModel: 'claude-3-5-haiku-20241022',
+      requiresProxy: true, // 提示用户可能需要VPN
+      setupGuide: '1. 访问 https://www.ohmygpt.com/dashboard\n2. 确保账户有余额\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
+    ),
+    // 未来可以添加更多服务商
+    'openai': ApiProvider(
+      id: 'openai',
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com/v1',
+      availableModels: [
+        'gpt-4o',
+        'gpt-4-turbo',
+        'gpt-3.5-turbo',
+      ],
+      defaultModel: 'gpt-3.5-turbo',
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://platform.openai.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
+    ),
+  };
+
+  // 获取默认服务商ID
+  static String get defaultProviderId => 'deepseek';
+  
+  // 根据ID获取服务商
+  static ApiProvider? getProvider(String id) {
+    return providers[id];
+  }
+  
+  // 获取默认服务商
+  static ApiProvider get defaultProvider => providers[defaultProviderId]!;
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\api_service.dart
+
+Size: 2106 bytes
+
+Modified: 01/03/2026 17:37:21
+
+========================================
+
+// lib/services/api_service.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'storage_service.dart';
+import 'api_config.dart';
+
+class ApiService {
+  final StorageService _storage = StorageService();
+
+  Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
+    // 1. 获取用户选择的服务商
+    final providerId = await _storage.getSelectedProvider();
+    final provider = ApiConfig.getProvider(providerId);
+    if (provider == null) {
+      throw Exception('未找到服务商配置');
+    }
+    
+    // 2. 获取该服务商的API Key
+    final apiKey = await _storage.getProviderApiKey(provider.id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('请先配置${provider.name}的API Key');
+    }
+    
+    // 3. 确定使用的模型
+    final savedModel = await _storage.getSelectedModel();
+    final modelName = model ?? (savedModel.isNotEmpty ? savedModel : provider.defaultModel);
+    
+    // 4. 发送请求（不处理代理，交给系统网络）
+    try {
+      final response = await http.post(
+        Uri.parse('${provider.baseUrl}/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': modelName,
+          'messages': messages,
+          'temperature': 0.9,
+          'stream': false,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'];
+      } else {
+        throw Exception('${provider.name} API错误: ${response.statusCode}');
+      }
+    } catch (e) {
+      // 网络错误时给出友好提示
+      String errorMsg = '网络请求失败: $e';
+      if (provider.requiresProxy && e.toString().contains('timed out')) {
+        errorMsg = '连接超时，${provider.name}可能需要VPN/代理才能访问，请检查设备网络设置';
+      }
+      throw Exception(errorMsg);
+    }
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\constants.dart
+
+Size: 0 bytes
+
+Modified: 01/02/2026 16:37:48
+
+========================================
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\storage_service.dart
+
+Size: 11992 bytes
+
+Modified: 01/04/2026 01:12:39
+
+========================================
+
+// lib/services/storage_service.dart
+import 'dart:convert';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path_lib;
+import 'package:flutter/foundation.dart';
+import 'api_config.dart'; // 新增导入
+import '../models/message.dart';
+
+class StorageService {
+  static final StorageService _instance = StorageService._internal();
+  factory StorageService() => _instance;
+  StorageService._internal();
+
+  Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
+
+  // ── 新增：服务商管理方法 ──
+  Future<void> saveSelectedProvider(String providerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_provider', providerId);
+  }
+
+  Future<String> getSelectedProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('selected_provider') ?? ApiConfig.defaultProviderId;
+  }
+
+  Future<void> saveProviderApiKey(String providerId, String apiKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_key_$providerId', apiKey);
+  }
+
+  Future<String?> getProviderApiKey(String providerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('api_key_$providerId');
+  }
+  
+  // 兼容旧方法（可选，如果其他代码还在使用）
+  Future<void> saveApiConfig(String baseUrl, String apiKey) async {
+    // 简单实现：保存到最后使用的服务商
+    final providerId = await getSelectedProvider();
+    await saveProviderApiKey(providerId, apiKey);
+  }
+  
+  Future<String> getApiBaseUrl() async {
+    final providerId = await getSelectedProvider();
+    final provider = ApiConfig.getProvider(providerId);
+    return provider?.baseUrl ?? ApiConfig.defaultProvider.baseUrl;
+  }
+  
+  Future<String?> getApiKey() async {
+    final providerId = await getSelectedProvider();
+    return await getProviderApiKey(providerId);
+  }
+
+  // ── 聊天记录相关 ──
+// 修改 saveChatHistory 方法：
+Future<void> saveChatHistory(List<Message> history) async {
+  final prefs = await _prefs;
+  
+  // 转换为Map列表
+  final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
+    return msg.toMap();
+  }).toList();
+  
+  final jsonString = jsonEncode(serializableHistory);
+  await prefs.setString('chat_history_master', jsonString);
+}
+
+// 修改 loadChatHistory 方法：
+Future<List<Message>> loadChatHistory() async {
+  final prefs = await _prefs;
+  final jsonString = prefs.getString('chat_history_master');
+  if (jsonString == null || jsonString.isEmpty) {
+    return [];
+  }
+  try {
+    final List<dynamic> decoded = jsonDecode(jsonString);
+    return decoded.map<Message>((e) {
+      return Message.fromMap(e as Map<String, dynamic>);
+    }).toList();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('聊天记录解析失败: $e');
+    }
+    return [];
+  }
+}
+
+  Future<void> clearChatHistory() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_history_master');
+  }
+
+  // ── 角色编辑相关 ──
+  Future<void> saveCharacterAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('character_avatar_path', path);
+  }
+
+  Future<String?> getCharacterAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('character_avatar_path');
+  }
+
+  Future<void> saveCharacterData(Map<String, String> data) async {
+    final prefs = await _prefs;
+    await prefs.setString('character_data', jsonEncode(data));
+  }
+
+  Future<Map<String, String>> loadCharacterData() async {
+    final prefs = await _prefs;
+    final jsonString = prefs.getString('character_data');
+    if (jsonString == null || jsonString.isEmpty) {
+      return {};
+    }
+    try {
+      final Map<String, dynamic> decoded = jsonDecode(jsonString);
+      return decoded.cast<String, String>();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('角色数据解析失败: $e');
+      }
+      return {};
+    }
+  }
+
+  Future<String> getCharacterSystemPrompt({String? currentTime}) async {
+    final data = await loadCharacterData();
+    final nickname = data['nickname'] ?? 'Master';
+    final intro = data['intro'] ?? '';
+    final privateSetting = data['private_setting'] ?? '';
+    final opening = data['opening'] ?? '';
+    
+    String prompt = '';
+    
+    if (currentTime != null && currentTime.isNotEmpty) {
+      prompt += '当前时间：$currentTime\n\n';
+    }
+    
+    prompt += '角色名称：$nickname\n\n';
+    
+    if (intro.isNotEmpty) {
+      prompt += '角色设定：\n$intro\n\n';
+    }
+    
+    if (opening.isNotEmpty) {
+      prompt += '开场白示例：\n$opening\n\n';
+    }
+    
+    if (privateSetting.isNotEmpty) {
+      prompt += '私密行为设定：\n$privateSetting\n\n';
+    }
+    
+    // 添加XML格式要求
+    prompt += '''
+===重要格式指令===
+你必须严格按照以下XML格式回复，任何时候都不准打破结构：
+<message>
+  <narration>这里是旁白、动作、环境描述</narration>
+  <dialogue>这里是角色说的话语</dialogue>
+</message>
+
+规则：
+1. 所有内容必须放在<message>标签里
+2. 不准出现标签以外的任何文字
+3. <narration>用于叙述、动作、心理、环境描述
+4. <dialogue>只用于角色直接说的话
+5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
+6. 确保每个<dialogue>都是完整的对话，不要截断
+''';
+    
+    if (prompt.isEmpty) {
+      prompt = '''
+角色名称：$nickname
+
+角色设定：
+话少，对话自然，像人类，冷淡。
+
+===重要格式指令===
+你必须严格按照以下XML格式回复，任何时候都不准打破结构：
+<message>
+  <narration>这里是旁白、动作、环境描述</narration>
+  <dialogue>这里是角色说的话语</dialogue>
+</message>
+
+规则：
+1. 所有内容必须放在<message>标签里
+2. 不准出现标签以外的任何文字
+3. <narration>用于叙述、动作、心理、环境描述
+4. <dialogue>只用于角色直接说的话
+5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
+6. 确保每个<dialogue>都是完整的对话，不要截断
+''';
+    }
+    
+    return prompt.trim();
+  }
+
+  Future<String> getCharacterNickname() async {
+    final data = await loadCharacterData();
+    return data['nickname'] ?? 'Master';
+  }
+
+  Future<String> getCharacterIntro() async {
+    final data = await loadCharacterData();
+    return data['intro'] ?? '';
+  }
+
+  Future<String> getCharacterOpening() async {
+    final data = await loadCharacterData();
+    return data['opening'] ?? '';
+  }
+
+  Future<String> copyFileToAppDir(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final newPath = '${appDir.path}/$fileName';
+      
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) {
+        await sourceFile.copy(newPath);
+        return newPath;
+      } else {
+        throw Exception('源文件不存在: $sourcePath');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('复制文件失败: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> hasCustomAvatar() async {
+    final avatarPath = await getCharacterAvatarPath();
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return false;
+    }
+    
+    final file = File(avatarPath);
+    return await file.exists();
+  }
+
+  Future<File?> getAvatarFile() async {
+    final avatarPath = await getCharacterAvatarPath();
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return null;
+    }
+    
+    final file = File(avatarPath);
+    if (await file.exists()) {
+      return file;
+    }
+    return null;
+  }
+
+  Future<void> clearAllCharacterData() async {
+    final prefs = await _prefs;
+    await prefs.remove('character_avatar_path');
+    await prefs.remove('character_data');
+  }
+
+  // ── 用户头像相关 ──
+  Future<void> saveUserAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_avatar_path', path);
+  }
+
+  Future<String?> getUserAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_avatar_path');
+  }
+
+  Future<String> copyUserAvatarToAppDir(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final newPath = '${appDir.path}/$fileName';
+      
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) {
+        await sourceFile.copy(newPath);
+        return newPath;
+      } else {
+        throw Exception('源文件不存在: $sourcePath');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('复制用户头像失败: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // ── 用户资料相关 ──（新增部分，添加在这里）
+  Future<void> saveUserName(String userName) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_name', userName);
+  }
+
+  Future<String> getUserName() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_name') ?? '尘不言'; // 默认值
+  }
+
+  Future<void> saveShowUserAvatar(bool show) async {
+    final prefs = await _prefs;
+    await prefs.setBool('show_user_avatar', show);
+  }
+
+  Future<bool> getShowUserAvatar() async {
+    final prefs = await _prefs;
+    return prefs.getBool('show_user_avatar') ?? true; // 默认显示
+  }
+
+  Future<Map<String, dynamic>> getUserProfile() async {
+    final name = await getUserName();
+    final avatarPath = await getUserAvatarPath();
+    final showAvatar = await getShowUserAvatar();
+    
+    return {
+      'name': name,
+      'avatarPath': avatarPath,
+      'showAvatar': showAvatar,
+    };
+  }
+
+  Future<void> saveUserProfile(Map<String, dynamic> profile) async {
+    if (profile['name'] != null) {
+      await saveUserName(profile['name'] as String);
+    }
+    if (profile['avatarPath'] != null) {
+      await saveUserAvatarPath(profile['avatarPath'] as String);
+    }
+    if (profile['showAvatar'] != null) {
+      await saveShowUserAvatar(profile['showAvatar'] as bool);
+    }
+  }
+
+  // ── 模型管理方法 ──
+  Future<void> saveSelectedModel(String modelName) async {
+    final prefs = await _prefs;
+    await prefs.setString('selected_model', modelName);
+  }
+
+  Future<String> getSelectedModel() async {
+    final prefs = await _prefs;
+    return prefs.getString('selected_model') ?? 'deepseek-chat'; // 改为更通用的默认值
+  }
+
+  // 根据服务商获取模型列表
+  List<String> getModelOptionsForCurrentProvider(String currentBaseUrl) {
+    if (currentBaseUrl.contains('deepseek.com')) {
+      return ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'];
+    } else if (currentBaseUrl.contains('ohmygpt.com')) {
+      return ['claude-3-5-haiku-20241022', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus'];
+    } else if (currentBaseUrl.contains('openai.com')) {
+      return ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+    }
+    return ['deepseek-chat']; // 默认
+  }
+
+  // 旧方法（保持兼容）
+  List<String> getModelOptions() {
+    return ['deepseek-chat', 'claude-3-5-haiku-20241022', 'gpt-4o-mini'];
+  }
+
+  Future<void> clearModelSettings() async {
+    final prefs = await _prefs;
+    await prefs.remove('selected_model');
+  }
+}
+
+
+

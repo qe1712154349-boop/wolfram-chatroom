@@ -3,6 +3,7 @@ import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
 import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
+import '../app/theme.dart'; // 导入主题
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -24,6 +25,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,

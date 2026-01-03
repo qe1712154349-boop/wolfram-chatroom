@@ -1,66 +1,81 @@
 // lib/pages/chat/chat_components.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
+import '../../app/theme.dart'; // 导入主题
 
 class ReceivedMessage extends StatelessWidget {
   final String text;
-  final String time;
   final String? avatarPath;
 
   const ReceivedMessage({
     super.key,
     required this.text,
-    required this.time,
     this.avatarPath,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: const Color(0xFFFFD1DC),
-            backgroundImage: avatarPath != null
-                ? FileImage(File(avatarPath!))
-                : null,
-            child: avatarPath == null
-                ? const Icon(Icons.person, size: 18, color: Colors.white)
-                : null,
+          // AI头像
+          Container(
+            width: 36,
+            height: 36,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(
+                color: AppTheme.aiBubbleBorder, // 使用AI气泡边框色
+                width: 1,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.transparent,
+              backgroundImage: avatarPath != null
+                  ? FileImage(File(avatarPath!))
+                  : null,
+              child: avatarPath == null
+                  ? Icon(
+                      Icons.person,
+                      size: 18,
+                      color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                    )
+                  : null,
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0F5),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFFD1DC)),
-                  ),
-                  child: Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      height: 1.4,
-                    ),
-                  ),
+          // AI气泡 - 纯色无阴影，带细边框
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
+                minWidth: 40,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.aiBubbleColor, // AI气泡背景 #FFFFFF
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                border: Border.all(
+                  color: AppTheme.aiBubbleBorder, // AI气泡边框 #F1DCDE
+                  width: 1,
                 ),
-              ],
+              ),
+              child: Text(
+                text,
+                style: AppTheme.dialogueStyle,
+              ),
             ),
           ),
         ],
@@ -71,57 +86,156 @@ class ReceivedMessage extends StatelessWidget {
 
 class SentMessage extends StatelessWidget {
   final String text;
-  final String time;
-  // 移除 avatarPath 参数，因为不再需要用户头像
+  final String? userAvatarPath;
+  final bool showUserAvatar;
+
   const SentMessage({
     super.key,
     required this.text,
-    required this.time,
+    this.userAvatarPath,
+    this.showUserAvatar = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // 用户消息气泡（移除头像后的版本）
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFBBDEFB)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                    height: 1.4,
-                  ),
+          // 用户气泡 - 纯色无阴影，带细边框
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
+                minWidth: 40,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.userBubbleColor, // 用户气泡背景 #FFEAEF
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  topRight: Radius.circular(4),
+                  bottomLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                border: Border.all(
+                  color: AppTheme.userBubbleBorder, // 用户气泡边框 #EDD8DD
+                  width: 1,
                 ),
-              ],
+              ),
+              child: Text(
+                text,
+                style: AppTheme.dialogueStyle,
+              ),
             ),
           ),
-          const SizedBox(width: 8), // 保持一些右边距，让气泡不贴边
+          const SizedBox(width: 8),
+          // 用户头像（根据设置显示或隐藏）
+          if (showUserAvatar)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: AppTheme.userBubbleBorder, // 使用用户气泡边框色
+                  width: 1,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.transparent,
+                backgroundImage: userAvatarPath != null
+                    ? FileImage(File(userAvatarPath!))
+                    : null,
+                child: userAvatarPath == null
+                    ? Icon(
+                        Icons.person_outline,
+                        size: 18,
+                        color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                      )
+                    : null,
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class SystemTimeMessage extends StatelessWidget {
+  final String text;
+
+  const SystemTimeMessage({
+    super.key,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F0F5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            text,
+            style: AppTheme.systemTimeStyle,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// 旁白消息组件
+class NarrationMessage extends StatelessWidget {
+  final String text;
+  final bool isAI;
+  final bool isCentered;
+
+  const NarrationMessage({
+    super.key,
+    required this.text,
+    this.isAI = false,
+    this.isCentered = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * (isCentered ? 0.8 : 0.6),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFE0E0E0),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          text,
+          textAlign: isCentered ? TextAlign.center : TextAlign.left,
+          style: AppTheme.narrationStyle,
+        ),
       ),
     );
   }

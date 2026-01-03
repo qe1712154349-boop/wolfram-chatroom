@@ -1,13 +1,16 @@
 // lib/pages/chat/chat_room_page.dart
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:xml/xml.dart' as xml;
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
+import '../../models/message.dart';
+import '../../app/theme.dart'; // 添加导入
 import 'chat_components.dart';
-import 'xml_message_parser.dart'; // 新增导入
-// 导入新的聊天室设置页面
-import 'chat_room_settings_page.dart';  // 确保这个文件存在且正确导出类
+import 'chat_room_settings_page.dart';
+// 移除 xml_message_parser.dart 导入，因为不再需要
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -16,17 +19,21 @@ class ChatRoomPage extends StatefulWidget {
   State<ChatRoomPage> createState() => _ChatRoomPageState();
 }
 
-class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver {
+class _ChatRoomPageState extends State<ChatRoomPage>
+    with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, dynamic>> _messages = [];
+  final List<Message> _messages = [];
   bool _isLoading = false;
   bool _showScrollToBottomButton = false;
+  Timer? _scrollButtonTimer;
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
   String _characterName = 'Master';
   String? _avatarPath;
+  String? _userAvatarPath;
+  bool _showUserAvatar = true;
   String _systemPrompt = '';
 
   @override
@@ -34,25 +41,36 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCharacterData();
+    _loadUserSettings();
     _loadHistory();
     
     _scrollController.addListener(() {
-      if (!mounted) return; // 添加检查
+      if (!mounted) return;
       
       final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
       
       if ((maxScroll - currentScroll) > 300.0) {
-        if (!_showScrollToBottomButton && mounted) {
+        if (!_showScrollToBottomButton) {
           setState(() {
             _showScrollToBottomButton = true;
           });
+          // 启动3秒后隐藏计时器
+          _scrollButtonTimer?.cancel();
+          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted && _showScrollToBottomButton) {
+              setState(() {
+                _showScrollToBottomButton = false;
+              });
+            }
+          });
         }
       } else {
-        if (_showScrollToBottomButton && mounted) {
+        if (_showScrollToBottomButton) {
           setState(() {
             _showScrollToBottomButton = false;
           });
+          _scrollButtonTimer?.cancel();
         }
       }
     });
@@ -63,15 +81,16 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _controller.dispose();
+    _scrollButtonTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeMetrics() {
-    if (!mounted) return; // 添加检查
+    if (!mounted) return;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && _messages.isNotEmpty && mounted) {
+      if (_scrollController.hasClients && _messages.isNotEmpty) {
         _scrollToBottom();
       }
     });
@@ -82,7 +101,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     if (!mounted) return;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && mounted) {
+      if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -104,14 +123,36 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     }
   }
 
+  Future<void> _loadUserSettings() async {
+    final showAvatar = await _storage.getShowUserAvatar();
+    final userAvatarPath = await _storage.getUserAvatarPath();
+    
+    if (mounted) {
+      setState(() {
+        _showUserAvatar = showAvatar;
+        _userAvatarPath = userAvatarPath;
+      });
+    }
+  }
+
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
-    if (history.isNotEmpty && mounted) {
-      setState(() {
-        _messages.clear();
-        _messages.addAll(history);
-      });
-      _scrollToBottom();
+    if (history.isNotEmpty) {
+      // 检查是否需要添加时间戳消息
+      final List<Message> messagesWithTime = [];
+      
+      for (final msg in history) {
+        // 由于消息没有存储准确时间，我们暂时不添加时间戳
+        messagesWithTime.add(msg);
+      }
+      
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          _messages.addAll(messagesWithTime);
+        });
+        _scrollToBottom();
+      }
     }
   }
 
@@ -128,40 +169,128 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     await _storage.clearChatHistory();
   }
 
+  /// 检查并插入时间戳消息
+  void _checkAndInsertTimestampMessage(DateTime currentTime) {
+    if (_messages.isEmpty) return;
+    
+    // 这里应该比较最后一条消息的时间
+    // 由于我们没有存储准确时间，暂时跳过时间戳插入逻辑
+    
+    // 如果要实现时间戳，可以这样添加：
+    // if (shouldInsertTimestamp) {
+    //   final timestampMessage = Message(
+    //     id: 'timestamp_${currentTime.millisecondsSinceEpoch}',
+    //     role: 'system',
+    //     content: DateFormat('HH:mm').format(currentTime),
+    //     timestamp: DateFormat('HH:mm').format(currentTime),
+    //     messageType: MessageType.system_time,
+    //   );
+    //   _messages.add(timestampMessage);
+    // }
+  }
+
+  /// 解析AI回复，生成对应的Message对象
+  List<Message> _parseAiResponse(String xmlContent, String timestamp) {
+    final List<Message> messages = [];
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    try {
+      final document = xml.XmlDocument.parse(xmlContent);
+      final messageElement = document.findElements('message').first;
+      final children = messageElement.children
+          .whereType<xml.XmlElement>()
+          .toList();
+
+      for (int i = 0; i < children.length; i++) {
+        final node = children[i];
+        final text = node.innerText.trim();
+        final String content = text;
+        
+        if (node.name.local == 'narration') {
+          // AI旁白
+          messages.add(Message(
+            id: 'ai_${now}_narration_$i',
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            messageType: MessageType.ai_narration,
+          ));
+        } else if (node.name.local == 'dialogue') {
+          // AI对话
+          messages.add(Message(
+            id: 'ai_${now}_dialogue_$i',
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            messageType: MessageType.ai_dialogue,
+          ));
+        }
+      }
+    } catch (e) {
+      // 解析失败时，创建一个默认的AI对话消息
+      messages.add(Message(
+        id: 'ai_${now}_fallback',
+        role: 'assistant',
+        content: xmlContent,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      ));
+    }
+    
+    return messages;
+  }
+
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty || _isLoading) return;
 
-    // 解析用户输入
-    final userInput = XmlMessageParser.parseUserInput(text);
-    
-    // 获取当前时间
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
-
-    // 获取包含当前时间的系统提示
-    final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
-    final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
-
-    final userMessage = {
-      'role': 'user', 
-      'content': userInput['content']!, // 去掉/前缀的内容
-      'displayText': userInput['displayText']!,
-      'type': userInput['type'], // 旁白或对话
-      'timestamp': timestamp,
-    };
+    
+    // 检查是否需要添加时间戳消息
+    _checkAndInsertTimestampMessage(now);
+    
+    // 根据架构规则确定消息类型（核心逻辑）
+    final MessageType messageType;
+    final String role = 'user';
+    String displayContent = text.trim();
+    
+    if (displayContent.startsWith('/')) {
+      // 以/开头 → user_narration
+      messageType = MessageType.user_narration;
+      displayContent = displayContent.substring(1).trim();
+    } else {
+      // 否则 → user_dialogue
+      messageType = MessageType.user_dialogue;
+    }
+    
+    // 创建Message对象（必须包含显式messageType）
+    final userMessage = Message(
+      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+      role: role,
+      content: displayContent,
+      timestamp: timestamp,
+      messageType: messageType,
+      metadata: {
+        'originalText': text,
+      },
+    );
 
     if (!mounted) return;
     
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
-      _systemPrompt = systemPrompt;
     });
 
     _scrollToBottom();
     await _saveHistory();
 
     try {
+      // 获取包含当前时间的系统提示
+      final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
+      final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
+      _systemPrompt = systemPrompt;
+
       // 构建发送给API的完整上下文
       List<Map<String, String>> apiMessages = [
         {'role': 'system', 'content': systemPrompt},
@@ -174,8 +303,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
           : _messages;
 
       apiMessages.addAll(recent.map((msg) => {
-        'role': msg['role']! as String,
-        'content': msg['content']! as String, // 只发送内容
+        'role': msg.role,
+        'content': msg.content,
       }));
 
       // 从StorageService获取选择的模型
@@ -188,13 +317,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
       if (mounted) {
+        // 解析AI回复，生成多个Message
+        final aiMessages = _parseAiResponse(aiReply ?? '', aiTimestamp);
         setState(() {
-          _messages.add({
-            'role': 'assistant', 
-            'content': aiReply ?? '…',
-            'timestamp': aiTimestamp,
-            'parsed': true, // 标记为需要解析
-          });
+          _messages.addAll(aiMessages);
         });
       }
 
@@ -204,12 +330,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
       if (mounted) {
         setState(() {
-          _messages.add({
-            'role': 'assistant', 
-            'content': '出错啦… $e',
-            'timestamp': errorTimestamp,
-            'parsed': false,
-          });
+          _messages.add(Message(
+            id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
+            role: 'assistant',
+            content: '出错啦… $e',
+            timestamp: errorTimestamp,
+            messageType: MessageType.ai_dialogue,
+          ));
         });
       }
       await _saveHistory();
@@ -234,88 +361,98 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("删除这条消息？"),
-        content: const Text("删除后无法恢复哦～"),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        title: const Text(
+          "删除消息",
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: const Text(
+          "确定要删除这条消息吗？",
+          style: TextStyle(fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("取消"),
+            child: const Text(
+              "取消",
+              style: TextStyle(color: Colors.grey),
+            ),
           ),
           TextButton(
             onPressed: () {
               _deleteMessage(index);
               Navigator.pop(context);
             },
-            child: const Text("删除", style: TextStyle(color: Colors.red)),
+            child: const Text(
+              "删除",
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// 构建消息Widget
-  Widget _buildMessageWidget(Map<String, dynamic> msg, bool isUser) {
-    final content = msg['content']?.toString() ?? '';
-    final timestamp = msg['timestamp']?.toString() ?? '';
-    final type = msg['type']?.toString();
-    final parsed = msg['parsed'] as bool? ?? false;
+ /// 构建消息Widget - 使用正确的组件
+Widget _buildMessageWidget(Message msg) {
+  // 根据messageType渲染，使用正确的UI组件
+  switch (msg.messageType) {
+    case MessageType.user_narration:
+      // 用户旁白 - 使用新的旁白组件
+      return NarrationMessage(
+        text: msg.content,
+        isAI: false,
+        isCentered: false, // 用户旁白偏右
+      );
 
-    // AI消息且需要解析
-    if (!isUser && parsed && XmlMessageParser.isValidXml(content)) {
-      final widgets = XmlMessageParser.parseXmlMessage(
-        xmlContent: content,
-        timestamp: timestamp,
-        avatarPath: _avatarPath,
-        characterName: _characterName,
+    case MessageType.ai_narration:
+      // AI旁白 - 使用新的旁白组件
+      return NarrationMessage(
+        text: msg.content,
         isAI: true,
+        isCentered: true, // AI旁白居中
       );
       
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: widgets,
+    case MessageType.user_dialogue:
+      // 用户对话
+      return SentMessage(
+        text: msg.content,
+        userAvatarPath: _userAvatarPath,
+        showUserAvatar: _showUserAvatar,
       );
-    }
-    
-    // 用户消息
-    if (isUser) {
-      if (type == 'narration') {
-        // 用户旁白
-        return XmlMessageParser.parseXmlMessage(
-          xmlContent: XmlMessageParser.createUserNarrationXml(msg['displayText']?.toString() ?? content),
-          timestamp: timestamp,
-          avatarPath: null, // 用户旁白不需要头像
-          characterName: '你',
-          isAI: false,
-        ).first;
-      } else {
-        // 用户对话
-        return XmlMessageParser.parseXmlMessage(
-          xmlContent: XmlMessageParser.createUserDialogueXml(msg['displayText']?.toString() ?? content),
-          timestamp: timestamp,
-          avatarPath: null, // 用户对话不需要头像
-          characterName: '你',
-          isAI: false,
-        ).first;
-      }
-    }
-    
-    // 默认的AI消息显示（用于解析失败的情况）
-    return ReceivedMessage(
-      text: content,
-      time: timestamp,
-      avatarPath: _avatarPath,
-    );
+      
+    case MessageType.ai_dialogue:
+      // AI对话
+      return ReceivedMessage(
+        text: msg.content,
+        avatarPath: _avatarPath,
+      );
+      
+    case MessageType.system_time:
+      // 系统时间消息
+      return SystemTimeMessage(text: msg.content);
+      
+    case MessageType.system_state:
+      // 系统状态消息（当前未实现）
+      return Container();
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8FA),
+      backgroundColor: AppTheme.appBackground, // 使用应用背景色
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF8FA),
-        elevation: 0,
+        backgroundColor: AppTheme.chatRoomTop, // 聊天室顶部颜色 #FCECEF
+        elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: GestureDetector(
@@ -323,13 +460,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
           child: Row(
             children: [
               CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.pinkAccent,
+                radius: 16,
+                backgroundColor: const Color(0xFFFFD2DD),
                 backgroundImage: _avatarPath != null
                     ? FileImage(File(_avatarPath!))
                     : null,
                 child: _avatarPath == null
-                    ? const Icon(Icons.person, size: 24, color: Colors.white)
+                    ? const Icon(Icons.person, size: 18, color: Colors.white)
                     : null,
               ),
               const SizedBox(width: 10),
@@ -338,9 +475,19 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                 children: [
                   Text(
                     _characterName,
-                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  const Text("在线", style: TextStyle(color: Colors.green, fontSize: 12)),
+                  const Text(
+                    "在线",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -348,9 +495,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_horiz, size: 24),
             onPressed: () async {
-              // 跳转到聊天室设置页面
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -361,68 +507,130 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                 ),
               );
               
-              // 如果返回true，表示清空了聊天记录，需要刷新界面
-              if (result == true && mounted) {
+              if (result == true) {
                 await _clearAllMessages();
               }
             },
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: _messages.length + (_isLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (_isLoading && index == _messages.length) {
-                      return ReceivedMessage(
-                        text: "$_characterName正在思考...",
-                        time: DateFormat('HH:mm').format(DateTime.now()),
-                        avatarPath: _avatarPath,
-                      );
-                    }
-
-                    final msg = _messages[index];
-                    final isUser = msg['role'] == 'user';
-
-                    return GestureDetector(
-                      onLongPress: () => _showDeleteDialog(index),
-                      child: _buildMessageWidget(msg, isUser),
-                    );
-                  },
-                ),
-              ),
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: SafeArea(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 48),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(24),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isLoading && index == _messages.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFFFFD2DD),
+                                backgroundImage: _avatarPath != null
+                                    ? FileImage(File(_avatarPath!))
+                                    : null,
+                                child: _avatarPath == null
+                                    ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD2DD),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Text(
+                                  "正在输入...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: TextField(
-                            controller: _controller,
-                            maxLines: 5,
-                            minLines: 1,
-                            textInputAction: TextInputAction.newline,
-                            decoration: const InputDecoration(
-                              hintText: "输入消息（以/开头表示旁白）...",
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
+                        );
+                      }
+
+                      final msg = _messages[index];
+                      return GestureDetector(
+                        onLongPress: () => _showDeleteDialog(index),
+                        child: _buildMessageWidget(msg),
+                      );
+                    },
+                  ),
+                ),
+                // 底部输入区域
+                Container(
+                  color: AppTheme.messageInputBackground, // 底部发消息大矩形 #FBDCE1
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 40),
+                            decoration: BoxDecoration(
+                              color: AppTheme.messageFieldBackground, // 发消息框内背景 #FFFFFF
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.messageFieldBorder, // 发消息框边框 #B1A9AB
+                                width: 1,
+                              ),
                             ),
-                            onSubmitted: (value) {
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            child: TextField(
+                              controller: _controller,
+                              maxLines: 5,
+                              minLines: 1,
+                              textInputAction: TextInputAction.send,
+                              keyboardType: TextInputType.multiline,
+                              decoration: const InputDecoration(
+                                hintText: "输入消息...（以 / 开头表示旁白）",
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintStyle: TextStyle(color: Color(0xFF8E8E93)),
+                              ),
+                              onSubmitted: (value) {
+                                final text = _controller.text.trim();
+                                if (text.isNotEmpty) {
+                                  _sendMessage(text);
+                                  _controller.clear();
+                                }
+                              },
+                              onChanged: (value) {
+                                // 可以在这里添加实时搜索或其他功能
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 发送按钮
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                            onPressed: () {
                               final text = _controller.text.trim();
                               if (text.isNotEmpty) {
                                 _sendMessage(text);
@@ -431,36 +639,42 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                             },
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.send_rounded, color: Color(0xFFFF5A7E)),
-                        onPressed: () {
-                          final text = _controller.text.trim();
-                          if (text.isNotEmpty) {
-                            _sendMessage(text);
-                            _controller.clear();
-                          }
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // 滚动到底部按钮
+            if (_showScrollToBottomButton)
+              Positioned(
+                bottom: 90,
+                right: 16,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    border: Border.all(
+                      color: AppTheme.aiBubbleBorder,
+                      width: 1,
+                    ),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                    onPressed: () {
+                      _scrollToBottom();
+                      setState(() {
+                        _showScrollToBottomButton = false;
+                      });
+                      _scrollButtonTimer?.cancel();
+                    },
                   ),
                 ),
               ),
-            ],
-          ),
-          if (_showScrollToBottomButton)
-            Positioned(
-              bottom: 100,
-              right: 20,
-              child: FloatingActionButton(
-                mini: true,
-                backgroundColor: const Color(0xFFFF5A7E),
-                onPressed: _scrollToBottom,
-                child: const Icon(Icons.arrow_downward, color: Colors.white),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -474,7 +688,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -482,25 +696,32 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
           children: [
             Center(
               child: Container(
-                width: 40,
+                width: 36,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
+                  color: const Color(0xFFC7C7CC),
+                  borderRadius: BorderRadius.circular(2.5),
                 ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               "$_characterName 人物设定",
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   _systemPrompt,
-                  style: const TextStyle(fontSize: 15, height: 1.6),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.6,
+                    color: Color(0xFF3C3C43),
+                  ),
                 ),
               ),
             ),
@@ -511,10 +732,18 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                 backgroundColor: const Color(0xFFFF5A7E),
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                "关闭",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              child: const Text("关闭", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

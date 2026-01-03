@@ -291,6 +291,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
           
+          // 在 _SettingsPageState 类中找到角色设置的 ListTile，修改 onTap 方法
           ListTile(
             title: const Text("角色设置"),
             subtitle: const Text("编辑AI角色人设和头像"),

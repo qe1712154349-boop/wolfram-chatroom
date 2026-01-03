@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../components/mood_day.dart';
 import '../components/order_card.dart';
+import '../app/theme.dart'; // 导入主题
 
 class VowPage extends StatelessWidget {
   const VowPage({super.key});
@@ -8,7 +9,7 @@ class VowPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFFFF0F3),
+      color: AppTheme.appBackground, // 使用统一的背景色 #FDF7F7
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [

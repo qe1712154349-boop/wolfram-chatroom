@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:io';                      // 新增
+import 'dart:io';
 import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
 import '../../services/storage_service.dart';
+import '../../app/theme.dart'; // 导入主题
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -38,9 +39,9 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF5F8),
+      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF5F8),
+        backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "聊天",
@@ -65,14 +66,12 @@ class _ChatListPageState extends State<ChatListPage> {
             },
             leading: GestureDetector(
               onTap: () {
-                // 点击头像跳转到编辑页面
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const ChatCharacterEditPage(),
                   ),
                 ).then((_) {
-                  // 从编辑页面返回后刷新数据
                   _loadCharacterData();
                 });
               },
