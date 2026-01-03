@@ -74,7 +74,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withAlpha(26),
                   spreadRadius: 1,
                   blurRadius: 5,
                 ),
@@ -164,7 +164,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+             color: Colors.grey.withAlpha(26), // 0.1 opacity ≈ 26 alpha (255 * 0.1 ≈ 26)
             spreadRadius: 1,
             blurRadius: 3,
           ),
@@ -175,7 +175,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withAlpha(26),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color),

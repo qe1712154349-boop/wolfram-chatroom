@@ -178,7 +178,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
       final selectedModel = await _storage.getSelectedModel();
       
       // 调用API时传入当前选择的模型
-      final aiReply = await _apiService.sendChatMessage(apiMessages, selectedModel);
+      final aiReply = await _apiService.sendChatMessage(apiMessages, model: selectedModel);
 
       // AI回复的时间
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());

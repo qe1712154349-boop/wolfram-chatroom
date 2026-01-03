@@ -1,10 +1,11 @@
-// storage_service.dart
+// lib/services/storage_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path_lib;
 import 'package:flutter/foundation.dart';
+import 'api_config.dart'; // 新增导入
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -13,21 +14,43 @@ class StorageService {
 
   Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
 
-  // ── API配置相关 ──
-  Future<String> getApiBaseUrl() async {
-    final prefs = await _prefs;
-    return prefs.getString('api_base_url') ?? 'https://api.deepseek.com';
+  // ── 新增：服务商管理方法 ──
+  Future<void> saveSelectedProvider(String providerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_provider', providerId);
   }
 
-  Future<String?> getApiKey() async {
-    final prefs = await _prefs;
-    return prefs.getString('api_key');
+  Future<String> getSelectedProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('selected_provider') ?? ApiConfig.defaultProviderId;
   }
 
+  Future<void> saveProviderApiKey(String providerId, String apiKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_key_$providerId', apiKey);
+  }
+
+  Future<String?> getProviderApiKey(String providerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('api_key_$providerId');
+  }
+  
+  // 兼容旧方法（可选，如果其他代码还在使用）
   Future<void> saveApiConfig(String baseUrl, String apiKey) async {
-    final prefs = await _prefs;
-    await prefs.setString('api_base_url', baseUrl.trim());
-    await prefs.setString('api_key', apiKey.trim());
+    // 简单实现：保存到最后使用的服务商
+    final providerId = await getSelectedProvider();
+    await saveProviderApiKey(providerId, apiKey);
+  }
+  
+  Future<String> getApiBaseUrl() async {
+    final providerId = await getSelectedProvider();
+    final provider = ApiConfig.getProvider(providerId);
+    return provider?.baseUrl ?? ApiConfig.defaultProvider.baseUrl;
+  }
+  
+  Future<String?> getApiKey() async {
+    final providerId = await getSelectedProvider();
+    return await getProviderApiKey(providerId);
   }
 
   // ── 聊天记录相关 ──
@@ -60,11 +83,10 @@ class StorageService {
     }
   }
 
-    // 可选：清空聊天记录（调试或用户需要时使用）
-    Future<void> clearChatHistory() async {
-      final prefs = await _prefs;
-      await prefs.remove('chat_history_master');
-    }
+  Future<void> clearChatHistory() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_history_master');
+  }
 
   // ── 角色编辑相关 ──
   Future<void> saveCharacterAvatarPath(String path) async {
@@ -128,11 +150,11 @@ class StorageService {
     
     if (prompt.isEmpty) {
       prompt = '''
-    角色名称：$nickname
+角色名称：$nickname
 
-    角色设定：
-    话少，对话自然，像人类，冷淡。
-    ''';
+角色设定：
+话少，对话自然，像人类，冷淡。
+''';
     }
     
     return prompt.trim();
@@ -235,30 +257,34 @@ class StorageService {
     }
   }
 
-  // ── 新增：模型管理方法 ──
-  // 保存选择的模型
+  // ── 模型管理方法 ──
   Future<void> saveSelectedModel(String modelName) async {
     final prefs = await _prefs;
     await prefs.setString('selected_model', modelName);
   }
 
-  // 获取选择的模型（默认使用 claude-3-5-haiku-latest）
   Future<String> getSelectedModel() async {
     final prefs = await _prefs;
-    return prefs.getString('selected_model') ?? 'claude-3-5-haiku-latest';
+    return prefs.getString('selected_model') ?? 'deepseek-chat'; // 改为更通用的默认值
   }
 
-  // 获取可用模型列表
+  // 根据服务商获取模型列表
+  List<String> getModelOptionsForCurrentProvider(String currentBaseUrl) {
+    if (currentBaseUrl.contains('deepseek.com')) {
+      return ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'];
+    } else if (currentBaseUrl.contains('ohmygpt.com')) {
+      return ['claude-3-5-haiku-20241022', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus'];
+    } else if (currentBaseUrl.contains('openai.com')) {
+      return ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+    }
+    return ['deepseek-chat']; // 默认
+  }
+
+  // 旧方法（保持兼容）
   List<String> getModelOptions() {
-    return [
-      'claude-3-5-haiku-latest',
-      'claude-3-7-sonnet',
-      'deepseek-chat',
-      'gpt-4o-mini'
-    ];
+    return ['deepseek-chat', 'claude-3-5-haiku-20241022', 'gpt-4o-mini'];
   }
 
-  // 清空模型设置
   Future<void> clearModelSettings() async {
     final prefs = await _prefs;
     await prefs.remove('selected_model');

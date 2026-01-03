@@ -1,5 +1,7 @@
+// lib/pages/me/settings_page.dart
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
+import '../../services/api_config.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -9,53 +11,102 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _baseUrlController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
   bool _obscureKey = true;
   final StorageService _storage = StorageService();
   
-  // 模型选择相关变量
-  String _selectedModel = 'claude-3-5-haiku-latest';
-  List<String> _modelOptions = [];
+  // 状态变量
+  String _selectedProviderId = ApiConfig.defaultProviderId;
+  String _selectedModel = '';
+  ApiProvider? _currentProvider;
+  List<String> _availableModels = [];
 
   @override
   void initState() {
     super.initState();
-    _loadSavedConfig();
-    _loadModelSettings();
+    _loadSettings();
   }
 
-  Future<void> _loadSavedConfig() async {
-    final baseUrl = await _storage.getApiBaseUrl();
-    final apiKey = await _storage.getApiKey();
+  Future<void> _loadSettings() async {
+    // 1. 加载用户选择的服务商
+    final providerId = await _storage.getSelectedProvider();
+    final provider = ApiConfig.getProvider(providerId) ?? ApiConfig.defaultProvider;
+    
+    // 2. 加载该服务商的API Key
+    final apiKey = await _storage.getProviderApiKey(provider.id);
+    
+    // 3. 加载该服务商保存的模型选择
+    final savedModel = await _storage.getSelectedModel();
+    
+    // 4. 获取去重后的模型列表
+    final uniqueModels = provider.availableModels.toSet().toList();
+    
     setState(() {
-      _baseUrlController.text = baseUrl;
+      _selectedProviderId = provider.id;
+      _currentProvider = provider;
+      _availableModels = uniqueModels;
+      
+      // 确保保存的模型在可用模型中，否则使用默认模型
+      if (savedModel.isNotEmpty && uniqueModels.contains(savedModel)) {
+        _selectedModel = savedModel;
+      } else {
+        _selectedModel = provider.defaultModel;
+      }
+      
       _apiKeyController.text = apiKey ?? '';
     });
   }
 
-  Future<void> _loadModelSettings() async {
-    final model = await _storage.getSelectedModel();
-    setState(() {
-      _selectedModel = model;
-      _modelOptions = _storage.getModelOptions();
-    });
-  }
-
-  Future<void> _saveConfig() async {
-    await _storage.saveApiConfig(_baseUrlController.text, _apiKeyController.text);
+  Future<void> _saveSettings() async {
+    if (_currentProvider == null) return;
+    
+    // 1. 保存服务商选择
+    await _storage.saveSelectedProvider(_selectedProviderId);
+    
+    // 2. 保存该服务商的API Key
+    if (_apiKeyController.text.isNotEmpty) {
+      await _storage.saveProviderApiKey(_currentProvider!.id, _apiKeyController.text);
+    }
+    
+    // 3. 保存模型选择
+    if (_selectedModel.isNotEmpty) {
+      await _storage.saveSelectedModel(_selectedModel);
+    }
+    
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('API 配置已保存')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('设置已保存')),
+      );
     }
   }
 
-  Future<void> _saveModel(String model) async {
-    await _storage.saveSelectedModel(model);
-    if (mounted) {
+  void _onProviderChanged(String? newProviderId) {
+    if (newProviderId == null || newProviderId == _selectedProviderId) return;
+    
+    final newProvider = ApiConfig.getProvider(newProviderId);
+    if (newProvider == null) return;
+    
+    // 获取去重后的模型列表
+    final uniqueModels = newProvider.availableModels.toSet().toList();
+    
+    setState(() {
+      _selectedProviderId = newProviderId;
+      _currentProvider = newProvider;
+      _availableModels = uniqueModels;
+      _selectedModel = newProvider.defaultModel;
+      _apiKeyController.text = ''; // 切换服务商时清空Key输入框
+    });
+    
+    // 加载新服务商保存的Key
+    _loadProviderApiKey(newProviderId);
+  }
+
+  Future<void> _loadProviderApiKey(String providerId) async {
+    final apiKey = await _storage.getProviderApiKey(providerId);
+    if (mounted && apiKey != null) {
       setState(() {
-        _selectedModel = model;
+        _apiKeyController.text = apiKey;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('模型设置已保存')));
     }
   }
 
@@ -65,49 +116,17 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: const Color(0xFFF2F2F2),
       appBar: AppBar(
         title: const Text("设置"), 
-        backgroundColor: Colors.white
+        backgroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // API 配置部分
-          const Text("API 配置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _baseUrlController,
-            decoration: const InputDecoration(
-              labelText: "API Base URL",
-              hintText: "https://api.deepseek.com",
-              border: OutlineInputBorder(),
-            ),
+          // 服务商选择
+          const Text(
+            "AI 服务商", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _apiKeyController,
-            obscureText: _obscureKey,
-            decoration: InputDecoration(
-              labelText: "API Key",
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                icon: Icon(_obscureKey ? Icons.visibility_off : Icons.visibility),
-                onPressed: () => setState(() => _obscureKey = !_obscureKey),
-              ),
-            ),
-          ),
-          const SizedBox(height: 30),
-          ElevatedButton(
-            onPressed: _saveConfig,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5A7E), 
-              padding: const EdgeInsets.symmetric(vertical: 16)
-            ),
-            child: const Text("保存API配置", style: TextStyle(fontSize: 16, color: Colors.white)),
-          ),
-          const SizedBox(height: 40),
-          
-          // 模型选择部分
-          const Text("AI 模型选择", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -119,20 +138,109 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "选择默认对话模型：",
+                  "选择AI服务提供商：",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 DropdownButton<String>(
-                  value: _selectedModel,
+                  value: _selectedProviderId,
+                  isExpanded: true,
+                  underline: Container(height: 0),
+                  onChanged: _onProviderChanged,
+                  items: ApiConfig.providers.entries.map((entry) {
+                    final provider = entry.value;
+                    return DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            provider.name,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          if (provider.requiresProxy)
+                            Text(
+                              '可能需要VPN',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.orange[700],
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          // 服务商信息卡片
+          if (_currentProvider != null) _buildProviderInfoCard(),
+          
+          const SizedBox(height: 24),
+          
+          // API Key 输入
+          const Text(
+            "API 配置", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _apiKeyController,
+            obscureText: _obscureKey,
+            decoration: InputDecoration(
+              labelText: "API Key",
+              hintText: "请输入您的API密钥",
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureKey ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey[600],
+                ),
+                onPressed: () => setState(() => _obscureKey = !_obscureKey),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // 模型选择
+          const Text(
+            "AI 模型", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "选择对话模型：",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                DropdownButton<String>(
+                  value: _selectedModel.isNotEmpty && _availableModels.contains(_selectedModel)
+                      ? _selectedModel
+                      : (_currentProvider?.defaultModel ?? ''),
                   isExpanded: true,
                   underline: Container(height: 0),
                   onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      _saveModel(newValue);
+                    if (newValue != null && _availableModels.contains(newValue)) {
+                      setState(() {
+                        _selectedModel = newValue;
+                      });
                     }
                   },
-                  items: _modelOptions.map<DropdownMenuItem<String>>((String value) {
+                  items: _availableModels.map<DropdownMenuItem<String>>((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
                       child: Text(
@@ -145,37 +253,59 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+          
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F8FF),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("模型说明：", style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
-                Text("• claude-3-5-haiku: 快速响应，适合测试", style: TextStyle(fontSize: 12)),
-                Text("• claude-3-7-sonnet: 顶级情感模型，适合恋人对话", style: TextStyle(fontSize: 12)),
-                Text("• deepseek-chat: 免费模型，性价比高", style: TextStyle(fontSize: 12)),
-                Text("• gpt-4o-mini: OpenAI轻量模型", style: TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
+          
+          // 模型说明
+          if (_currentProvider != null) _buildModelDescription(),
+          
           const SizedBox(height: 30),
           
+          // 保存按钮
+          ElevatedButton(
+            onPressed: _saveSettings,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5A7E), 
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              "保存所有设置", 
+              style: TextStyle(fontSize: 16, color: Colors.white)
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // 设置指南
+          if (_currentProvider != null) _buildSetupGuide(),
+          
+          const SizedBox(height: 40),
+          
           // 其他设置项
-          const Text("其他设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            "其他设置", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
           const SizedBox(height: 16),
+          
           ListTile(
             title: const Text("角色设置"),
             subtitle: const Text("编辑AI角色人设和头像"),
             leading: const Icon(Icons.person, color: Color(0xFFFF5A7E)),
             onTap: () {
-              // 跳转到角色设置页面
               Navigator.pushNamed(context, '/character-edit');
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: const Text("聊天记录"),
+            subtitle: const Text("管理聊天历史记录"),
+            leading: const Icon(Icons.chat, color: Colors.green),
+            onTap: () {
+              _showNotImplementedSnackbar("聊天记录管理");
             },
           ),
           const Divider(height: 1),
@@ -187,15 +317,108 @@ class _SettingsPageState extends State<SettingsPage> {
               _showNotImplementedSnackbar("关于页面");
             },
           ),
-          
-          const SizedBox(height: 50),
-          _buildTipsCard(),
         ],
       ),
     );
   }
 
-  Widget _buildTipsCard() {
+  Widget _buildProviderInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F8FF),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.api,
+                color: Colors.blue[700],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _currentProvider!.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'API地址：${_currentProvider!.baseUrl}',
+            style: const TextStyle(fontSize: 13),
+          ),
+          if (_currentProvider!.requiresProxy) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.vpn_lock, size: 14, color: Colors.orange[700]),
+                  const SizedBox(width: 6),
+                  Text(
+                    '此服务可能需要VPN/代理才能访问',
+                    style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModelDescription() {
+    final modelDescriptions = {
+      'deepseek-chat': '通用聊天模型，性价比高，适合日常对话',
+      'deepseek-coder': '代码专用模型，编程助手',
+      'deepseek-reasoner': '推理能力更强的模型',
+      'claude-3-5-haiku-20241022': '快速响应，适合测试和简单对话',
+      'claude-3-5-haiku-latest': '最新版Claude快速模型',
+      'gpt-4o-mini': 'OpenAI轻量模型，响应快成本低',
+      'gpt-4-turbo': 'OpenAI强大模型，智能程度高',
+      'gpt-3.5-turbo': 'OpenAI经典模型，性价比高',
+      'claude-3-opus': 'Anthropic最强大模型，适合复杂任务',
+    };
+    
+    final currentModel = _selectedModel.isNotEmpty ? _selectedModel : _currentProvider?.defaultModel ?? '';
+    final description = modelDescriptions[currentModel] ?? '未找到模型描述';
+    
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              description,
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupGuide() {
+    final lines = _currentProvider!.setupGuide.split('\n');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -203,18 +426,45 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFD1DC), width: 1),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("🐰 兔兔温馨提示：", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF5A7E))),
-          SizedBox(height: 8),
-          Text("1. 去 https://platform.deepseek.com/ 注册账号并获取API Key"),
-          SizedBox(height: 4),
-          Text("2. Base URL 保持为 https://api.deepseek.com"),
-          SizedBox(height: 4),
-          Text("3. 保存配置后，在聊天页面测试是否正常"),
-          SizedBox(height: 4),
-          Text("4. 如果AI回复太正经，可以在角色设置中添加system prompt"),
+          Row(
+            children: [
+              const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFFF5A7E)),
+              const SizedBox(width: 8),
+              Text(
+                "设置指南 - ${_currentProvider!.name}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  color: Color(0xFFFF5A7E)
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...lines.map((line) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                line,
+                style: const TextStyle(fontSize: 13),
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          if (_currentProvider!.requiresProxy)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                '💡 提示：如果连接失败，请检查设备网络设置，确保可以访问国际服务',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
         ],
       ),
     );
@@ -223,7 +473,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showNotImplementedSnackbar(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("$feature功能开发中..."),
+        content: Text("$feature 功能开发中..."),
         duration: const Duration(seconds: 1),
       ),
     );
