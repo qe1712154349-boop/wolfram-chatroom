@@ -595,13 +595,13 @@ Widget build(BuildContext context) {
                           constraints: const BoxConstraints(minHeight: 40),
                           decoration: BoxDecoration(
                             color: AppTheme.messageFieldBackground,
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(36),
                             border: Border.all(
                               color: AppTheme.messageFieldBorder,
                               width: 1,
                             ),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                           child: TextField(
                             controller: _controller,
                             maxLines: 4,
