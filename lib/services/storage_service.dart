@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path_lib;
 import 'package:flutter/foundation.dart';
-import 'api_config.dart'; // 新增导入
+import 'api_config.dart';
 import '../models/message.dart';
 
 class StorageService {
@@ -15,24 +15,35 @@ class StorageService {
 
   Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
 
-  // ── 新增：服务商管理方法 ──
+  // ── 开发者模式相关 ──
+  Future<void> saveDeveloperMode(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool('developer_mode', enabled);
+  }
+
+  Future<bool> getDeveloperMode() async {
+    final prefs = await _prefs;
+    return prefs.getBool('developer_mode') ?? false;
+  }
+
+  // ── 服务商管理方法 ──
   Future<void> saveSelectedProvider(String providerId) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString('selected_provider', providerId);
   }
 
   Future<String> getSelectedProvider() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getString('selected_provider') ?? ApiConfig.defaultProviderId;
   }
 
   Future<void> saveProviderApiKey(String providerId, String apiKey) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString('api_key_$providerId', apiKey);
   }
 
   Future<String?> getProviderApiKey(String providerId) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getString('api_key_$providerId');
   }
   
@@ -55,38 +66,36 @@ class StorageService {
   }
 
   // ── 聊天记录相关 ──
-// 修改 saveChatHistory 方法：
-Future<void> saveChatHistory(List<Message> history) async {
-  final prefs = await _prefs;
-  
-  // 转换为Map列表
-  final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
-    return msg.toMap();
-  }).toList();
-  
-  final jsonString = jsonEncode(serializableHistory);
-  await prefs.setString('chat_history_master', jsonString);
-}
-
-// 修改 loadChatHistory 方法：
-Future<List<Message>> loadChatHistory() async {
-  final prefs = await _prefs;
-  final jsonString = prefs.getString('chat_history_master');
-  if (jsonString == null || jsonString.isEmpty) {
-    return [];
-  }
-  try {
-    final List<dynamic> decoded = jsonDecode(jsonString);
-    return decoded.map<Message>((e) {
-      return Message.fromMap(e as Map<String, dynamic>);
+  Future<void> saveChatHistory(List<Message> history) async {
+    final prefs = await _prefs;
+    
+    // 转换为Map列表
+    final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
+      return msg.toMap();
     }).toList();
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('聊天记录解析失败: $e');
-    }
-    return [];
+    
+    final jsonString = jsonEncode(serializableHistory);
+    await prefs.setString('chat_history_master', jsonString);
   }
-}
+
+  Future<List<Message>> loadChatHistory() async {
+    final prefs = await _prefs;
+    final jsonString = prefs.getString('chat_history_master');
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonString);
+      return decoded.map<Message>((e) {
+        return Message.fromMap(e as Map<String, dynamic>);
+      }).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('聊天记录解析失败: $e');
+      }
+      return [];
+    }
+  }
 
   Future<void> clearChatHistory() async {
     final prefs = await _prefs;
@@ -153,22 +162,50 @@ Future<List<Message>> loadChatHistory() async {
       prompt += '私密行为设定：\n$privateSetting\n\n';
     }
     
-    // 添加XML格式要求
+    // 增强 XML 格式指令
     prompt += '''
 ===重要格式指令===
-你必须严格按照以下XML格式回复，任何时候都不准打破结构：
+你必须严格按照以下XML格式回复，任何时候都不准打破结构，并且不要输出任何XML标签以外的内容。
+
+示例1：
+用户输入：/摸摸头
+你应该输出：
 <message>
-  <narration>这里是旁白、动作、环境描述</narration>
-  <dialogue>这里是角色说的话语</dialogue>
+  <narration>他微微低头，让你摸了摸他的头</narration>
+  <dialogue>这样你会开心一点吗？</dialogue>
 </message>
 
-规则：
-1. 所有内容必须放在<message>标签里
-2. 不准出现标签以外的任何文字
-3. <narration>用于叙述、动作、心理、环境描述
-4. <dialogue>只用于角色直接说的话
-5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
-6. 确保每个<dialogue>都是完整的对话，不要截断
+示例2：
+用户输入：你今天过得怎么样？
+你应该输出：
+<message>
+  <dialogue>还不错，处理了一些文件</dialogue>
+  <narration>他轻轻转动椅子，看向窗外</narration>
+  <dialogue>你呢？今天有什么特别的事吗？</dialogue>
+</message>
+
+格式规则（严格遵守）：
+1. 只输出 <message> 标签及其内部内容，绝对不要有其他文字
+2. <narration> 用于：动作、表情、心理活动、环境描述
+3. <dialogue> 用于：角色说出的对话
+4. 可以按顺序包含多个 <narration> 和 <dialogue> 标签
+5. 永远不要重复输出内容（比如不要在标签外再写一遍）
+6. 保持 XML 格式的完整性和正确性
+
+错误示例（绝对不能这样做）：
+"他歪了歪头，似乎对你的反应感到困惑"  ← 错误！标签外有内容
+<message>
+  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>  ← 错误！和标签外重复了
+  <dialogue>有什么问题吗?</dialogue>
+</message>
+
+正确做法：
+<message>
+  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>
+  <dialogue>有什么问题吗？</dialogue>
+</message>
+
+记住：整个回复必须是一个完整的 XML 文档，没有任何多余的文字。
 ''';
     
     if (prompt.isEmpty) {
@@ -179,19 +216,7 @@ Future<List<Message>> loadChatHistory() async {
 话少，对话自然，像人类，冷淡。
 
 ===重要格式指令===
-你必须严格按照以下XML格式回复，任何时候都不准打破结构：
-<message>
-  <narration>这里是旁白、动作、环境描述</narration>
-  <dialogue>这里是角色说的话语</dialogue>
-</message>
-
-规则：
-1. 所有内容必须放在<message>标签里
-2. 不准出现标签以外的任何文字
-3. <narration>用于叙述、动作、心理、环境描述
-4. <dialogue>只用于角色直接说的话
-5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
-6. 确保每个<dialogue>都是完整的对话，不要截断
+（上面的格式指令保持不变）
 ''';
     }
     
@@ -295,7 +320,7 @@ Future<List<Message>> loadChatHistory() async {
     }
   }
 
-  // ── 用户资料相关 ──（新增部分，添加在这里）
+  // ── 用户资料相关 ──
   Future<void> saveUserName(String userName) async {
     final prefs = await _prefs;
     await prefs.setString('user_name', userName);
@@ -303,7 +328,7 @@ Future<List<Message>> loadChatHistory() async {
 
   Future<String> getUserName() async {
     final prefs = await _prefs;
-    return prefs.getString('user_name') ?? '尘不言'; // 默认值
+    return prefs.getString('user_name') ?? '尘不言';
   }
 
   Future<void> saveShowUserAvatar(bool show) async {
@@ -313,7 +338,7 @@ Future<List<Message>> loadChatHistory() async {
 
   Future<bool> getShowUserAvatar() async {
     final prefs = await _prefs;
-    return prefs.getBool('show_user_avatar') ?? true; // 默认显示
+    return prefs.getBool('show_user_avatar') ?? true;
   }
 
   Future<Map<String, dynamic>> getUserProfile() async {
@@ -348,7 +373,7 @@ Future<List<Message>> loadChatHistory() async {
 
   Future<String> getSelectedModel() async {
     final prefs = await _prefs;
-    return prefs.getString('selected_model') ?? 'deepseek-chat'; // 改为更通用的默认值
+    return prefs.getString('selected_model') ?? 'deepseek-chat';
   }
 
   // 根据服务商获取模型列表
@@ -360,7 +385,7 @@ Future<List<Message>> loadChatHistory() async {
     } else if (currentBaseUrl.contains('openai.com')) {
       return ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
     }
-    return ['deepseek-chat']; // 默认
+    return ['deepseek-chat'];
   }
 
   // 旧方法（保持兼容）

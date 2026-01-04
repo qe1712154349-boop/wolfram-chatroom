@@ -1,5 +1,5 @@
-// lib/pages/me/settings_page.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/storage_service.dart';
 import '../../services/api_config.dart';
 
@@ -20,12 +20,46 @@ class _SettingsPageState extends State<SettingsPage> {
   String _selectedModel = '';
   ApiProvider? _currentProvider;
   List<String> _availableModels = [];
+  
+  // 开发者模式
+  bool _developerMode = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadDeveloperMode();
   }
+
+// 修改 _loadDeveloperMode 方法，添加 mounted 检查：
+Future<void> _loadDeveloperMode() async {
+  final mode = await _storage.getDeveloperMode();
+  if (mounted) {
+    setState(() {
+      _developerMode = mode;
+    });
+  }
+}
+
+        // 修改 _toggleDeveloperMode 方法
+        Future<void> _toggleDeveloperMode(bool value) async {
+          await _storage.saveDeveloperMode(value);
+          
+          if (mounted) {
+            setState(() {
+              _developerMode = value;
+            });
+          }
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(value ? '开发者模式已开启' : '开发者模式已关闭'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
 
   Future<void> _loadSettings() async {
     // 1. 加载用户选择的服务商
@@ -107,6 +141,73 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _apiKeyController.text = apiKey;
       });
+    }
+  }
+
+  void _showErrorLogs() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('错误日志'),
+        content: FutureBuilder<List<String>>(
+          future: _getErrorLogs(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final logs = snapshot.data ?? [];
+            if (logs.isEmpty) {
+              return const Text('暂无错误日志');
+            }
+            
+            return SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: logs.reversed.map((log) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        log,
+                        style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+          TextButton(
+            onPressed: _clearErrorLogs,
+            child: const Text('清空日志', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<List<String>> _getErrorLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('error_logs') ?? [];
+  }
+
+  Future<void> _clearErrorLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('error_logs');
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('日志已清空')),
+      );
     }
   }
 
@@ -291,7 +392,30 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
           
-          // 在 _SettingsPageState 类中找到角色设置的 ListTile，修改 onTap 方法
+          // 开发者模式开关
+          SwitchListTile(
+            title: const Text("开发者模式"),
+            subtitle: const Text("开启后可查看详细错误信息和日志"),
+            value: _developerMode,
+            onChanged: _toggleDeveloperMode,
+            activeThumbColor: const Color(0xFFFF5A7E),
+            activeTrackColor: const Color(0xFFFF5A7E).withValues(alpha: 0.5 * 255),
+          ),
+          const Divider(height: 1),
+
+          // 开发者工具入口（仅当开发者模式开启时显示）
+          if (_developerMode) ...[
+            ListTile(
+              title: const Text("错误日志"),
+              subtitle: const Text("查看最近的错误信息"),
+              leading: const Icon(Icons.bug_report, color: Colors.red),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: _showErrorLogs,
+            ),
+            const Divider(height: 1),
+          ],
+
+          // 角色设置
           ListTile(
             title: const Text("角色设置"),
             subtitle: const Text("编辑AI角色人设和头像"),

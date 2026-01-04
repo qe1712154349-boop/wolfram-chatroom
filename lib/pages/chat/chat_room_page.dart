@@ -7,10 +7,9 @@ import 'package:xml/xml.dart' as xml;
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
-import '../../app/theme.dart'; // 添加导入
+import '../../app/theme.dart';
 import 'chat_components.dart';
 import 'chat_room_settings_page.dart';
-// 移除 xml_message_parser.dart 导入，因为不再需要
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -135,39 +134,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
-/// 构建用于AI的上下文消息列表
-List<Message> _buildContextMessages({int maxCount = 8}) {
-  if (_messages.isEmpty) return [];
-
-  // 1. 过滤：只保留能进上下文的（排除 system_time）
-  final contextCandidates = _messages.where((m) {
-    return m.messageType != MessageType.system_time;
-  }).toList();
-
-  if (contextCandidates.isEmpty) return [];
-
-  // 2. 找最后一条用户消息（强制优先，锁定权重）
-  final lastUserMessage = contextCandidates.lastWhere(
-    (m) =>
-        m.messageType == MessageType.user_dialogue ||
-        m.messageType == MessageType.user_narration,
-    orElse: () => contextCandidates.last,
-  );
-
-  // 3. 取前面的背景消息（从后往前取，保持时序）
-  final background = contextCandidates
-      .where((m) => m != lastUserMessage)
-      .toList()  // 先转换为 List
-      .reversed
-      .take(maxCount - 1)
-      .toList()
-      .reversed
-      .toList(); // 恢复正向顺序
-
-  // 4. 组合，保证最后一条用户消息在末尾
-  return [...background, lastUserMessage];
-}
-
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty) {
@@ -220,6 +186,39 @@ List<Message> _buildContextMessages({int maxCount = 8}) {
     //   );
     //   _messages.add(timestampMessage);
     // }
+  }
+
+  /// 构建用于AI的上下文消息列表
+  List<Message> _buildContextMessages({int maxCount = 8}) {
+    if (_messages.isEmpty) return [];
+
+    // 1. 过滤：只保留能进上下文的（排除 system_time）
+    final contextCandidates = _messages.where((m) {
+      return m.messageType != MessageType.system_time;
+    }).toList();
+
+    if (contextCandidates.isEmpty) return [];
+
+    // 2. 找最后一条用户消息（强制优先，锁定权重）
+    final lastUserMessage = contextCandidates.lastWhere(
+      (m) =>
+          m.messageType == MessageType.user_dialogue ||
+          m.messageType == MessageType.user_narration,
+      orElse: () => contextCandidates.last,
+    );
+
+    // 3. 取前面的背景消息（从后往前取，保持时序）
+    final background = contextCandidates
+        .where((m) => m != lastUserMessage)
+        .toList()  // 先转换为 List
+        .reversed
+        .take(maxCount - 1)
+        .toList()
+        .reversed
+        .toList(); // 恢复正向顺序
+
+    // 4. 组合，保证最后一条用户消息在末尾
+    return [...background, lastUserMessage];
   }
 
   /// 解析AI回复，生成对应的Message对象
@@ -432,301 +431,300 @@ List<Message> _buildContextMessages({int maxCount = 8}) {
     );
   }
 
- /// 构建消息Widget - 使用正确的组件
-Widget _buildMessageWidget(Message msg) {
-  // 根据messageType渲染，使用正确的UI组件
-  switch (msg.messageType) {
-    case MessageType.user_narration:
-      // 用户旁白 - 使用新的旁白组件
-      return NarrationMessage(
-        text: msg.content,
-        isAI: false,
-        isCentered: false, // 用户旁白偏右
-      );
+  /// 构建消息Widget - 使用正确的组件
+  Widget _buildMessageWidget(Message msg) {
+    // 根据messageType渲染，使用正确的UI组件
+    switch (msg.messageType) {
+      case MessageType.user_narration:
+        // 用户旁白 - 使用新的旁白组件
+        return NarrationMessage(
+          text: msg.content,
+          isAI: false,
+          isCentered: false, // 用户旁白偏右
+        );
 
-    case MessageType.ai_narration:
-      // AI旁白 - 使用新的旁白组件
-      return NarrationMessage(
-        text: msg.content,
-        isAI: true,
-        isCentered: true, // AI旁白居中
-      );
-      
-    case MessageType.user_dialogue:
-      // 用户对话
-      return SentMessage(
-        text: msg.content,
-        userAvatarPath: _userAvatarPath,
-        showUserAvatar: _showUserAvatar,
-      );
-      
-    case MessageType.ai_dialogue:
-      // AI对话
-      return ReceivedMessage(
-        text: msg.content,
-        avatarPath: _avatarPath,
-      );
-      
-    case MessageType.system_time:
-      // 系统时间消息
-      return SystemTimeMessage(text: msg.content);
-      
-    case MessageType.system_state:
-      // 系统状态消息（当前未实现）
-      return Container();
+      case MessageType.ai_narration:
+        // AI旁白 - 使用新的旁白组件
+        return NarrationMessage(
+          text: msg.content,
+          isAI: true,
+          isCentered: true, // AI旁白居中
+        );
+        
+      case MessageType.user_dialogue:
+        // 用户对话
+        return SentMessage(
+          text: msg.content,
+          userAvatarPath: _userAvatarPath,
+          showUserAvatar: _showUserAvatar,
+        );
+        
+      case MessageType.ai_dialogue:
+        // AI对话
+        return ReceivedMessage(
+          text: msg.content,
+          avatarPath: _avatarPath,
+        );
+        
+      case MessageType.system_time:
+        // 系统时间消息
+        return SystemTimeMessage(text: msg.content);
+        
+      case MessageType.system_state:
+        // 系统状态消息（当前未实现）
+        return Container();
+    }
   }
-}
 
- // 修复后的 lib/pages/chat/chat_room_page.dart 的 build 方法部分
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: AppTheme.appBackground,
-    appBar: AppBar(
-      backgroundColor: AppTheme.chatRoomTop,
-      elevation: 0.5,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: GestureDetector(
-        onTap: () => _showAISetting(context),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: const Color(0xFFFFD2DD),
-              backgroundImage: _avatarPath != null
-                  ? FileImage(File(_avatarPath!))
-                  : null,
-              child: _avatarPath == null
-                  ? const Icon(Icons.person, size: 18, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _characterName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.appBackground,
+      appBar: AppBar(
+        backgroundColor: AppTheme.chatRoomTop,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: GestureDetector(
+          onTap: () => _showAISetting(context),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: const Color(0xFFFFD2DD),
+                backgroundImage: _avatarPath != null
+                    ? FileImage(File(_avatarPath!))
+                    : null,
+                child: _avatarPath == null
+                    ? const Icon(Icons.person, size: 18, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _characterName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Text(
+                    "在线",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_horiz, size: 24),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatRoomSettingsPage(
+                    characterName: _characterName,
+                    avatarPath: _avatarPath,
                   ),
                 ),
-                const Text(
-                  "在线",
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
+              );
+              
+              if (result == true) {
+                await _clearAllMessages();
+              }
+            },
+          ),
+        ],
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isLoading && index == _messages.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFFFFD2DD),
+                                backgroundImage: _avatarPath != null
+                                    ? FileImage(File(_avatarPath!))
+                                    : null,
+                                child: _avatarPath == null
+                                    ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD2DD),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Text(
+                                  "正在输入...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final msg = _messages[index];
+                      return GestureDetector(
+                        onLongPress: () => _showDeleteDialog(index),
+                        child: _buildMessageWidget(msg),
+                      );
+                    },
+                  ),
+                ),
+                // 底部输入区域
+                Container(
+                  color: AppTheme.messageInputBackground,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline, size: 22),
+                          color: Colors.grey[700],
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {},
+                        ),
+                        const SizedBox(width: 4),
+                        
+                        Expanded(
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 40),
+                            decoration: BoxDecoration(
+                              color: AppTheme.messageFieldBackground,
+                              borderRadius: BorderRadius.circular(36),
+                              border: Border.all(
+                                color: AppTheme.messageFieldBorder,
+                                width: 1,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                            child: TextField(
+                              controller: _controller,
+                              maxLines: 4,
+                              minLines: 1,
+                              textInputAction: TextInputAction.send,
+                              keyboardType: TextInputType.multiline,
+                              style: const TextStyle(fontSize: 15),
+                              decoration: const InputDecoration(
+                                hintText: "输入消息...",
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintStyle: TextStyle(color: Color(0xFF8E8E93)),
+                              ),
+                              onSubmitted: (value) {
+                                final text = _controller.text.trim();
+                                if (text.isNotEmpty) {
+                                  _sendMessage(text);
+                                  _controller.clear();
+                                }
+                              },
+                              onChanged: (value) {
+                                // 可以在这里添加实时搜索或其他功能
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        // 发送按钮 - 改为圆形更可爱
+                        GestureDetector(
+                          onTap: () {
+                            final text = _controller.text.trim();
+                            if (text.isNotEmpty) {
+                              _sendMessage(text);
+                              _controller.clear();
+                            }
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
+            // 滚动到底部按钮
+            if (_showScrollToBottomButton)
+              Positioned(
+                bottom: 90,
+                right: 16,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    border: Border.all(
+                      color: AppTheme.aiBubbleBorder,
+                      width: 1,
+                    ),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                    onPressed: () {
+                      _scrollToBottom();
+                      setState(() {
+                        _showScrollToBottomButton = false;
+                      });
+                      _scrollButtonTimer?.cancel();
+                    },
+                  ),
+                ),
+              ),
           ],
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.more_horiz, size: 24),
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChatRoomSettingsPage(
-                  characterName: _characterName,
-                  avatarPath: _avatarPath,
-                ),
-              ),
-            );
-            
-            if (result == true) {
-              await _clearAllMessages();
-            }
-          },
-        ),
-      ],
-    ),
-    body: GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: _messages.length + (_isLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (_isLoading && index == _messages.length) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: const Color(0xFFFFD2DD),
-                              backgroundImage: _avatarPath != null
-                                  ? FileImage(File(_avatarPath!))
-                                  : null,
-                              child: _avatarPath == null
-                                  ? const Icon(Icons.person, size: 20, color: Colors.white)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFD2DD),
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              child: const Text(
-                                "正在输入...",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black87,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final msg = _messages[index];
-                    return GestureDetector(
-                      onLongPress: () => _showDeleteDialog(index),
-                      child: _buildMessageWidget(msg),
-                    );
-                  },
-                ),
-              ),
-              // 底部输入区域
-              Container(
-                color: AppTheme.messageInputBackground,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline, size: 22),
-                        color: Colors.grey[700],
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {},
-                      ),
-                      const SizedBox(width: 4),
-                      
-                      Expanded(
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 40),
-                          decoration: BoxDecoration(
-                            color: AppTheme.messageFieldBackground,
-                            borderRadius: BorderRadius.circular(36),
-                            border: Border.all(
-                              color: AppTheme.messageFieldBorder,
-                              width: 1,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                          child: TextField(
-                            controller: _controller,
-                            maxLines: 4,
-                            minLines: 1,
-                            textInputAction: TextInputAction.send,
-                            keyboardType: TextInputType.multiline,
-                            style: const TextStyle(fontSize: 15),
-                            decoration: const InputDecoration(
-                              hintText: "输入消息...",
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(color: Color(0xFF8E8E93)),
-                            ),
-                            onSubmitted: (value) {
-                              final text = _controller.text.trim();
-                              if (text.isNotEmpty) {
-                                _sendMessage(text);
-                                _controller.clear();
-                              }
-                            },
-                            onChanged: (value) {
-                              // 可以在这里添加实时搜索或其他功能
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      
-                      // 发送按钮 - 改为圆形更可爱
-                      GestureDetector(
-                        onTap: () {
-                          final text = _controller.text.trim();
-                          if (text.isNotEmpty) {
-                            _sendMessage(text);
-                            _controller.clear();
-                          }
-                        },
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // 滚动到底部按钮
-          if (_showScrollToBottomButton)
-            Positioned(
-              bottom: 90,
-              right: 16,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(
-                    color: AppTheme.aiBubbleBorder,
-                    width: 1,
-                  ),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
-                  onPressed: () {
-                    _scrollToBottom();
-                    setState(() {
-                      _showScrollToBottomButton = false;
-                    });
-                    _scrollButtonTimer?.cancel();
-                  },
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
-}
+    );
+  }
 
   void _showAISetting(BuildContext context) {
     showModalBottomSheet(

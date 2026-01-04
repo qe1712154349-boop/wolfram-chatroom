@@ -1457,9 +1457,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 26597 bytes
+Size: 27077 bytes
 
-Modified: 01/05/2026 01:03:22
+Modified: 01/05/2026 02:21:50
 
 ========================================
 
@@ -1472,10 +1472,9 @@ import 'package:xml/xml.dart' as xml;
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
-import '../../app/theme.dart'; // 添加导入
+import '../../app/theme.dart';
 import 'chat_components.dart';
 import 'chat_room_settings_page.dart';
-// 移除 xml_message_parser.dart 导入，因为不再需要
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -1600,39 +1599,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
-/// 构建用于AI的上下文消息列表
-List<Message> _buildContextMessages({int maxCount = 8}) {
-  if (_messages.isEmpty) return [];
-
-  // 1. 过滤：只保留能进上下文的（排除 system_time）
-  final contextCandidates = _messages.where((m) {
-    return m.messageType != MessageType.system_time;
-  }).toList();
-
-  if (contextCandidates.isEmpty) return [];
-
-  // 2. 找最后一条用户消息（强制优先，锁定权重）
-  final lastUserMessage = contextCandidates.lastWhere(
-    (m) =>
-        m.messageType == MessageType.user_dialogue ||
-        m.messageType == MessageType.user_narration,
-    orElse: () => contextCandidates.last,
-  );
-
-  // 3. 取前面的背景消息（从后往前取，保持时序）
-  final background = contextCandidates
-      .where((m) => m != lastUserMessage)
-      .toList()  // 先转换为 List
-      .reversed
-      .take(maxCount - 1)
-      .toList()
-      .reversed
-      .toList(); // 恢复正向顺序
-
-  // 4. 组合，保证最后一条用户消息在末尾
-  return [...background, lastUserMessage];
-}
-
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty) {
@@ -1685,6 +1651,39 @@ List<Message> _buildContextMessages({int maxCount = 8}) {
     //   );
     //   _messages.add(timestampMessage);
     // }
+  }
+
+  /// 构建用于AI的上下文消息列表
+  List<Message> _buildContextMessages({int maxCount = 8}) {
+    if (_messages.isEmpty) return [];
+
+    // 1. 过滤：只保留能进上下文的（排除 system_time）
+    final contextCandidates = _messages.where((m) {
+      return m.messageType != MessageType.system_time;
+    }).toList();
+
+    if (contextCandidates.isEmpty) return [];
+
+    // 2. 找最后一条用户消息（强制优先，锁定权重）
+    final lastUserMessage = contextCandidates.lastWhere(
+      (m) =>
+          m.messageType == MessageType.user_dialogue ||
+          m.messageType == MessageType.user_narration,
+      orElse: () => contextCandidates.last,
+    );
+
+    // 3. 取前面的背景消息（从后往前取，保持时序）
+    final background = contextCandidates
+        .where((m) => m != lastUserMessage)
+        .toList()  // 先转换为 List
+        .reversed
+        .take(maxCount - 1)
+        .toList()
+        .reversed
+        .toList(); // 恢复正向顺序
+
+    // 4. 组合，保证最后一条用户消息在末尾
+    return [...background, lastUserMessage];
   }
 
   /// 解析AI回复，生成对应的Message对象
@@ -1897,301 +1896,300 @@ List<Message> _buildContextMessages({int maxCount = 8}) {
     );
   }
 
- /// 构建消息Widget - 使用正确的组件
-Widget _buildMessageWidget(Message msg) {
-  // 根据messageType渲染，使用正确的UI组件
-  switch (msg.messageType) {
-    case MessageType.user_narration:
-      // 用户旁白 - 使用新的旁白组件
-      return NarrationMessage(
-        text: msg.content,
-        isAI: false,
-        isCentered: false, // 用户旁白偏右
-      );
+  /// 构建消息Widget - 使用正确的组件
+  Widget _buildMessageWidget(Message msg) {
+    // 根据messageType渲染，使用正确的UI组件
+    switch (msg.messageType) {
+      case MessageType.user_narration:
+        // 用户旁白 - 使用新的旁白组件
+        return NarrationMessage(
+          text: msg.content,
+          isAI: false,
+          isCentered: false, // 用户旁白偏右
+        );
 
-    case MessageType.ai_narration:
-      // AI旁白 - 使用新的旁白组件
-      return NarrationMessage(
-        text: msg.content,
-        isAI: true,
-        isCentered: true, // AI旁白居中
-      );
-      
-    case MessageType.user_dialogue:
-      // 用户对话
-      return SentMessage(
-        text: msg.content,
-        userAvatarPath: _userAvatarPath,
-        showUserAvatar: _showUserAvatar,
-      );
-      
-    case MessageType.ai_dialogue:
-      // AI对话
-      return ReceivedMessage(
-        text: msg.content,
-        avatarPath: _avatarPath,
-      );
-      
-    case MessageType.system_time:
-      // 系统时间消息
-      return SystemTimeMessage(text: msg.content);
-      
-    case MessageType.system_state:
-      // 系统状态消息（当前未实现）
-      return Container();
+      case MessageType.ai_narration:
+        // AI旁白 - 使用新的旁白组件
+        return NarrationMessage(
+          text: msg.content,
+          isAI: true,
+          isCentered: true, // AI旁白居中
+        );
+        
+      case MessageType.user_dialogue:
+        // 用户对话
+        return SentMessage(
+          text: msg.content,
+          userAvatarPath: _userAvatarPath,
+          showUserAvatar: _showUserAvatar,
+        );
+        
+      case MessageType.ai_dialogue:
+        // AI对话
+        return ReceivedMessage(
+          text: msg.content,
+          avatarPath: _avatarPath,
+        );
+        
+      case MessageType.system_time:
+        // 系统时间消息
+        return SystemTimeMessage(text: msg.content);
+        
+      case MessageType.system_state:
+        // 系统状态消息（当前未实现）
+        return Container();
+    }
   }
-}
 
- // 修复后的 lib/pages/chat/chat_room_page.dart 的 build 方法部分
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: AppTheme.appBackground,
-    appBar: AppBar(
-      backgroundColor: AppTheme.chatRoomTop,
-      elevation: 0.5,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: GestureDetector(
-        onTap: () => _showAISetting(context),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: const Color(0xFFFFD2DD),
-              backgroundImage: _avatarPath != null
-                  ? FileImage(File(_avatarPath!))
-                  : null,
-              child: _avatarPath == null
-                  ? const Icon(Icons.person, size: 18, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _characterName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.appBackground,
+      appBar: AppBar(
+        backgroundColor: AppTheme.chatRoomTop,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: GestureDetector(
+          onTap: () => _showAISetting(context),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: const Color(0xFFFFD2DD),
+                backgroundImage: _avatarPath != null
+                    ? FileImage(File(_avatarPath!))
+                    : null,
+                child: _avatarPath == null
+                    ? const Icon(Icons.person, size: 18, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _characterName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Text(
+                    "在线",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_horiz, size: 24),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatRoomSettingsPage(
+                    characterName: _characterName,
+                    avatarPath: _avatarPath,
                   ),
                 ),
-                const Text(
-                  "在线",
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
+              );
+              
+              if (result == true) {
+                await _clearAllMessages();
+              }
+            },
+          ),
+        ],
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isLoading && index == _messages.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFFFFD2DD),
+                                backgroundImage: _avatarPath != null
+                                    ? FileImage(File(_avatarPath!))
+                                    : null,
+                                child: _avatarPath == null
+                                    ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD2DD),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Text(
+                                  "正在输入...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final msg = _messages[index];
+                      return GestureDetector(
+                        onLongPress: () => _showDeleteDialog(index),
+                        child: _buildMessageWidget(msg),
+                      );
+                    },
+                  ),
+                ),
+                // 底部输入区域
+                Container(
+                  color: AppTheme.messageInputBackground,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline, size: 22),
+                          color: Colors.grey[700],
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {},
+                        ),
+                        const SizedBox(width: 4),
+                        
+                        Expanded(
+                          child: Container(
+                            constraints: const BoxConstraints(minHeight: 40),
+                            decoration: BoxDecoration(
+                              color: AppTheme.messageFieldBackground,
+                              borderRadius: BorderRadius.circular(36),
+                              border: Border.all(
+                                color: AppTheme.messageFieldBorder,
+                                width: 1,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                            child: TextField(
+                              controller: _controller,
+                              maxLines: 4,
+                              minLines: 1,
+                              textInputAction: TextInputAction.send,
+                              keyboardType: TextInputType.multiline,
+                              style: const TextStyle(fontSize: 15),
+                              decoration: const InputDecoration(
+                                hintText: "输入消息...",
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintStyle: TextStyle(color: Color(0xFF8E8E93)),
+                              ),
+                              onSubmitted: (value) {
+                                final text = _controller.text.trim();
+                                if (text.isNotEmpty) {
+                                  _sendMessage(text);
+                                  _controller.clear();
+                                }
+                              },
+                              onChanged: (value) {
+                                // 可以在这里添加实时搜索或其他功能
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        // 发送按钮 - 改为圆形更可爱
+                        GestureDetector(
+                          onTap: () {
+                            final text = _controller.text.trim();
+                            if (text.isNotEmpty) {
+                              _sendMessage(text);
+                              _controller.clear();
+                            }
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
+            // 滚动到底部按钮
+            if (_showScrollToBottomButton)
+              Positioned(
+                bottom: 90,
+                right: 16,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    border: Border.all(
+                      color: AppTheme.aiBubbleBorder,
+                      width: 1,
+                    ),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                    onPressed: () {
+                      _scrollToBottom();
+                      setState(() {
+                        _showScrollToBottomButton = false;
+                      });
+                      _scrollButtonTimer?.cancel();
+                    },
+                  ),
+                ),
+              ),
           ],
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.more_horiz, size: 24),
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChatRoomSettingsPage(
-                  characterName: _characterName,
-                  avatarPath: _avatarPath,
-                ),
-              ),
-            );
-            
-            if (result == true) {
-              await _clearAllMessages();
-            }
-          },
-        ),
-      ],
-    ),
-    body: GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: _messages.length + (_isLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (_isLoading && index == _messages.length) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: const Color(0xFFFFD2DD),
-                              backgroundImage: _avatarPath != null
-                                  ? FileImage(File(_avatarPath!))
-                                  : null,
-                              child: _avatarPath == null
-                                  ? const Icon(Icons.person, size: 20, color: Colors.white)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFD2DD),
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              child: const Text(
-                                "正在输入...",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black87,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final msg = _messages[index];
-                    return GestureDetector(
-                      onLongPress: () => _showDeleteDialog(index),
-                      child: _buildMessageWidget(msg),
-                    );
-                  },
-                ),
-              ),
-              // 底部输入区域
-              Container(
-                color: AppTheme.messageInputBackground,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline, size: 22),
-                        color: Colors.grey[700],
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {},
-                      ),
-                      const SizedBox(width: 4),
-                      
-                      Expanded(
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 40),
-                          decoration: BoxDecoration(
-                            color: AppTheme.messageFieldBackground,
-                            borderRadius: BorderRadius.circular(36),
-                            border: Border.all(
-                              color: AppTheme.messageFieldBorder,
-                              width: 1,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                          child: TextField(
-                            controller: _controller,
-                            maxLines: 4,
-                            minLines: 1,
-                            textInputAction: TextInputAction.send,
-                            keyboardType: TextInputType.multiline,
-                            style: const TextStyle(fontSize: 15),
-                            decoration: const InputDecoration(
-                              hintText: "输入消息...",
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(color: Color(0xFF8E8E93)),
-                            ),
-                            onSubmitted: (value) {
-                              final text = _controller.text.trim();
-                              if (text.isNotEmpty) {
-                                _sendMessage(text);
-                                _controller.clear();
-                              }
-                            },
-                            onChanged: (value) {
-                              // 可以在这里添加实时搜索或其他功能
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      
-                      // 发送按钮 - 改为圆形更可爱
-                      GestureDetector(
-                        onTap: () {
-                          final text = _controller.text.trim();
-                          if (text.isNotEmpty) {
-                            _sendMessage(text);
-                            _controller.clear();
-                          }
-                        },
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // 滚动到底部按钮
-          if (_showScrollToBottomButton)
-            Positioned(
-              bottom: 90,
-              right: 16,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(
-                    color: AppTheme.aiBubbleBorder,
-                    width: 1,
-                  ),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
-                  onPressed: () {
-                    _scrollToBottom();
-                    setState(() {
-                      _showScrollToBottomButton = false;
-                    });
-                    _scrollButtonTimer?.cancel();
-                  },
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
-}
+    );
+  }
 
   void _showAISetting(BuildContext context) {
     showModalBottomSheet(
@@ -3383,14 +3381,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 16784 bytes
+Size: 20872 bytes
 
-Modified: 01/04/2026 14:54:20
+Modified: 01/05/2026 02:21:23
 
 ========================================
 
-// lib/pages/me/settings_page.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/storage_service.dart';
 import '../../services/api_config.dart';
 
@@ -3411,12 +3409,46 @@ class _SettingsPageState extends State<SettingsPage> {
   String _selectedModel = '';
   ApiProvider? _currentProvider;
   List<String> _availableModels = [];
+  
+  // 开发者模式
+  bool _developerMode = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadDeveloperMode();
   }
+
+// 修改 _loadDeveloperMode 方法，添加 mounted 检查：
+Future<void> _loadDeveloperMode() async {
+  final mode = await _storage.getDeveloperMode();
+  if (mounted) {
+    setState(() {
+      _developerMode = mode;
+    });
+  }
+}
+
+        // 修改 _toggleDeveloperMode 方法
+        Future<void> _toggleDeveloperMode(bool value) async {
+          await _storage.saveDeveloperMode(value);
+          
+          if (mounted) {
+            setState(() {
+              _developerMode = value;
+            });
+          }
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(value ? '开发者模式已开启' : '开发者模式已关闭'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
 
   Future<void> _loadSettings() async {
     // 1. 加载用户选择的服务商
@@ -3498,6 +3530,73 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _apiKeyController.text = apiKey;
       });
+    }
+  }
+
+  void _showErrorLogs() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('错误日志'),
+        content: FutureBuilder<List<String>>(
+          future: _getErrorLogs(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final logs = snapshot.data ?? [];
+            if (logs.isEmpty) {
+              return const Text('暂无错误日志');
+            }
+            
+            return SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: logs.reversed.map((log) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        log,
+                        style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+          TextButton(
+            onPressed: _clearErrorLogs,
+            child: const Text('清空日志', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<List<String>> _getErrorLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('error_logs') ?? [];
+  }
+
+  Future<void> _clearErrorLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('error_logs');
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('日志已清空')),
+      );
     }
   }
 
@@ -3682,7 +3781,30 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
           
-          // 在 _SettingsPageState 类中找到角色设置的 ListTile，修改 onTap 方法
+          // 开发者模式开关
+          SwitchListTile(
+            title: const Text("开发者模式"),
+            subtitle: const Text("开启后可查看详细错误信息和日志"),
+            value: _developerMode,
+            onChanged: _toggleDeveloperMode,
+            activeThumbColor: const Color(0xFFFF5A7E),
+            activeTrackColor: const Color(0xFFFF5A7E).withValues(alpha: 0.5 * 255),
+          ),
+          const Divider(height: 1),
+
+          // 开发者工具入口（仅当开发者模式开启时显示）
+          if (_developerMode) ...[
+            ListTile(
+              title: const Text("错误日志"),
+              subtitle: const Text("查看最近的错误信息"),
+              leading: const Icon(Icons.bug_report, color: Colors.red),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: _showErrorLogs,
+            ),
+            const Divider(height: 1),
+          ],
+
+          // 角色设置
           ListTile(
             title: const Text("角色设置"),
             subtitle: const Text("编辑AI角色人设和头像"),
@@ -4054,9 +4176,9 @@ Modified: 01/02/2026 16:37:48
 
 File: D:\D\my_new_app\lib\services\storage_service.dart
 
-Size: 11992 bytes
+Size: 12595 bytes
 
-Modified: 01/04/2026 01:12:39
+Modified: 01/05/2026 02:20:32
 
 ========================================
 
@@ -4067,7 +4189,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path_lib;
 import 'package:flutter/foundation.dart';
-import 'api_config.dart'; // 新增导入
+import 'api_config.dart';
 import '../models/message.dart';
 
 class StorageService {
@@ -4077,24 +4199,35 @@ class StorageService {
 
   Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
 
-  // ── 新增：服务商管理方法 ──
+  // ── 开发者模式相关 ──
+  Future<void> saveDeveloperMode(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool('developer_mode', enabled);
+  }
+
+  Future<bool> getDeveloperMode() async {
+    final prefs = await _prefs;
+    return prefs.getBool('developer_mode') ?? false;
+  }
+
+  // ── 服务商管理方法 ──
   Future<void> saveSelectedProvider(String providerId) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString('selected_provider', providerId);
   }
 
   Future<String> getSelectedProvider() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getString('selected_provider') ?? ApiConfig.defaultProviderId;
   }
 
   Future<void> saveProviderApiKey(String providerId, String apiKey) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString('api_key_$providerId', apiKey);
   }
 
   Future<String?> getProviderApiKey(String providerId) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getString('api_key_$providerId');
   }
   
@@ -4117,38 +4250,36 @@ class StorageService {
   }
 
   // ── 聊天记录相关 ──
-// 修改 saveChatHistory 方法：
-Future<void> saveChatHistory(List<Message> history) async {
-  final prefs = await _prefs;
-  
-  // 转换为Map列表
-  final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
-    return msg.toMap();
-  }).toList();
-  
-  final jsonString = jsonEncode(serializableHistory);
-  await prefs.setString('chat_history_master', jsonString);
-}
-
-// 修改 loadChatHistory 方法：
-Future<List<Message>> loadChatHistory() async {
-  final prefs = await _prefs;
-  final jsonString = prefs.getString('chat_history_master');
-  if (jsonString == null || jsonString.isEmpty) {
-    return [];
-  }
-  try {
-    final List<dynamic> decoded = jsonDecode(jsonString);
-    return decoded.map<Message>((e) {
-      return Message.fromMap(e as Map<String, dynamic>);
+  Future<void> saveChatHistory(List<Message> history) async {
+    final prefs = await _prefs;
+    
+    // 转换为Map列表
+    final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
+      return msg.toMap();
     }).toList();
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('聊天记录解析失败: $e');
-    }
-    return [];
+    
+    final jsonString = jsonEncode(serializableHistory);
+    await prefs.setString('chat_history_master', jsonString);
   }
-}
+
+  Future<List<Message>> loadChatHistory() async {
+    final prefs = await _prefs;
+    final jsonString = prefs.getString('chat_history_master');
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonString);
+      return decoded.map<Message>((e) {
+        return Message.fromMap(e as Map<String, dynamic>);
+      }).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('聊天记录解析失败: $e');
+      }
+      return [];
+    }
+  }
 
   Future<void> clearChatHistory() async {
     final prefs = await _prefs;
@@ -4215,22 +4346,50 @@ Future<List<Message>> loadChatHistory() async {
       prompt += '私密行为设定：\n$privateSetting\n\n';
     }
     
-    // 添加XML格式要求
+    // 增强 XML 格式指令
     prompt += '''
 ===重要格式指令===
-你必须严格按照以下XML格式回复，任何时候都不准打破结构：
+你必须严格按照以下XML格式回复，任何时候都不准打破结构，并且不要输出任何XML标签以外的内容。
+
+示例1：
+用户输入：/摸摸头
+你应该输出：
 <message>
-  <narration>这里是旁白、动作、环境描述</narration>
-  <dialogue>这里是角色说的话语</dialogue>
+  <narration>他微微低头，让你摸了摸他的头</narration>
+  <dialogue>这样你会开心一点吗？</dialogue>
 </message>
 
-规则：
-1. 所有内容必须放在<message>标签里
-2. 不准出现标签以外的任何文字
-3. <narration>用于叙述、动作、心理、环境描述
-4. <dialogue>只用于角色直接说的话
-5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
-6. 确保每个<dialogue>都是完整的对话，不要截断
+示例2：
+用户输入：你今天过得怎么样？
+你应该输出：
+<message>
+  <dialogue>还不错，处理了一些文件</dialogue>
+  <narration>他轻轻转动椅子，看向窗外</narration>
+  <dialogue>你呢？今天有什么特别的事吗？</dialogue>
+</message>
+
+格式规则（严格遵守）：
+1. 只输出 <message> 标签及其内部内容，绝对不要有其他文字
+2. <narration> 用于：动作、表情、心理活动、环境描述
+3. <dialogue> 用于：角色说出的对话
+4. 可以按顺序包含多个 <narration> 和 <dialogue> 标签
+5. 永远不要重复输出内容（比如不要在标签外再写一遍）
+6. 保持 XML 格式的完整性和正确性
+
+错误示例（绝对不能这样做）：
+"他歪了歪头，似乎对你的反应感到困惑"  ← 错误！标签外有内容
+<message>
+  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>  ← 错误！和标签外重复了
+  <dialogue>有什么问题吗?</dialogue>
+</message>
+
+正确做法：
+<message>
+  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>
+  <dialogue>有什么问题吗？</dialogue>
+</message>
+
+记住：整个回复必须是一个完整的 XML 文档，没有任何多余的文字。
 ''';
     
     if (prompt.isEmpty) {
@@ -4241,19 +4400,7 @@ Future<List<Message>> loadChatHistory() async {
 话少，对话自然，像人类，冷淡。
 
 ===重要格式指令===
-你必须严格按照以下XML格式回复，任何时候都不准打破结构：
-<message>
-  <narration>这里是旁白、动作、环境描述</narration>
-  <dialogue>这里是角色说的话语</dialogue>
-</message>
-
-规则：
-1. 所有内容必须放在<message>标签里
-2. 不准出现标签以外的任何文字
-3. <narration>用于叙述、动作、心理、环境描述
-4. <dialogue>只用于角色直接说的话
-5. 如果有多段内容，可以包含多个<narration>和<dialogue>标签
-6. 确保每个<dialogue>都是完整的对话，不要截断
+（上面的格式指令保持不变）
 ''';
     }
     
@@ -4357,7 +4504,7 @@ Future<List<Message>> loadChatHistory() async {
     }
   }
 
-  // ── 用户资料相关 ──（新增部分，添加在这里）
+  // ── 用户资料相关 ──
   Future<void> saveUserName(String userName) async {
     final prefs = await _prefs;
     await prefs.setString('user_name', userName);
@@ -4365,7 +4512,7 @@ Future<List<Message>> loadChatHistory() async {
 
   Future<String> getUserName() async {
     final prefs = await _prefs;
-    return prefs.getString('user_name') ?? '尘不言'; // 默认值
+    return prefs.getString('user_name') ?? '尘不言';
   }
 
   Future<void> saveShowUserAvatar(bool show) async {
@@ -4375,7 +4522,7 @@ Future<List<Message>> loadChatHistory() async {
 
   Future<bool> getShowUserAvatar() async {
     final prefs = await _prefs;
-    return prefs.getBool('show_user_avatar') ?? true; // 默认显示
+    return prefs.getBool('show_user_avatar') ?? true;
   }
 
   Future<Map<String, dynamic>> getUserProfile() async {
@@ -4410,7 +4557,7 @@ Future<List<Message>> loadChatHistory() async {
 
   Future<String> getSelectedModel() async {
     final prefs = await _prefs;
-    return prefs.getString('selected_model') ?? 'deepseek-chat'; // 改为更通用的默认值
+    return prefs.getString('selected_model') ?? 'deepseek-chat';
   }
 
   // 根据服务商获取模型列表
@@ -4422,7 +4569,7 @@ Future<List<Message>> loadChatHistory() async {
     } else if (currentBaseUrl.contains('openai.com')) {
       return ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'];
     }
-    return ['deepseek-chat']; // 默认
+    return ['deepseek-chat'];
   }
 
   // 旧方法（保持兼容）

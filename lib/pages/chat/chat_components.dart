@@ -216,7 +216,7 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 24.0), // 上下间距从8改为2
+      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0), // 上下间距从8改为2
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75, // 从0.8改为0.75
