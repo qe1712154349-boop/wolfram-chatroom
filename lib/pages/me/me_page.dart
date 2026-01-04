@@ -18,7 +18,7 @@ class _MePageState extends State<MePage> {
   final StorageService _storage = StorageService();
   final ImagePicker _picker = ImagePicker();
   String? _userAvatarPath;
-  String _userName = '尘不言';
+  String _userName = 'name';
   bool _isLoadingAvatar = false;
 
   @override
@@ -171,7 +171,7 @@ class _MePageState extends State<MePage> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        "微信号: likeme9543",
+                        "ID: likeme",
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                     ],
@@ -186,15 +186,15 @@ class _MePageState extends State<MePage> {
         const SizedBox(height: 10),
         
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "服务", Colors.green),
+        _buildListTile(Icons.wechat_outlined, "爱意", Colors.green),
         const Divider(height: 1, indent: 60),
         _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
         const Divider(height: 1, indent: 60),
         _buildListTile(Icons.photo_outlined, "朋友圈", Colors.blue),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.credit_card_outlined, "卡包", Colors.blueAccent),
+        _buildListTile(Icons.credit_card_outlined, "小说", Colors.blueAccent),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "表情", Colors.amber),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "相册", Colors.amber),
         
         const SizedBox(height: 10),
         

@@ -30,7 +30,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
-  String _characterName = 'Master';
+  String _characterName = 'name';
   String? _avatarPath;
   String? _userAvatarPath;
   bool _showUserAvatar = true;

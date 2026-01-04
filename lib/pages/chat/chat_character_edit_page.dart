@@ -44,7 +44,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
       
       setState(() {
         _avatarPath = avatarPath;
-        _nicknameController.text = characterData['nickname'] ?? 'Master';
+        _nicknameController.text = characterData['nickname'] ?? 'name';
         _introController.text = characterData['intro'] ?? '';
         _privateSettingController.text = characterData['private_setting'] ?? '';
         _openingController.text = characterData['opening'] ?? '';
@@ -286,7 +286,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
-            '编辑 Master 人设',
+            '编辑 AI 人设',
             style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
           ),
         ),
@@ -306,7 +306,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          '编辑 Master 人设',
+          '编辑 AI 人设',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
       ),
@@ -344,7 +344,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '这些设定会作为AI的系统提示，影响Master的性格和行为',
+              '这些设定会作为AI的系统提示，影响AI的性格和行为',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,

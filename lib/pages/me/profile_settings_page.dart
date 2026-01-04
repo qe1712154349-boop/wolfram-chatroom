@@ -16,7 +16,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final ImagePicker _picker = ImagePicker();
   
   String? _userAvatarPath;
-  String _userName = '尘不言';
+  String _userName = 'name';
   bool _showUserAvatar = true;
   bool _isLoading = false;
   bool _isSaving = false;
@@ -37,7 +37,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       
       setState(() {
         _userAvatarPath = profile['avatarPath'];
-        _userName = profile['name'] ?? '尘不言';
+        _userName = profile['name'] ?? 'name';
         _showUserAvatar = profile['showAvatar'] ?? true;
         _isLoading = false;
       });

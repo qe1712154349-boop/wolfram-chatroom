@@ -14,8 +14,8 @@ class ChatListPage extends StatefulWidget {
 
 class _ChatListPageState extends State<ChatListPage> {
   final StorageService _storage = StorageService();
-  String _characterName = 'Master';
-  String _characterIntro = 'iyaa bebil, aku di sini';
+  String _characterName = 'name';
+  String _characterIntro = 'Character Profile';
   String? _avatarPath;
 
   @override
@@ -31,7 +31,7 @@ class _ChatListPageState extends State<ChatListPage> {
     
     setState(() {
       _characterName = name;
-      _characterIntro = intro.isNotEmpty ? intro : 'iyaa bebil, aku di sini';
+      _characterIntro = intro.isNotEmpty ? intro : 'Character Profile';
       _avatarPath = avatarPath;
     });
   }
