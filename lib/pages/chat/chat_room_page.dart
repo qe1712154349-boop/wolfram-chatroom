@@ -135,6 +135,39 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
+/// 构建用于AI的上下文消息列表
+List<Message> _buildContextMessages({int maxCount = 8}) {
+  if (_messages.isEmpty) return [];
+
+  // 1. 过滤：只保留能进上下文的（排除 system_time）
+  final contextCandidates = _messages.where((m) {
+    return m.messageType != MessageType.system_time;
+  }).toList();
+
+  if (contextCandidates.isEmpty) return [];
+
+  // 2. 找最后一条用户消息（强制优先，锁定权重）
+  final lastUserMessage = contextCandidates.lastWhere(
+    (m) =>
+        m.messageType == MessageType.user_dialogue ||
+        m.messageType == MessageType.user_narration,
+    orElse: () => contextCandidates.last,
+  );
+
+  // 3. 取前面的背景消息（从后往前取，保持时序）
+  final background = contextCandidates
+      .where((m) => m != lastUserMessage)
+      .toList()  // 先转换为 List
+      .reversed
+      .take(maxCount - 1)
+      .toList()
+      .reversed
+      .toList(); // 恢复正向顺序
+
+  // 4. 组合，保证最后一条用户消息在末尾
+  return [...background, lastUserMessage];
+}
+
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty) {
@@ -296,16 +329,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         {'role': 'system', 'content': systemPrompt},
       ];
 
-      // 只添加对话内容给AI，不包括类型信息
-      final int historyLimit = 20;
-      final recent = _messages.length > historyLimit 
-          ? _messages.sublist(_messages.length - historyLimit) 
-          : _messages;
+      // 构建AI上下文（严格按 messageType 过滤）
+      final contextMessages = _buildContextMessages();
 
-      apiMessages.addAll(recent.map((msg) => {
-        'role': msg.role,
-        'content': msg.content,
-      }));
+      // 只发送有效上下文给AI（排除 system_time）
+      apiMessages.addAll(
+        contextMessages.map((msg) => {
+          'role': msg.role,
+          'content': msg.content,
+        }),
+      );
 
       // 从StorageService获取选择的模型
       final selectedModel = await _storage.getSelectedModel();
