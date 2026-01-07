@@ -385,6 +385,14 @@ Future<void> _loadDeveloperMode() async {
           
           const SizedBox(height: 40),
           
+          // 输出格式配置
+          const Text(
+            "输出格式", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          _buildFormatSelector(),
+          const SizedBox(height: 40),
           // 其他设置项
           const Text(
             "其他设置", 
@@ -411,6 +419,25 @@ Future<void> _loadDeveloperMode() async {
               leading: const Icon(Icons.bug_report, color: Colors.red),
               trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
               onTap: _showErrorLogs,
+            ),
+            const Divider(height: 1),
+          ],
+
+if (_developerMode) ...[
+            ListTile(
+              title: const Text("错误日志"),
+              subtitle: const Text("查看最近的错误信息"),
+              leading: const Icon(Icons.bug_report, color: Colors.red),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: _showErrorLogs,
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text("格式诊断"),
+              subtitle: const Text("查看消息格式解析日志"),
+              leading: const Icon(Icons.analytics, color: Colors.blue),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: _showDebugLogs,
             ),
             const Divider(height: 1),
           ],
@@ -590,6 +617,233 @@ Future<void> _loadDeveloperMode() async {
                 style: TextStyle(fontSize: 12),
               ),
             ),
+        ],
+      ),
+    );
+  }
+Widget _buildFormatSelector() {
+    return FutureBuilder<Map<String, String>>(
+      future: _getFormatInfo(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const CircularProgressIndicator();
+        }
+        
+        final info = snapshot.data!;
+        final currentFormat = info['current'] ?? 'auto';
+        final recommended = info['recommended'] ?? 'markdown';
+        final actual = info['actual'] ?? 'markdown';
+        
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    "AI 输出格式：",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const Spacer(),
+                  Text(
+                    "当前使用：${_getFormatName(actual)}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // 格式选项
+              _buildFormatOption('auto', '自动选择（推荐）', 
+                  '根据模型自动选择最佳格式', currentFormat, recommended),
+              const SizedBox(height: 8),
+              _buildFormatOption('markdown', 'Markdown', 
+                  '*旁白* "对话"，适合 DeepSeek', currentFormat, recommended),
+              const SizedBox(height: 8),
+              _buildFormatOption('xml', 'XML', 
+                  '<narration>/<dialogue>，适合 Claude', currentFormat, recommended),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildFormatOption(String value, String title, String subtitle, 
+      String currentFormat, String recommended) {
+    final isSelected = currentFormat == value;
+    final isRecommended = value == 'auto' || value == recommended;
+    
+    return GestureDetector(
+      onTap: () async {
+        await _storage.saveOutputFormat(value);
+        setState(() {});
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF0F3) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF5A7E) : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: isSelected ? const Color(0xFFFF5A7E) : Colors.grey[400],
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      if (isRecommended) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '推荐',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Future<Map<String, String>> _getFormatInfo() async {
+    final current = await _storage.getOutputFormat();
+    final recommended = await _storage.getRecommendedFormat();
+    final actual = await _storage.getActualFormat();
+    
+    return {
+      'current': current,
+      'recommended': recommended,
+      'actual': actual,
+    };
+  }
+  
+  String _getFormatName(String format) {
+    switch (format) {
+      case 'markdown':
+        return 'Markdown';
+      case 'xml':
+        return 'XML';
+      case 'json':
+        return 'JSON';
+      case 'auto':
+        return '自动';
+      default:
+        return format;
+    }
+  }
+  void _showDebugLogs() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('格式解析日志'),
+        content: FutureBuilder<List<String>>(
+          future: _storage.getDebugLogs(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final logs = snapshot.data ?? [];
+            if (logs.isEmpty) {
+              return const Text('暂无日志记录\n\n提示：开启开发者模式后，进行对话即可记录日志');
+            }
+            
+            return SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: ListView.builder(
+                itemCount: logs.length,
+                reverse: true,
+                itemBuilder: (context, index) {
+                  final log = logs[logs.length - 1 - index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      log,
+                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await _storage.exportDebugLogsText();
+              if (!mounted) return;  // ⬅️ 提前返回，更安全
+              
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('日志已准备，可添加分享功能')),
+              );
+            },
+            child: const Text('导出'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await _storage.clearDebugLogs();
+              if (!mounted) return;  // ⬅️ 改成这样
+              
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('日志已清空')),
+              );
+            },
+            child: const Text('清空', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );

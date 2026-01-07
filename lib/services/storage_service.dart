@@ -159,54 +159,37 @@ class StorageService {
     }
     
     if (privateSetting.isNotEmpty) {
-      prompt += '私密行为设定：\n$privateSetting\n\n';
+      prompt += '附加设定（私密，不对外展示）：\n$privateSetting\n\n';
     }
     
-    // 增强 XML 格式指令
-    prompt += '''
-===重要格式指令===
-你必须严格按照以下XML格式回复，任何时候都不准打破结构，并且不要输出任何XML标签以外的内容。
+// ⭐ 动态生成格式要求（根据配置）
+    final actualFormat = await getActualFormat();
+    
+ if (actualFormat == 'markdown') {
+  prompt += '''
+=== 📋 输出格式要求（Markdown 格式 - 简化版）===
 
-示例1：
-用户输入：/摸摸头
-你应该输出：
-<message>
-  <narration>他微微低头，让你摸了摸他的头</narration>
-  <dialogue>这样你会开心一点吗？</dialogue>
-</message>
+你的回复必须遵循以下规则：
 
-示例2：
-用户输入：你今天过得怎么样？
-你应该输出：
-<message>
-  <dialogue>还不错，处理了一些文件</dialogue>
-  <narration>他轻轻转动椅子，看向窗外</narration>
-  <dialogue>你呢？今天有什么特别的事吗？</dialogue>
-</message>
+【格式规则】
+- 对话：用 "双引号" 包裹
+- 旁白/动作：不用引号，直接写
 
-格式规则（严格遵守）：
-1. 只输出 <message> 标签及其内部内容，绝对不要有其他文字
-2. <narration> 用于：动作、表情、心理活动、环境描述
-3. <dialogue> 用于：角色说出的对话
-4. 可以按顺序包含多个 <narration> 和 <dialogue> 标签
-5. 永远不要重复输出内容（比如不要在标签外再写一遍）
-6. 保持 XML 格式的完整性和正确性
+【示例】
+他轻轻笑出声，那笑声在石室里回荡。
 
-错误示例（绝对不能这样做）：
-"他歪了歪头，似乎对你的反应感到困惑"  ← 错误！标签外有内容
-<message>
-  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>  ← 错误！和标签外重复了
-  <dialogue>有什么问题吗?</dialogue>
-</message>
+"多么……可爱的要求。"
 
-正确做法：
-<message>
-  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>
-  <dialogue>有什么问题吗？</dialogue>
-</message>
+他后退一步，优雅地行了个礼。
 
-记住：整个回复必须是一个完整的 XML 文档，没有任何多余的文字。
+"但亲爱的,您似乎搞错了一件事。"
+
+【重要提示】
+- 只有对话才用引号
+- 旁白和动作描写不要加任何标记
+- 保持自然流畅的叙述
 ''';
+}
     
     if (prompt.isEmpty) {
       prompt = '''
@@ -215,8 +198,14 @@ class StorageService {
 角色设定：
 话少，对话自然，像人类，冷淡。
 
-===重要格式指令===
-（上面的格式指令保持不变）
+=== 格式要求（重复强调）===
+你的每个回复必须是：
+<message>
+  <narration>动作/表情</narration>
+  <dialogue>对话</dialogue>
+</message>
+
+不要在标签外写任何东西！
 ''';
     }
     
@@ -396,5 +385,87 @@ class StorageService {
   Future<void> clearModelSettings() async {
     final prefs = await _prefs;
     await prefs.remove('selected_model');
+  }
+  // ── 格式配置相关 ──
+  
+  /// 保存输出格式配置
+  Future<void> saveOutputFormat(String format) async {
+    final prefs = await _prefs;
+    await prefs.setString('output_format', format);
+  }
+  
+  /// 获取输出格式配置
+  /// 返回值：'auto' | 'markdown' | 'xml' | 'json'
+  Future<String> getOutputFormat() async {
+    final prefs = await _prefs;
+    return prefs.getString('output_format') ?? 'auto';
+  }
+  
+  /// 根据当前模型自动推荐格式
+  Future<String> getRecommendedFormat() async {
+    final model = await getSelectedModel();
+    
+    if (model.contains('deepseek')) {
+      return 'markdown';
+    } else if (model.contains('claude') || model.contains('gemini')) {
+      return 'xml';
+    } else if (model.contains('gpt')) {
+      return 'json';
+    }
+    
+    return 'markdown'; // 默认
+  }
+  
+  /// 获取实际使用的格式（考虑自动模式）
+  Future<String> getActualFormat() async {
+    final format = await getOutputFormat();
+    
+    if (format == 'auto') {
+      return await getRecommendedFormat();
+    }
+    
+    return format;
+  }
+  
+  // ── 开发者日志相关 ──
+  
+  /// 保存调试日志（只在开发者模式下记录）
+  Future<void> saveDebugLog(String message) async {
+    final isDeveloperMode = await getDeveloperMode();
+    if (!isDeveloperMode) return;
+    
+    final prefs = await _prefs;
+    final logs = prefs.getStringList('debug_logs') ?? [];
+    
+    final timestamp = DateTime.now().toString().substring(0, 19);
+    logs.add('[$timestamp] $message');
+    
+    // 只保留最近 50 条
+    if (logs.length > 50) {
+      logs.removeAt(0);
+    }
+    
+    await prefs.setStringList('debug_logs', logs);
+  }
+  
+  /// 获取调试日志
+  Future<List<String>> getDebugLogs() async {
+    final prefs = await _prefs;
+    return prefs.getStringList('debug_logs') ?? [];
+  }
+  
+  /// 清空调试日志
+  Future<void> clearDebugLogs() async {
+    final prefs = await _prefs;
+    await prefs.remove('debug_logs');
+  }
+  
+  /// 导出日志为文本（用于分享）
+  Future<String> exportDebugLogsText() async {
+    final logs = await getDebugLogs();
+    if (logs.isEmpty) {
+      return '暂无日志记录';
+    }
+    return logs.join('\n');
   }
 }

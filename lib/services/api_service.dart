@@ -33,11 +33,13 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $apiKey',
         },
-        body: jsonEncode({
+body: jsonEncode({
           'model': modelName,
           'messages': messages,
           'temperature': 0.9,
           'stream': false,
+          // 预留：如果格式配置为 JSON，可以启用
+          // 'response_format': {'type': 'json_object'},
         }),
       );
 

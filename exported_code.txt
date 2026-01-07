@@ -1060,7 +1060,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
 
 Size: 7987 bytes
 
-Modified: 01/04/2026 04:21:06
+Modified: 01/05/2026 02:36:22
 
 ========================================
 
@@ -1282,7 +1282,7 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 24.0), // 上下间距从8改为2
+      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0), // 上下间距从8改为2
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75, // 从0.8改为0.75
@@ -1457,9 +1457,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 27077 bytes
+Size: 31159 bytes
 
-Modified: 01/05/2026 02:21:50
+Modified: 01/07/2026 23:59:00
 
 ========================================
 
@@ -1467,8 +1467,10 @@ Modified: 01/05/2026 02:21:50
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:xml/xml.dart' as xml;
+import '../../services/message_format_service.dart';
+import 'dart:math';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
@@ -1499,46 +1501,48 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String? _userAvatarPath;
   bool _showUserAvatar = true;
   String _systemPrompt = '';
+  bool _developerMode = false;  // ⬅️ 添加这行
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadCharacterData();
-    _loadUserSettings();
-    _loadHistory();
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addObserver(this);
+  _loadDeveloperMode();  // ⬅️ 在 initState 中调用
+  _loadCharacterData();
+  _loadUserSettings();
+  _loadHistory();
+  
+  _scrollController.addListener(() {
+    if (!mounted) return;
     
-    _scrollController.addListener(() {
-      if (!mounted) return;
-      
-      final double maxScroll = _scrollController.position.maxScrollExtent;
-      final double currentScroll = _scrollController.position.pixels;
-      
-      if ((maxScroll - currentScroll) > 300.0) {
-        if (!_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = true;
-          });
-          // 启动3秒后隐藏计时器
-          _scrollButtonTimer?.cancel();
-          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted && _showScrollToBottomButton) {
-              setState(() {
-                _showScrollToBottomButton = false;
-              });
-            }
-          });
-        }
-      } else {
-        if (_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = false;
-          });
-          _scrollButtonTimer?.cancel();
-        }
+    final double maxScroll = _scrollController.position.maxScrollExtent;
+    final double currentScroll = _scrollController.position.pixels;
+    
+    if ((maxScroll - currentScroll) > 300.0) {
+      if (!_showScrollToBottomButton) {
+        setState(() {
+          _showScrollToBottomButton = true;
+        });
+        // 启动3秒后隐藏计时器
+        _scrollButtonTimer?.cancel();
+        _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+          if (mounted && _showScrollToBottomButton) {
+            setState(() {
+              _showScrollToBottomButton = false;
+            });
+          }
+        });
       }
-    });
-  }
+    } else {
+      if (_showScrollToBottomButton) {
+        setState(() {
+          _showScrollToBottomButton = false;
+        });
+        _scrollButtonTimer?.cancel();
+      }
+    }
+  });
+}
 
   @override
   void dispose() {
@@ -1599,6 +1603,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
+    // ⬅️ 在这里添加
+    Future<void> _loadDeveloperMode() async {
+      final mode = await _storage.getDeveloperMode();
+      if (mounted) {
+        setState(() {
+          _developerMode = mode;
+        });
+      }
+    }
+
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty) {
@@ -1615,7 +1629,64 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           _messages.clear();
           _messages.addAll(messagesWithTime);
         });
-        _scrollToBottom();
+      }
+    } else {
+      // ⬅️ 这是新增的部分：历史为空时加载开场白
+      await _loadOpeningMessage();
+    }
+    
+    // ⬅️ 注意：_scrollToBottom() 移到这里，无论有没有历史都执行
+    _scrollToBottom();
+  }
+
+/// 加载开场白（仅当消息为空时）
+  Future<void> _loadOpeningMessage() async {
+    final opening = await _storage.getCharacterOpening();
+    if (opening.isEmpty) return;
+    
+    final now = DateTime.now();
+    final timestamp = DateFormat('HH:mm').format(now);
+    
+    // 使用 Markdown 解析开场白
+    final parsedItems = MessageFormatService.parseContent(opening);
+    
+    if (parsedItems.isEmpty) {
+      // 解析失败，整体作为对话
+      final msg = Message(
+        id: 'opening_${now.millisecondsSinceEpoch}',
+        role: 'assistant',
+        content: opening,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _messages.add(msg);
+        });
+      }
+      return;
+    }
+    
+    // 逐项添加
+    for (int i = 0; i < parsedItems.length; i++) {
+      final (type, content) = parsedItems[i];
+      if (content.isEmpty) continue;
+      
+      final msg = Message(
+        id: 'opening_${now.millisecondsSinceEpoch}_$i',
+        role: 'assistant',
+        content: content,
+        timestamp: timestamp,
+        messageType: type == 'narration' 
+            ? MessageType.ai_narration 
+            : MessageType.ai_dialogue,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _messages.add(msg);
+        });
       }
     }
   }
@@ -1686,52 +1757,92 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     return [...background, lastUserMessage];
   }
 
-  /// 解析AI回复，生成对应的Message对象
-  List<Message> _parseAiResponse(String xmlContent, String timestamp) {
+/// 解析AI回复，生成对应的Message对象（支持多格式）
+Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    try {
-      final document = xml.XmlDocument.parse(xmlContent);
-      final messageElement = document.findElements('message').first;
-      final children = messageElement.children
-          .whereType<xml.XmlElement>()
-          .toList();
-
-      for (int i = 0; i < children.length; i++) {
-        final node = children[i];
-        final text = node.innerText.trim();
-        final String content = text;
-        
-        if (node.name.local == 'narration') {
-          // AI旁白
-          messages.add(Message(
-            id: 'ai_${now}_narration_$i',
-            role: 'assistant',
-            content: content,
-            timestamp: timestamp,
-            messageType: MessageType.ai_narration,
-          ));
-        } else if (node.name.local == 'dialogue') {
-          // AI对话
-          messages.add(Message(
-            id: 'ai_${now}_dialogue_$i',
-            role: 'assistant',
-            content: content,
-            timestamp: timestamp,
-            messageType: MessageType.ai_dialogue,
-          ));
-        }
+    if (kDebugMode) {
+      debugPrint('=== 开始解析 AI 回复 ===');
+      debugPrint('原始内容: $aiContent');
+    }
+    
+    // 记录日志
+    await _storage.saveDebugLog('开始解析 AI 回复，长度: ${aiContent.length}');
+    
+    // ⭐ 使用新的格式检测服务
+    final parsedItems = MessageFormatService.parseContent(aiContent);
+    final format = MessageFormatService.detectFormat(aiContent);
+    
+    await _storage.saveDebugLog('检测到格式: $format');
+    
+    if (parsedItems.isEmpty) {
+      // 如果解析结果为空，当作整体对话
+      if (kDebugMode) {
+        debugPrint('⚠️ 无法解析，降级为纯对话');
       }
-    } catch (e) {
-      // 解析失败时，创建一个默认的AI对话消息
+      
+      await _storage.saveDebugLog('⚠️ 格式解析失败，降级为纯对话');
+      
       messages.add(Message(
         id: 'ai_${now}_fallback',
         role: 'assistant',
-        content: xmlContent,
+        content: aiContent,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+        metadata: {
+          'parseError': 'true', // 标记为解析失败
+        },
+      ));
+      return messages;
+    }
+    
+    await _storage.saveDebugLog('✅ 解析成功，共 ${parsedItems.length} 条');
+    
+    // ⭐ 逐项处理（第二层防线：逐行兜底）
+    for (int i = 0; i < parsedItems.length; i++) {
+      final (type, content) = parsedItems[i];
+      
+      if (content.isEmpty) continue;
+      
+      if (type == 'narration') {
+        messages.add(Message(
+          id: 'ai_${now}_narration_$i',
+          role: 'assistant',
+          content: content,
+          timestamp: timestamp,
+          messageType: MessageType.ai_narration,
+        ));
+        if (kDebugMode) {
+          debugPrint('✅ 添加旁白: ${content.substring(0, min(20, content.length))}...');
+        }
+      } else if (type == 'dialogue') {
+        messages.add(Message(
+          id: 'ai_${now}_dialogue_$i',
+          role: 'assistant',
+          content: content,
+          timestamp: timestamp,
+          messageType: MessageType.ai_dialogue,
+        ));
+        if (kDebugMode) {
+          debugPrint('✅ 添加对话: ${content.substring(0, min(20, content.length))}...');
+        }
+      }
+    }
+    
+    // 确保至少有一条消息
+    if (messages.isEmpty) {
+      messages.add(Message(
+        id: 'ai_${now}_empty',
+        role: 'assistant',
+        content: '（思考中……）',
         timestamp: timestamp,
         messageType: MessageType.ai_dialogue,
       ));
+    }
+    
+    if (kDebugMode) {
+      debugPrint('=== 解析完成，共 ${messages.length} 条消息 ===\n');
     }
     
     return messages;
@@ -1813,9 +1924,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       // AI回复的时间
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
-      if (mounted) {
+if (mounted) {
         // 解析AI回复，生成多个Message
-        final aiMessages = _parseAiResponse(aiReply ?? '', aiTimestamp);
+        final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
         setState(() {
           _messages.addAll(aiMessages);
         });
@@ -1895,29 +2006,59 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       ),
     );
   }
+/// 构建消息Widget（使用缓存的开发者模式）
+Widget _buildMessageWidgetWithDevMode(Message msg) {
+  final hasParseError = msg.metadata?['parseError'] == 'true';
+  final messageWidget = _buildMessageWidget(msg);
+  
+  // 如果是解析失败的消息且开启了开发者模式，添加警告标记
+  if (hasParseError && _developerMode) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.warning_amber, size: 14, color: Colors.orange[700]),
+              const SizedBox(width: 4),
+              Text(
+                '格式识别异常（已降级处理）',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+        messageWidget,
+      ],
+    );
+  }
+  
+  return messageWidget;
+}
 
-  /// 构建消息Widget - 使用正确的组件
+/// 构建消息Widget - 使用正确的组件
   Widget _buildMessageWidget(Message msg) {
     // 根据messageType渲染，使用正确的UI组件
     switch (msg.messageType) {
       case MessageType.user_narration:
-        // 用户旁白 - 使用新的旁白组件
         return NarrationMessage(
           text: msg.content,
           isAI: false,
-          isCentered: false, // 用户旁白偏右
+          isCentered: false,
         );
 
       case MessageType.ai_narration:
-        // AI旁白 - 使用新的旁白组件
         return NarrationMessage(
           text: msg.content,
           isAI: true,
-          isCentered: true, // AI旁白居中
+          isCentered: true,
         );
         
       case MessageType.user_dialogue:
-        // 用户对话
         return SentMessage(
           text: msg.content,
           userAvatarPath: _userAvatarPath,
@@ -1925,18 +2066,15 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         );
         
       case MessageType.ai_dialogue:
-        // AI对话
         return ReceivedMessage(
           text: msg.content,
           avatarPath: _avatarPath,
         );
         
       case MessageType.system_time:
-        // 系统时间消息
         return SystemTimeMessage(text: msg.content);
         
       case MessageType.system_state:
-        // 系统状态消息（当前未实现）
         return Container();
     }
   }
@@ -2061,10 +2199,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                       }
 
                       final msg = _messages[index];
-                      return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(index),
-                        child: _buildMessageWidget(msg),
-                      );
+return GestureDetector(
+  onLongPress: () => _showDeleteDialog(index),
+  child: _buildMessageWidgetWithDevMode(msg),  // ⬅️ 直接调用同步方法
+);
                     },
                   ),
                 ),
@@ -2481,7 +2619,7 @@ File: D:\D\my_new_app\lib\pages\chat\xml_message_parser.dart
 
 Size: 3183 bytes
 
-Modified: 01/04/2026 14:56:27
+Modified: 01/07/2026 22:43:03
 
 ========================================
 
@@ -3381,9 +3519,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 20872 bytes
+Size: 30022 bytes
 
-Modified: 01/05/2026 02:21:23
+Modified: 01/07/2026 23:36:35
 
 ========================================
 
@@ -3774,6 +3912,14 @@ Future<void> _loadDeveloperMode() async {
           
           const SizedBox(height: 40),
           
+          // 输出格式配置
+          const Text(
+            "输出格式", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 12),
+          _buildFormatSelector(),
+          const SizedBox(height: 40),
           // 其他设置项
           const Text(
             "其他设置", 
@@ -3800,6 +3946,25 @@ Future<void> _loadDeveloperMode() async {
               leading: const Icon(Icons.bug_report, color: Colors.red),
               trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
               onTap: _showErrorLogs,
+            ),
+            const Divider(height: 1),
+          ],
+
+if (_developerMode) ...[
+            ListTile(
+              title: const Text("错误日志"),
+              subtitle: const Text("查看最近的错误信息"),
+              leading: const Icon(Icons.bug_report, color: Colors.red),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: _showErrorLogs,
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text("格式诊断"),
+              subtitle: const Text("查看消息格式解析日志"),
+              leading: const Icon(Icons.analytics, color: Colors.blue),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: _showDebugLogs,
             ),
             const Divider(height: 1),
           ],
@@ -3983,6 +4148,233 @@ Future<void> _loadDeveloperMode() async {
       ),
     );
   }
+Widget _buildFormatSelector() {
+    return FutureBuilder<Map<String, String>>(
+      future: _getFormatInfo(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const CircularProgressIndicator();
+        }
+        
+        final info = snapshot.data!;
+        final currentFormat = info['current'] ?? 'auto';
+        final recommended = info['recommended'] ?? 'markdown';
+        final actual = info['actual'] ?? 'markdown';
+        
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    "AI 输出格式：",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const Spacer(),
+                  Text(
+                    "当前使用：${_getFormatName(actual)}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // 格式选项
+              _buildFormatOption('auto', '自动选择（推荐）', 
+                  '根据模型自动选择最佳格式', currentFormat, recommended),
+              const SizedBox(height: 8),
+              _buildFormatOption('markdown', 'Markdown', 
+                  '*旁白* "对话"，适合 DeepSeek', currentFormat, recommended),
+              const SizedBox(height: 8),
+              _buildFormatOption('xml', 'XML', 
+                  '<narration>/<dialogue>，适合 Claude', currentFormat, recommended),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildFormatOption(String value, String title, String subtitle, 
+      String currentFormat, String recommended) {
+    final isSelected = currentFormat == value;
+    final isRecommended = value == 'auto' || value == recommended;
+    
+    return GestureDetector(
+      onTap: () async {
+        await _storage.saveOutputFormat(value);
+        setState(() {});
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF0F3) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF5A7E) : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: isSelected ? const Color(0xFFFF5A7E) : Colors.grey[400],
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      if (isRecommended) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '推荐',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Future<Map<String, String>> _getFormatInfo() async {
+    final current = await _storage.getOutputFormat();
+    final recommended = await _storage.getRecommendedFormat();
+    final actual = await _storage.getActualFormat();
+    
+    return {
+      'current': current,
+      'recommended': recommended,
+      'actual': actual,
+    };
+  }
+  
+  String _getFormatName(String format) {
+    switch (format) {
+      case 'markdown':
+        return 'Markdown';
+      case 'xml':
+        return 'XML';
+      case 'json':
+        return 'JSON';
+      case 'auto':
+        return '自动';
+      default:
+        return format;
+    }
+  }
+  void _showDebugLogs() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('格式解析日志'),
+        content: FutureBuilder<List<String>>(
+          future: _storage.getDebugLogs(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final logs = snapshot.data ?? [];
+            if (logs.isEmpty) {
+              return const Text('暂无日志记录\n\n提示：开启开发者模式后，进行对话即可记录日志');
+            }
+            
+            return SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: ListView.builder(
+                itemCount: logs.length,
+                reverse: true,
+                itemBuilder: (context, index) {
+                  final log = logs[logs.length - 1 - index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      log,
+                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await _storage.exportDebugLogsText();
+              if (!mounted) return;  // ⬅️ 提前返回，更安全
+              
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('日志已准备，可添加分享功能')),
+              );
+            },
+            child: const Text('导出'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await _storage.clearDebugLogs();
+              if (!mounted) return;  // ⬅️ 改成这样
+              
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('日志已清空')),
+              );
+            },
+            child: const Text('清空', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showNotImplementedSnackbar(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -4091,9 +4483,9 @@ class ApiConfig {
 
 File: D:\D\my_new_app\lib\services\api_service.dart
 
-Size: 2106 bytes
+Size: 2221 bytes
 
-Modified: 01/03/2026 17:37:21
+Modified: 01/07/2026 22:57:56
 
 ========================================
 
@@ -4132,11 +4524,13 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $apiKey',
         },
-        body: jsonEncode({
+body: jsonEncode({
           'model': modelName,
           'messages': messages,
           'temperature': 0.9,
           'stream': false,
+          // 预留：如果格式配置为 JSON，可以启用
+          // 'response_format': {'type': 'json_object'},
         }),
       );
 
@@ -4174,11 +4568,219 @@ Modified: 01/02/2026 16:37:48
 
 ========================================
 
+File: D:\D\my_new_app\lib\services\message_format_service.dart
+
+Size: 6055 bytes
+
+Modified: 01/08/2026 00:17:21
+
+========================================
+
+// lib/services/message_format_service.dart
+import 'package:flutter/foundation.dart';
+import 'package:xml/xml.dart' as xml;
+
+/// 消息格式检测和解析服务
+/// 支持三种格式：
+/// 1. XML 格式（原生）
+/// 2. 标记行格式（【旁白】/ 【对话】）
+/// 3. 纯文本（降级方案）
+class MessageFormatService {
+  
+  /// 检测内容的格式类型
+  static MessageFormatType detectFormat(String content) {
+    if (content.isEmpty) return MessageFormatType.unknown;
+    
+    // 检查是否是 XML
+    if (content.contains('<message>') && content.contains('</message>')) {
+      try {
+        xml.XmlDocument.parse(content);
+        return MessageFormatType.xml;
+      } catch (e) {
+        // XML 不合法，继续检查其他格式
+      }
+    }
+    
+    // ⭐ 检查是否是 Markdown 格式
+    if (_hasMarkdownFormat(content)) {
+      return MessageFormatType.markdown;
+    }
+    
+    // 检查是否是标记行格式
+    if (content.contains('【旁白】') || content.contains('【对话】')) {
+      return MessageFormatType.taggedLines;
+    }
+    
+    // 否则当作纯文本
+    return MessageFormatType.plainText;
+  }
+  
+  /// 检测是否包含 Markdown 格式标记
+  static bool _hasMarkdownFormat(String content) {
+    // 检查是否包含 *...* 或 "..."
+    final hasAsterisk = RegExp(r'\*[^*]+\*').hasMatch(content);
+    final hasQuote = RegExp(r'"[^"]+"').hasMatch(content);
+    
+    return hasAsterisk || hasQuote;
+  }
+  
+  /// 解析内容，返回 (narration, dialogue) 对列表
+  static List<(String type, String content)> parseContent(String content) {
+    final format = detectFormat(content);
+    
+    if (kDebugMode) {
+      debugPrint('📊 检测到格式: $format');
+    }
+    
+    switch (format) {
+      case MessageFormatType.xml:
+        return _parseXml(content);
+      case MessageFormatType.markdown:
+        return _parseMarkdown(content);
+      case MessageFormatType.taggedLines:
+        return _parseTaggedLines(content);
+      case MessageFormatType.plainText:
+        return _parsePlainText(content);
+      case MessageFormatType.unknown:
+        return [];
+    }
+  }
+  
+  /// 解析 XML 格式
+  static List<(String, String)> _parseXml(String content) {
+    final result = <(String, String)>[];
+    
+    try {
+      final document = xml.XmlDocument.parse(content);
+      final messageElement = document.findElements('message').first;
+      
+      for (final child in messageElement.children.whereType<xml.XmlElement>()) {
+        final text = child.innerText.trim();
+        if (text.isEmpty) continue;
+        
+        if (child.name.local == 'narration') {
+          result.add(('narration', text));
+        } else if (child.name.local == 'dialogue') {
+          result.add(('dialogue', text));
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ XML 解析失败: $e');
+      }
+    }
+    
+    return result;
+  }
+  
+/// 解析 Markdown 格式（优化版：引号=对话，其余=旁白）
+static List<(String, String)> _parseMarkdown(String content) {
+  final result = <(String, String)>[];
+  final lines = content.split('\n');
+  
+  for (final line in lines) {
+    final trimmed = line.trim();
+    if (trimmed.isEmpty) continue;
+    
+    // ⭐ 核心逻辑：只要包含引号，就提取对话
+    final dialogueMatch = RegExp(r'"([^"]+)"').firstMatch(trimmed);
+    if (dialogueMatch != null) {
+      final text = dialogueMatch.group(1)?.trim() ?? '';
+      if (text.isNotEmpty) {
+        result.add(('dialogue', text));
+        continue;
+      }
+    }
+    
+    // ⭐ 其余情况：全部当作旁白（包括 *...* 也是旁白）
+    result.add(('narration', trimmed));
+  }
+  
+  return result;
+}
+
+  /// 解析标记行格式
+  static List<(String, String)> _parseTaggedLines(String content) {
+    final result = <(String, String)>[];
+    final lines = content.split('\n');
+    
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
+      
+      if (trimmed.startsWith('【旁白】')) {
+        final text = trimmed.substring('【旁白】'.length).trim();
+        if (text.isNotEmpty) {
+          result.add(('narration', text));
+        }
+      } else if (trimmed.startsWith('【对话】')) {
+        final text = trimmed.substring('【对话】'.length).trim();
+        if (text.isNotEmpty) {
+          result.add(('dialogue', text));
+        }
+      }
+    }
+    
+    return result;
+  }
+  
+  /// 降级方案：超级宽容的纯文本解析
+static List<(String, String)> _parsePlainText(String content) {
+  final result = <(String, String)>[];
+  final lines = content.split('\n');
+  
+  for (final line in lines) {
+    final trimmed = line.trim();
+    if (trimmed.isEmpty) continue;
+    
+    // ⭐ 规则1：包含引号 → 对话
+    if (trimmed.contains('"') || trimmed.contains('"') || trimmed.contains('"')) {
+      // 提取引号内容
+      final match = RegExp(r'[""""]([^""""]*)[""""""]').firstMatch(trimmed);
+      if (match != null) {
+        final text = match.group(1)?.trim() ?? trimmed;
+        result.add(('dialogue', text));
+        continue;
+      }
+    }
+    
+    // ⭐ 规则2：以冒号/说开头 → 对话
+    if (trimmed.contains('：') || trimmed.contains(':') || 
+        trimmed.endsWith('说') || trimmed.startsWith('说')) {
+      result.add(('dialogue', trimmed));
+      continue;
+    }
+    
+    // ⭐ 默认：全部旁白
+    result.add(('narration', trimmed));
+  }
+  
+  // 如果解析结果为空，整体作为旁白（不是对话）
+  if (result.isEmpty) {
+    return [('narration', content)];
+  }
+  
+  return result;
+}
+}
+
+enum MessageFormatType {
+  xml,          // XML 格式
+  markdown,     // Markdown 格式（*旁白* "对话"）
+  taggedLines,  // 【旁白】/【对话】标记行
+  plainText,    // 纯文本
+  unknown,      // 未知
+}
+
+
+
+========================================
+
 File: D:\D\my_new_app\lib\services\storage_service.dart
 
-Size: 12595 bytes
+Size: 14079 bytes
 
-Modified: 01/05/2026 02:20:32
+Modified: 01/08/2026 00:17:19
 
 ========================================
 
@@ -4343,54 +4945,37 @@ class StorageService {
     }
     
     if (privateSetting.isNotEmpty) {
-      prompt += '私密行为设定：\n$privateSetting\n\n';
+      prompt += '附加设定（私密，不对外展示）：\n$privateSetting\n\n';
     }
     
-    // 增强 XML 格式指令
-    prompt += '''
-===重要格式指令===
-你必须严格按照以下XML格式回复，任何时候都不准打破结构，并且不要输出任何XML标签以外的内容。
+// ⭐ 动态生成格式要求（根据配置）
+    final actualFormat = await getActualFormat();
+    
+ if (actualFormat == 'markdown') {
+  prompt += '''
+=== 📋 输出格式要求（Markdown 格式 - 简化版）===
 
-示例1：
-用户输入：/摸摸头
-你应该输出：
-<message>
-  <narration>他微微低头，让你摸了摸他的头</narration>
-  <dialogue>这样你会开心一点吗？</dialogue>
-</message>
+你的回复必须遵循以下规则：
 
-示例2：
-用户输入：你今天过得怎么样？
-你应该输出：
-<message>
-  <dialogue>还不错，处理了一些文件</dialogue>
-  <narration>他轻轻转动椅子，看向窗外</narration>
-  <dialogue>你呢？今天有什么特别的事吗？</dialogue>
-</message>
+【格式规则】
+- 对话：用 "双引号" 包裹
+- 旁白/动作：不用引号，直接写
 
-格式规则（严格遵守）：
-1. 只输出 <message> 标签及其内部内容，绝对不要有其他文字
-2. <narration> 用于：动作、表情、心理活动、环境描述
-3. <dialogue> 用于：角色说出的对话
-4. 可以按顺序包含多个 <narration> 和 <dialogue> 标签
-5. 永远不要重复输出内容（比如不要在标签外再写一遍）
-6. 保持 XML 格式的完整性和正确性
+【示例】
+他轻轻笑出声，那笑声在石室里回荡。
 
-错误示例（绝对不能这样做）：
-"他歪了歪头，似乎对你的反应感到困惑"  ← 错误！标签外有内容
-<message>
-  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>  ← 错误！和标签外重复了
-  <dialogue>有什么问题吗?</dialogue>
-</message>
+"多么……可爱的要求。"
 
-正确做法：
-<message>
-  <narration>他歪了歪头，似乎对你的反应感到困惑</narration>
-  <dialogue>有什么问题吗？</dialogue>
-</message>
+他后退一步，优雅地行了个礼。
 
-记住：整个回复必须是一个完整的 XML 文档，没有任何多余的文字。
+"但亲爱的,您似乎搞错了一件事。"
+
+【重要提示】
+- 只有对话才用引号
+- 旁白和动作描写不要加任何标记
+- 保持自然流畅的叙述
 ''';
+}
     
     if (prompt.isEmpty) {
       prompt = '''
@@ -4399,8 +4984,14 @@ class StorageService {
 角色设定：
 话少，对话自然，像人类，冷淡。
 
-===重要格式指令===
-（上面的格式指令保持不变）
+=== 格式要求（重复强调）===
+你的每个回复必须是：
+<message>
+  <narration>动作/表情</narration>
+  <dialogue>对话</dialogue>
+</message>
+
+不要在标签外写任何东西！
 ''';
     }
     
@@ -4580,6 +5171,88 @@ class StorageService {
   Future<void> clearModelSettings() async {
     final prefs = await _prefs;
     await prefs.remove('selected_model');
+  }
+  // ── 格式配置相关 ──
+  
+  /// 保存输出格式配置
+  Future<void> saveOutputFormat(String format) async {
+    final prefs = await _prefs;
+    await prefs.setString('output_format', format);
+  }
+  
+  /// 获取输出格式配置
+  /// 返回值：'auto' | 'markdown' | 'xml' | 'json'
+  Future<String> getOutputFormat() async {
+    final prefs = await _prefs;
+    return prefs.getString('output_format') ?? 'auto';
+  }
+  
+  /// 根据当前模型自动推荐格式
+  Future<String> getRecommendedFormat() async {
+    final model = await getSelectedModel();
+    
+    if (model.contains('deepseek')) {
+      return 'markdown';
+    } else if (model.contains('claude') || model.contains('gemini')) {
+      return 'xml';
+    } else if (model.contains('gpt')) {
+      return 'json';
+    }
+    
+    return 'markdown'; // 默认
+  }
+  
+  /// 获取实际使用的格式（考虑自动模式）
+  Future<String> getActualFormat() async {
+    final format = await getOutputFormat();
+    
+    if (format == 'auto') {
+      return await getRecommendedFormat();
+    }
+    
+    return format;
+  }
+  
+  // ── 开发者日志相关 ──
+  
+  /// 保存调试日志（只在开发者模式下记录）
+  Future<void> saveDebugLog(String message) async {
+    final isDeveloperMode = await getDeveloperMode();
+    if (!isDeveloperMode) return;
+    
+    final prefs = await _prefs;
+    final logs = prefs.getStringList('debug_logs') ?? [];
+    
+    final timestamp = DateTime.now().toString().substring(0, 19);
+    logs.add('[$timestamp] $message');
+    
+    // 只保留最近 50 条
+    if (logs.length > 50) {
+      logs.removeAt(0);
+    }
+    
+    await prefs.setStringList('debug_logs', logs);
+  }
+  
+  /// 获取调试日志
+  Future<List<String>> getDebugLogs() async {
+    final prefs = await _prefs;
+    return prefs.getStringList('debug_logs') ?? [];
+  }
+  
+  /// 清空调试日志
+  Future<void> clearDebugLogs() async {
+    final prefs = await _prefs;
+    await prefs.remove('debug_logs');
+  }
+  
+  /// 导出日志为文本（用于分享）
+  Future<String> exportDebugLogsText() async {
+    final logs = await getDebugLogs();
+    if (logs.isEmpty) {
+      return '暂无日志记录';
+    }
+    return logs.join('\n');
   }
 }
 

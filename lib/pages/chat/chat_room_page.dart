@@ -2,8 +2,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:xml/xml.dart' as xml;
+import '../../services/message_format_service.dart';
+import 'dart:math';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
@@ -34,46 +36,48 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String? _userAvatarPath;
   bool _showUserAvatar = true;
   String _systemPrompt = '';
+  bool _developerMode = false;  // ⬅️ 添加这行
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadCharacterData();
-    _loadUserSettings();
-    _loadHistory();
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addObserver(this);
+  _loadDeveloperMode();  // ⬅️ 在 initState 中调用
+  _loadCharacterData();
+  _loadUserSettings();
+  _loadHistory();
+  
+  _scrollController.addListener(() {
+    if (!mounted) return;
     
-    _scrollController.addListener(() {
-      if (!mounted) return;
-      
-      final double maxScroll = _scrollController.position.maxScrollExtent;
-      final double currentScroll = _scrollController.position.pixels;
-      
-      if ((maxScroll - currentScroll) > 300.0) {
-        if (!_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = true;
-          });
-          // 启动3秒后隐藏计时器
-          _scrollButtonTimer?.cancel();
-          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted && _showScrollToBottomButton) {
-              setState(() {
-                _showScrollToBottomButton = false;
-              });
-            }
-          });
-        }
-      } else {
-        if (_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = false;
-          });
-          _scrollButtonTimer?.cancel();
-        }
+    final double maxScroll = _scrollController.position.maxScrollExtent;
+    final double currentScroll = _scrollController.position.pixels;
+    
+    if ((maxScroll - currentScroll) > 300.0) {
+      if (!_showScrollToBottomButton) {
+        setState(() {
+          _showScrollToBottomButton = true;
+        });
+        // 启动3秒后隐藏计时器
+        _scrollButtonTimer?.cancel();
+        _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+          if (mounted && _showScrollToBottomButton) {
+            setState(() {
+              _showScrollToBottomButton = false;
+            });
+          }
+        });
       }
-    });
-  }
+    } else {
+      if (_showScrollToBottomButton) {
+        setState(() {
+          _showScrollToBottomButton = false;
+        });
+        _scrollButtonTimer?.cancel();
+      }
+    }
+  });
+}
 
   @override
   void dispose() {
@@ -134,6 +138,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
+    // ⬅️ 在这里添加
+    Future<void> _loadDeveloperMode() async {
+      final mode = await _storage.getDeveloperMode();
+      if (mounted) {
+        setState(() {
+          _developerMode = mode;
+        });
+      }
+    }
+
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty) {
@@ -150,7 +164,64 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           _messages.clear();
           _messages.addAll(messagesWithTime);
         });
-        _scrollToBottom();
+      }
+    } else {
+      // ⬅️ 这是新增的部分：历史为空时加载开场白
+      await _loadOpeningMessage();
+    }
+    
+    // ⬅️ 注意：_scrollToBottom() 移到这里，无论有没有历史都执行
+    _scrollToBottom();
+  }
+
+/// 加载开场白（仅当消息为空时）
+  Future<void> _loadOpeningMessage() async {
+    final opening = await _storage.getCharacterOpening();
+    if (opening.isEmpty) return;
+    
+    final now = DateTime.now();
+    final timestamp = DateFormat('HH:mm').format(now);
+    
+    // 使用 Markdown 解析开场白
+    final parsedItems = MessageFormatService.parseContent(opening);
+    
+    if (parsedItems.isEmpty) {
+      // 解析失败，整体作为对话
+      final msg = Message(
+        id: 'opening_${now.millisecondsSinceEpoch}',
+        role: 'assistant',
+        content: opening,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _messages.add(msg);
+        });
+      }
+      return;
+    }
+    
+    // 逐项添加
+    for (int i = 0; i < parsedItems.length; i++) {
+      final (type, content) = parsedItems[i];
+      if (content.isEmpty) continue;
+      
+      final msg = Message(
+        id: 'opening_${now.millisecondsSinceEpoch}_$i',
+        role: 'assistant',
+        content: content,
+        timestamp: timestamp,
+        messageType: type == 'narration' 
+            ? MessageType.ai_narration 
+            : MessageType.ai_dialogue,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _messages.add(msg);
+        });
       }
     }
   }
@@ -221,52 +292,92 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     return [...background, lastUserMessage];
   }
 
-  /// 解析AI回复，生成对应的Message对象
-  List<Message> _parseAiResponse(String xmlContent, String timestamp) {
+/// 解析AI回复，生成对应的Message对象（支持多格式）
+Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    try {
-      final document = xml.XmlDocument.parse(xmlContent);
-      final messageElement = document.findElements('message').first;
-      final children = messageElement.children
-          .whereType<xml.XmlElement>()
-          .toList();
-
-      for (int i = 0; i < children.length; i++) {
-        final node = children[i];
-        final text = node.innerText.trim();
-        final String content = text;
-        
-        if (node.name.local == 'narration') {
-          // AI旁白
-          messages.add(Message(
-            id: 'ai_${now}_narration_$i',
-            role: 'assistant',
-            content: content,
-            timestamp: timestamp,
-            messageType: MessageType.ai_narration,
-          ));
-        } else if (node.name.local == 'dialogue') {
-          // AI对话
-          messages.add(Message(
-            id: 'ai_${now}_dialogue_$i',
-            role: 'assistant',
-            content: content,
-            timestamp: timestamp,
-            messageType: MessageType.ai_dialogue,
-          ));
-        }
+    if (kDebugMode) {
+      debugPrint('=== 开始解析 AI 回复 ===');
+      debugPrint('原始内容: $aiContent');
+    }
+    
+    // 记录日志
+    await _storage.saveDebugLog('开始解析 AI 回复，长度: ${aiContent.length}');
+    
+    // ⭐ 使用新的格式检测服务
+    final parsedItems = MessageFormatService.parseContent(aiContent);
+    final format = MessageFormatService.detectFormat(aiContent);
+    
+    await _storage.saveDebugLog('检测到格式: $format');
+    
+    if (parsedItems.isEmpty) {
+      // 如果解析结果为空，当作整体对话
+      if (kDebugMode) {
+        debugPrint('⚠️ 无法解析，降级为纯对话');
       }
-    } catch (e) {
-      // 解析失败时，创建一个默认的AI对话消息
+      
+      await _storage.saveDebugLog('⚠️ 格式解析失败，降级为纯对话');
+      
       messages.add(Message(
         id: 'ai_${now}_fallback',
         role: 'assistant',
-        content: xmlContent,
+        content: aiContent,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+        metadata: {
+          'parseError': 'true', // 标记为解析失败
+        },
+      ));
+      return messages;
+    }
+    
+    await _storage.saveDebugLog('✅ 解析成功，共 ${parsedItems.length} 条');
+    
+    // ⭐ 逐项处理（第二层防线：逐行兜底）
+    for (int i = 0; i < parsedItems.length; i++) {
+      final (type, content) = parsedItems[i];
+      
+      if (content.isEmpty) continue;
+      
+      if (type == 'narration') {
+        messages.add(Message(
+          id: 'ai_${now}_narration_$i',
+          role: 'assistant',
+          content: content,
+          timestamp: timestamp,
+          messageType: MessageType.ai_narration,
+        ));
+        if (kDebugMode) {
+          debugPrint('✅ 添加旁白: ${content.substring(0, min(20, content.length))}...');
+        }
+      } else if (type == 'dialogue') {
+        messages.add(Message(
+          id: 'ai_${now}_dialogue_$i',
+          role: 'assistant',
+          content: content,
+          timestamp: timestamp,
+          messageType: MessageType.ai_dialogue,
+        ));
+        if (kDebugMode) {
+          debugPrint('✅ 添加对话: ${content.substring(0, min(20, content.length))}...');
+        }
+      }
+    }
+    
+    // 确保至少有一条消息
+    if (messages.isEmpty) {
+      messages.add(Message(
+        id: 'ai_${now}_empty',
+        role: 'assistant',
+        content: '（思考中……）',
         timestamp: timestamp,
         messageType: MessageType.ai_dialogue,
       ));
+    }
+    
+    if (kDebugMode) {
+      debugPrint('=== 解析完成，共 ${messages.length} 条消息 ===\n');
     }
     
     return messages;
@@ -348,9 +459,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       // AI回复的时间
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
-      if (mounted) {
+if (mounted) {
         // 解析AI回复，生成多个Message
-        final aiMessages = _parseAiResponse(aiReply ?? '', aiTimestamp);
+        final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
         setState(() {
           _messages.addAll(aiMessages);
         });
@@ -430,29 +541,59 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       ),
     );
   }
+/// 构建消息Widget（使用缓存的开发者模式）
+Widget _buildMessageWidgetWithDevMode(Message msg) {
+  final hasParseError = msg.metadata?['parseError'] == 'true';
+  final messageWidget = _buildMessageWidget(msg);
+  
+  // 如果是解析失败的消息且开启了开发者模式，添加警告标记
+  if (hasParseError && _developerMode) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.warning_amber, size: 14, color: Colors.orange[700]),
+              const SizedBox(width: 4),
+              Text(
+                '格式识别异常（已降级处理）',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+        messageWidget,
+      ],
+    );
+  }
+  
+  return messageWidget;
+}
 
-  /// 构建消息Widget - 使用正确的组件
+/// 构建消息Widget - 使用正确的组件
   Widget _buildMessageWidget(Message msg) {
     // 根据messageType渲染，使用正确的UI组件
     switch (msg.messageType) {
       case MessageType.user_narration:
-        // 用户旁白 - 使用新的旁白组件
         return NarrationMessage(
           text: msg.content,
           isAI: false,
-          isCentered: false, // 用户旁白偏右
+          isCentered: false,
         );
 
       case MessageType.ai_narration:
-        // AI旁白 - 使用新的旁白组件
         return NarrationMessage(
           text: msg.content,
           isAI: true,
-          isCentered: true, // AI旁白居中
+          isCentered: true,
         );
         
       case MessageType.user_dialogue:
-        // 用户对话
         return SentMessage(
           text: msg.content,
           userAvatarPath: _userAvatarPath,
@@ -460,18 +601,15 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         );
         
       case MessageType.ai_dialogue:
-        // AI对话
         return ReceivedMessage(
           text: msg.content,
           avatarPath: _avatarPath,
         );
         
       case MessageType.system_time:
-        // 系统时间消息
         return SystemTimeMessage(text: msg.content);
         
       case MessageType.system_state:
-        // 系统状态消息（当前未实现）
         return Container();
     }
   }
@@ -596,10 +734,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                       }
 
                       final msg = _messages[index];
-                      return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(index),
-                        child: _buildMessageWidget(msg),
-                      );
+return GestureDetector(
+  onLongPress: () => _showDeleteDialog(index),
+  child: _buildMessageWidgetWithDevMode(msg),  // ⬅️ 直接调用同步方法
+);
                     },
                   ),
                 ),
