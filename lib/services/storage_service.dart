@@ -1,5 +1,4 @@
 // lib/services/storage_service.dart
-import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -7,6 +6,7 @@ import 'package:path/path.dart' as path_lib;
 import 'package:flutter/foundation.dart';
 import 'api_config.dart';
 import '../models/message.dart';
+import 'dart:convert';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -65,14 +65,13 @@ class StorageService {
     return await getProviderApiKey(providerId);
   }
 
-  // ── 聊天记录相关 ──
+    // ── 聊天记录相关 ──
   Future<void> saveChatHistory(List<Message> history) async {
     final prefs = await _prefs;
     
     // 转换为Map列表
-    final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
-      return msg.toMap();
-    }).toList();
+    final List<Map<String, dynamic>> serializableHistory = 
+        history.map((msg) => msg.toMap()).toList();
     
     final jsonString = jsonEncode(serializableHistory);
     await prefs.setString('chat_history_master', jsonString);
@@ -86,7 +85,7 @@ class StorageService {
     }
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.map<Message>((e) {
+      return decoded.map((e) {
         return Message.fromMap(e as Map<String, dynamic>);
       }).toList();
     } catch (e) {
@@ -97,25 +96,11 @@ class StorageService {
     }
   }
 
-  Future<void> clearChatHistory() async {
-    final prefs = await _prefs;
-    await prefs.remove('chat_history_master');
-  }
-
-  // ── 角色编辑相关 ──
-  Future<void> saveCharacterAvatarPath(String path) async {
-    final prefs = await _prefs;
-    await prefs.setString('character_avatar_path', path);
-  }
-
-  Future<String?> getCharacterAvatarPath() async {
-    final prefs = await _prefs;
-    return prefs.getString('character_avatar_path');
-  }
-
+  // ── 角色编辑相关 ──（替换 save/loadCharacterData）
   Future<void> saveCharacterData(Map<String, String> data) async {
     final prefs = await _prefs;
-    await prefs.setString('character_data', jsonEncode(data));
+    final jsonString = jsonEncode(data);
+    await prefs.setString('character_data', jsonString);
   }
 
   Future<Map<String, String>> loadCharacterData() async {
@@ -125,8 +110,8 @@ class StorageService {
       return {};
     }
     try {
-      final Map<String, dynamic> decoded = jsonDecode(jsonString);
-      return decoded.cast<String, String>();
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      return decoded.map((key, value) => MapEntry(key, value as String));
     } catch (e) {
       if (kDebugMode) {
         debugPrint('角色数据解析失败: $e');
@@ -276,7 +261,90 @@ class StorageService {
     await prefs.remove('character_avatar_path');
     await prefs.remove('character_data');
   }
+    Future<File?> getAvatarFile() async {
+    final avatarPath = await getCharacterAvatarPath();
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return null;
+    }
+    
+    final file = File(avatarPath);
+    if (await file.exists()) {
+      return file;
+    }
+    return null;
+  }
 
+  Future<void> clearAllCharacterData() async {
+    final prefs = await _prefs;
+    await prefs.remove('character_avatar_path');
+    await prefs.remove('character_data');
+  }
+
+  // ── 角色头像路径相关（新增，解决 get/saveCharacterAvatarPath 未定义） ──
+  Future<void> saveCharacterAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('character_avatar_path', path);
+  }
+
+  Future<String?> getCharacterAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('character_avatar_path');
+  }
+
+  // ── 清空聊天记录（确保存在，解决 clearChatHistory 未定义） ──
+  Future<void> clearChatHistory() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_history_master');
+  }
+  
+  // ── 用户头像相关 ──
+  Future<void> saveUserAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_avatar_path', path);
+  }
+
+  Future<String?> getUserAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_avatar_path');
+  }
+
+  Future<String> copyUserAvatarToAppDir(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final newPath = '${appDir.path}/$fileName';
+      
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) {
+        await sourceFile.copy(newPath);
+        return newPath;
+      } else {
+        throw Exception('源文件不存在: $sourcePath');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('复制用户头像失败: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // ── 角色头像路径相关（新增，解决 get/saveCharacterAvatarPath 未定义） ──
+  Future<void> saveCharacterAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('character_avatar_path', path);
+  }
+
+  Future<String?> getCharacterAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('character_avatar_path');
+  }
+
+  // ── 清空聊天记录（确保存在，解决 clearChatHistory 未定义） ──
+  Future<void> clearChatHistory() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_history_master');
+  }
   // ── 用户头像相关 ──
   Future<void> saveUserAvatarPath(String path) async {
     final prefs = await _prefs;
@@ -467,5 +535,41 @@ class StorageService {
       return '暂无日志记录';
     }
     return logs.join('\n');
+  }
+    // ── 自定义服务商管理 ──
+  Future<void> saveCustomProvider(Map<String, dynamic> providerData) async {
+    final prefs = await _prefs;
+    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
+    final List<dynamic> list = jsonDecode(customProvidersJson);
+    
+    // 检查是否已存在
+    final existingIndex = list.indexWhere((p) => p['id'] == providerData['id']);
+    if (existingIndex >= 0) {
+      list[existingIndex] = providerData;
+    } else {
+      list.add(providerData);
+    }
+    
+    await prefs.setString('custom_providers', jsonEncode(list));
+  }
+
+  Future<List<Map<String, dynamic>>> getCustomProviders() async {
+    final prefs = await _prefs;
+    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
+    try {
+      final List<dynamic> list = jsonDecode(customProvidersJson);
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> deleteCustomProvider(String id) async {
+    final prefs = await _prefs;
+    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
+    final List<dynamic> list = jsonDecode(customProvidersJson);
+    
+    final newList = list.where((p) => p['id'] != id).toList();
+    await prefs.setString('custom_providers', jsonEncode(newList));
   }
 }

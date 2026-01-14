@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/storage_service.dart';
 import '../../services/api_config.dart';
 import '../settings/developer_logs_page.dart'; // ⭐ 新增
+import '../settings/custom_providers_page.dart'; // ⬅️【在此处插入】新增：导入自定义服务商管理页面
+import '../test/test_providers_page.dart'; // ⬅️ 添加到导入部分
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -32,48 +34,21 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadDeveloperMode();
   }
 
-// 修改 _loadDeveloperMode 方法，添加 mounted 检查：
-Future<void> _loadDeveloperMode() async {
-  final mode = await _storage.getDeveloperMode();
-  if (mounted) {
-    setState(() {
-      _developerMode = mode;
-    });
-  }
-}
-
-        // 修改 _toggleDeveloperMode 方法
-        Future<void> _toggleDeveloperMode(bool value) async {
-          await _storage.saveDeveloperMode(value);
-          
-          if (mounted) {
-            setState(() {
-              _developerMode = value;
-            });
-          }
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(value ? '开发者模式已开启' : '开发者模式已关闭'),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-
   Future<void> _loadSettings() async {
-    // 1. 加载用户选择的服务商
-    final providerId = await _storage.getSelectedProvider();
-    final provider = ApiConfig.getProvider(providerId) ?? ApiConfig.defaultProvider;
+    // 1. 获取所有服务商（包括自定义）
+    final allProviders = await ApiConfig.getProviders();
     
-    // 2. 加载该服务商的API Key
+    // 2. 加载用户选择的服务商
+    final providerId = await _storage.getSelectedProvider();
+    final provider = allProviders[providerId] ?? ApiConfig.defaultProviders[ApiConfig.defaultProviderId]!;
+    
+    // 3. 加载该服务商的API Key
     final apiKey = await _storage.getProviderApiKey(provider.id);
     
-    // 3. 加载该服务商保存的模型选择
+    // 4. 加载该服务商保存的模型选择
     final savedModel = await _storage.getSelectedModel();
     
-    // 4. 获取去重后的模型列表
+    // 5. 获取去重后的模型列表
     final uniqueModels = provider.availableModels.toSet().toList();
     
     setState(() {
@@ -115,10 +90,12 @@ Future<void> _loadDeveloperMode() async {
     }
   }
 
-  void _onProviderChanged(String? newProviderId) {
+   void _onProviderChanged(String? newProviderId) async {
     if (newProviderId == null || newProviderId == _selectedProviderId) return;
     
-    final newProvider = ApiConfig.getProvider(newProviderId);
+    // 获取所有服务商（包括自定义）
+    final allProviders = await ApiConfig.getProviders();
+    final newProvider = allProviders[newProviderId];
     if (newProvider == null) return;
     
     // 获取去重后的模型列表
@@ -443,6 +420,24 @@ if (_developerMode) ...[
             const Divider(height: 1),
           ],
 
+          // ⬅️【在此处插入】添加自定义服务商管理入口
+          ListTile(
+            title: const Text("自定义服务商管理"),
+            subtitle: const Text("添加、编辑或删除自定义API服务商"),
+            leading: const Icon(Icons.settings, color: Colors.purple),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CustomProvidersPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          // ⬅️【插入结束】
+
           // 角色设置
           ListTile(
             title: const Text("角色设置"),
@@ -464,6 +459,21 @@ if (_developerMode) ...[
           const Divider(height: 1),
           ListTile(
             title: const Text("关于应用"),
+                      const Divider(height: 1),
+          ListTile(  // ⬅️【在此处插入】测试入口
+            title: const Text("功能测试"),
+            subtitle: const Text("测试自定义服务商功能"),
+            leading: const Icon(Icons.bug_report, color: Colors.orange),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TestProvidersPage(),
+                ),
+              );
+            },
+          ),
             subtitle: const Text("版本信息和帮助"),
             leading: const Icon(Icons.info, color: Colors.blue),
             onTap: () {

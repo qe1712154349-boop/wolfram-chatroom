@@ -1459,7 +1459,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
 Size: 31889 bytes
 
-Modified: 01/08/2026 01:01:55
+Modified: 01/14/2026 14:37:34
 
 ========================================
 
@@ -3532,9 +3532,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 27716 bytes
+Size: 28673 bytes
 
-Modified: 01/08/2026 01:20:49
+Modified: 01/14/2026 14:39:56
 
 ========================================
 
@@ -3543,6 +3543,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/storage_service.dart';
 import '../../services/api_config.dart';
 import '../settings/developer_logs_page.dart'; // ⭐ 新增
+import '../settings/custom_providers_page.dart'; // ⬅️【在此处插入】新增：导入自定义服务商管理页面
+import '../test/test_providers_page.dart'; // ⬅️ 添加到导入部分
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -3572,48 +3574,21 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadDeveloperMode();
   }
 
-// 修改 _loadDeveloperMode 方法，添加 mounted 检查：
-Future<void> _loadDeveloperMode() async {
-  final mode = await _storage.getDeveloperMode();
-  if (mounted) {
-    setState(() {
-      _developerMode = mode;
-    });
-  }
-}
-
-        // 修改 _toggleDeveloperMode 方法
-        Future<void> _toggleDeveloperMode(bool value) async {
-          await _storage.saveDeveloperMode(value);
-          
-          if (mounted) {
-            setState(() {
-              _developerMode = value;
-            });
-          }
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(value ? '开发者模式已开启' : '开发者模式已关闭'),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-
   Future<void> _loadSettings() async {
-    // 1. 加载用户选择的服务商
-    final providerId = await _storage.getSelectedProvider();
-    final provider = ApiConfig.getProvider(providerId) ?? ApiConfig.defaultProvider;
+    // 1. 获取所有服务商（包括自定义）
+    final allProviders = await ApiConfig.getProviders();
     
-    // 2. 加载该服务商的API Key
+    // 2. 加载用户选择的服务商
+    final providerId = await _storage.getSelectedProvider();
+    final provider = allProviders[providerId] ?? ApiConfig.defaultProviders[ApiConfig.defaultProviderId]!;
+    
+    // 3. 加载该服务商的API Key
     final apiKey = await _storage.getProviderApiKey(provider.id);
     
-    // 3. 加载该服务商保存的模型选择
+    // 4. 加载该服务商保存的模型选择
     final savedModel = await _storage.getSelectedModel();
     
-    // 4. 获取去重后的模型列表
+    // 5. 获取去重后的模型列表
     final uniqueModels = provider.availableModels.toSet().toList();
     
     setState(() {
@@ -3655,10 +3630,12 @@ Future<void> _loadDeveloperMode() async {
     }
   }
 
-  void _onProviderChanged(String? newProviderId) {
+   void _onProviderChanged(String? newProviderId) async {
     if (newProviderId == null || newProviderId == _selectedProviderId) return;
     
-    final newProvider = ApiConfig.getProvider(newProviderId);
+    // 获取所有服务商（包括自定义）
+    final allProviders = await ApiConfig.getProviders();
+    final newProvider = allProviders[newProviderId];
     if (newProvider == null) return;
     
     // 获取去重后的模型列表
@@ -3983,6 +3960,24 @@ if (_developerMode) ...[
             const Divider(height: 1),
           ],
 
+          // ⬅️【在此处插入】添加自定义服务商管理入口
+          ListTile(
+            title: const Text("自定义服务商管理"),
+            subtitle: const Text("添加、编辑或删除自定义API服务商"),
+            leading: const Icon(Icons.settings, color: Colors.purple),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CustomProvidersPage(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          // ⬅️【插入结束】
+
           // 角色设置
           ListTile(
             title: const Text("角色设置"),
@@ -4004,6 +3999,21 @@ if (_developerMode) ...[
           const Divider(height: 1),
           ListTile(
             title: const Text("关于应用"),
+                      const Divider(height: 1),
+          ListTile(  // ⬅️【在此处插入】测试入口
+            title: const Text("功能测试"),
+            subtitle: const Text("测试自定义服务商功能"),
+            leading: const Icon(Icons.bug_report, color: Colors.orange),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TestProvidersPage(),
+                ),
+              );
+            },
+          ),
             subtitle: const Text("版本信息和帮助"),
             leading: const Icon(Icons.info, color: Colors.blue),
             onTap: () {
@@ -4346,7 +4356,7 @@ File: D:\D\my_new_app\lib\pages\settings\custom_providers_page.dart
 
 Size: 0 bytes
 
-Modified: 01/14/2026 14:06:25
+Modified: 01/14/2026 14:37:34
 
 ========================================
 
@@ -4359,7 +4369,7 @@ File: D:\D\my_new_app\lib\pages\settings\developer_logs_page.dart
 
 Size: 3966 bytes
 
-Modified: 01/08/2026 01:22:16
+Modified: 01/14/2026 14:37:34
 
 ========================================
 
@@ -4491,12 +4501,136 @@ class _DeveloperLogsPageState extends State<DeveloperLogsPage> {
 
 File: D:\D\my_new_app\lib\pages\test\test_providers_page.dart
 
-Size: 0 bytes
+Size: 3968 bytes
 
-Modified: 01/14/2026 14:17:23
+Modified: 01/14/2026 14:41:18
 
 ========================================
 
+// lib/pages/test/test_providers_page.dart
+import 'package:flutter/material.dart';
+import '../../services/api_config.dart';
+import '../../services/storage_service.dart';
+
+class TestProvidersPage extends StatefulWidget {
+  const TestProvidersPage({super.key});
+
+  @override
+  State<TestProvidersPage> createState() => _TestProvidersPageState();
+}
+
+class _TestProvidersPageState extends State<TestProvidersPage> {
+  final StorageService _storage = StorageService();
+  String _testResult = '点击按钮开始测试...';
+
+  Future<void> _testCustomProviders() async {
+    setState(() {
+      _testResult = '测试中...';
+    });
+
+    try {
+      // 1. 获取所有服务商
+      final allProviders = await ApiConfig.getProviders();
+      
+      // 2. 测试默认服务商是否存在
+      final defaultProvider = await ApiConfig.defaultProvider;
+      
+      // 3. 测试是否能添加自定义服务商
+      final customProviderData = {
+        'id': 'test_custom_api',
+        'name': '测试API',
+        'baseUrl': 'https://api.test.com/v1',
+        'availableModels': ['test-model-1', 'test-model-2'],
+        'defaultModel': 'test-model-1',
+        'requiresProxy': false,
+        'setupGuide': '测试指南',
+        'isCustom': true,
+      };
+      
+      await _storage.saveCustomProvider(customProviderData);
+      
+      // 4. 重新获取验证
+      final updatedProviders = await ApiConfig.getProviders();
+      
+      setState(() {
+        _testResult = '''
+✅ 测试通过！
+
+总共服务商数量: ${allProviders.length}
+默认服务商: ${defaultProvider.name}
+NVIDIA 服务商存在: ${allProviders.containsKey('nvidia')}
+自定义服务商添加成功: ${updatedProviders.containsKey('test_custom_api')}
+
+详细服务商列表:
+${allProviders.values.map((p) => '- ${p.name} (${p.id}) - ${p.isCustom ? '自定义' : '内置'}').join('\n')}
+
+自定义服务商列表:
+${(await _storage.getCustomProviders()).map((p) => '- ${p['name']} (${p['id']})').join('\n')}
+''';
+      });
+      
+      // 清理测试数据
+      await _storage.deleteCustomProvider('test_custom_api');
+      
+    } catch (e) {
+      setState(() {
+        _testResult = '❌ 测试失败: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('服务商功能测试'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ElevatedButton(
+              onPressed: _testCustomProviders,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                '开始测试',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _testResult,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('返回'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 
 
@@ -4684,7 +4818,7 @@ File: D:\D\my_new_app\lib\services\message_format_service.dart
 
 Size: 9594 bytes
 
-Modified: 01/08/2026 01:03:44
+Modified: 01/14/2026 14:37:34
 
 ========================================
 
@@ -4970,14 +5104,13 @@ enum MessageFormatType {
 
 File: D:\D\my_new_app\lib\services\storage_service.dart
 
-Size: 14079 bytes
+Size: 15083 bytes
 
-Modified: 01/08/2026 00:17:19
+Modified: 01/14/2026 18:06:40
 
 ========================================
 
 // lib/services/storage_service.dart
-import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -4985,6 +5118,7 @@ import 'package:path/path.dart' as path_lib;
 import 'package:flutter/foundation.dart';
 import 'api_config.dart';
 import '../models/message.dart';
+import 'dart:convert';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -5043,14 +5177,13 @@ class StorageService {
     return await getProviderApiKey(providerId);
   }
 
-  // ── 聊天记录相关 ──
+    // ── 聊天记录相关 ──
   Future<void> saveChatHistory(List<Message> history) async {
     final prefs = await _prefs;
     
     // 转换为Map列表
-    final List<Map<String, dynamic>> serializableHistory = history.map((msg) {
-      return msg.toMap();
-    }).toList();
+    final List<Map<String, dynamic>> serializableHistory = 
+        history.map((msg) => msg.toMap()).toList();
     
     final jsonString = jsonEncode(serializableHistory);
     await prefs.setString('chat_history_master', jsonString);
@@ -5064,7 +5197,7 @@ class StorageService {
     }
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.map<Message>((e) {
+      return decoded.map((e) {
         return Message.fromMap(e as Map<String, dynamic>);
       }).toList();
     } catch (e) {
@@ -5075,25 +5208,11 @@ class StorageService {
     }
   }
 
-  Future<void> clearChatHistory() async {
-    final prefs = await _prefs;
-    await prefs.remove('chat_history_master');
-  }
-
-  // ── 角色编辑相关 ──
-  Future<void> saveCharacterAvatarPath(String path) async {
-    final prefs = await _prefs;
-    await prefs.setString('character_avatar_path', path);
-  }
-
-  Future<String?> getCharacterAvatarPath() async {
-    final prefs = await _prefs;
-    return prefs.getString('character_avatar_path');
-  }
-
+  // ── 角色编辑相关 ──（替换 save/loadCharacterData）
   Future<void> saveCharacterData(Map<String, String> data) async {
     final prefs = await _prefs;
-    await prefs.setString('character_data', jsonEncode(data));
+    final jsonString = jsonEncode(data);
+    await prefs.setString('character_data', jsonString);
   }
 
   Future<Map<String, String>> loadCharacterData() async {
@@ -5103,8 +5222,8 @@ class StorageService {
       return {};
     }
     try {
-      final Map<String, dynamic> decoded = jsonDecode(jsonString);
-      return decoded.cast<String, String>();
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      return decoded.map((key, value) => MapEntry(key, value as String));
     } catch (e) {
       if (kDebugMode) {
         debugPrint('角色数据解析失败: $e');
@@ -5445,6 +5564,42 @@ class StorageService {
       return '暂无日志记录';
     }
     return logs.join('\n');
+  }
+    // ── 自定义服务商管理 ──
+  Future<void> saveCustomProvider(Map<String, dynamic> providerData) async {
+    final prefs = await _prefs;
+    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
+    final List<dynamic> list = jsonDecode(customProvidersJson);
+    
+    // 检查是否已存在
+    final existingIndex = list.indexWhere((p) => p['id'] == providerData['id']);
+    if (existingIndex >= 0) {
+      list[existingIndex] = providerData;
+    } else {
+      list.add(providerData);
+    }
+    
+    await prefs.setString('custom_providers', jsonEncode(list));
+  }
+
+  Future<List<Map<String, dynamic>>> getCustomProviders() async {
+    final prefs = await _prefs;
+    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
+    try {
+      final List<dynamic> list = jsonDecode(customProvidersJson);
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> deleteCustomProvider(String id) async {
+    final prefs = await _prefs;
+    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
+    final List<dynamic> list = jsonDecode(customProvidersJson);
+    
+    final newList = list.where((p) => p['id'] != id).toList();
+    await prefs.setString('custom_providers', jsonEncode(newList));
   }
 }
 
