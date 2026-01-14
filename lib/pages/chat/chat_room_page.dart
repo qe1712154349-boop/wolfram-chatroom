@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../../services/message_format_service.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
@@ -161,44 +160,19 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-    final parsedItems = MessageFormatService.parseContent(opening);
+    // 简化：直接将开场白作为一条AI对话消息
+    final msg = Message(
+      id: 'opening_${now.millisecondsSinceEpoch}',
+      role: 'assistant',
+      content: opening,
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    );
     
-    if (parsedItems.isEmpty) {
-      final msg = Message(
-        id: 'opening_${now.millisecondsSinceEpoch}',
-        role: 'assistant',
-        content: opening,
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      );
-      
-      if (mounted) {
-        setState(() {
-          _messages.add(msg);
-        });
-      }
-      return;
-    }
-    
-    for (int i = 0; i < parsedItems.length; i++) {
-      final (type, content) = parsedItems[i];
-      if (content.isEmpty) continue;
-      
-      final msg = Message(
-        id: 'opening_${now.millisecondsSinceEpoch}_$i',
-        role: 'assistant',
-        content: content,
-        timestamp: timestamp,
-        messageType: type == 'narration' 
-            ? MessageType.ai_narration 
-            : MessageType.ai_dialogue,
-      );
-      
-      if (mounted) {
-        setState(() {
-          _messages.add(msg);
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _messages.add(msg);
+      });
     }
   }
 
@@ -271,6 +245,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
     if (mounted) {
+      // 简化：直接将AI回复作为一条对话消息
       final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
       setState(() {
         _messages.addAll(aiMessages);
@@ -366,38 +341,20 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final now = DateTime.now().millisecondsSinceEpoch;
     
     if (kDebugMode) {
-      debugPrint('=== 开始解析 AI 回复 ===');
-      debugPrint('原始内容: $aiContent');
+      debugPrint('=== AI 回复处理 ===');
+      debugPrint('内容长度: ${aiContent.length}');
     }
 
-    final parsedItems = MessageFormatService.parseContent(aiContent);
-    
-    if (parsedItems.isEmpty) {
+    // 简化：直接将整个AI回复作为一条对话消息
+    if (aiContent.isNotEmpty) {
       messages.add(Message(
-        id: 'ai_${now}_fallback',
+        id: 'ai_${now}_dialogue',
         role: 'assistant',
         content: aiContent,
         timestamp: timestamp,
         messageType: MessageType.ai_dialogue,
-        metadata: {'parseError': 'true'},
       ));
-      return messages;
-    }
-    
-    for (int i = 0; i < parsedItems.length; i++) {
-      final (type, content) = parsedItems[i];
-      if (content.isEmpty) continue;
-      
-      messages.add(Message(
-        id: 'ai_${now}_${type}_$i',
-        role: 'assistant',
-        content: content,
-        timestamp: timestamp,
-        messageType: type == 'narration' ? MessageType.ai_narration : MessageType.ai_dialogue,
-      ));
-    }
-    
-        if (messages.isEmpty) {
+    } else {
       messages.add(Message(
         id: 'ai_${now}_empty',
         role: 'assistant',
@@ -406,8 +363,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         messageType: MessageType.ai_dialogue,
       ));
     }
-
-    // 提取状态（如果最后一条是状态描述）
+    
+    // 提取状态（如果最后一行包含状态描述）
     if (messages.isNotEmpty) {
       final lastContent = messages.last.content.trim();
       if (lastContent.startsWith('状态：') && lastContent.length > 3) {
@@ -424,22 +381,23 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
 
 
-  Widget _buildMessageWidget(Message msg) {
-    switch (msg.messageType) {
-      case MessageType.user_narration:
-        return NarrationMessage(text: msg.content, isAI: false, isCentered: false);
-      case MessageType.ai_narration:
-        return NarrationMessage(text: msg.content, isAI: true, isCentered: true);
-      case MessageType.user_dialogue:
-        return SentMessage(text: msg.content, userAvatarPath: _userAvatarPath, showUserAvatar: _showUserAvatar);
-      case MessageType.ai_dialogue:
-        return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
-      case MessageType.system_time:
-        return SystemTimeMessage(text: msg.content);
-      case MessageType.system_state:
-        return Container();
-    }
+Widget _buildMessageWidget(Message msg) {
+  switch (msg.messageType) {
+    case MessageType.user_narration:
+      return NarrationMessage(text: msg.content, isAI: false, isCentered: false);  // ✅ 用户旁白保留
+    case MessageType.ai_narration:
+      // ✅ AI旁白也显示为对话气泡
+      return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
+    case MessageType.user_dialogue:
+      return SentMessage(text: msg.content, userAvatarPath: _userAvatarPath, showUserAvatar: _showUserAvatar);
+    case MessageType.ai_dialogue:
+      return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
+    case MessageType.system_time:
+      return SystemTimeMessage(text: msg.content);
+    case MessageType.system_state:
+      return Container();
   }
+}
 
   @override
   Widget build(BuildContext context) {

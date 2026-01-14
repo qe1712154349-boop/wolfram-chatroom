@@ -1,3 +1,4 @@
+// lib/pages/chat/chat_character_edit_page.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -395,7 +396,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             ),
             const SizedBox(height: 20),
 
-            // 提示信息
+            // 提示信息（移除格式相关提示）
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
