@@ -1325,9 +1325,9 @@ class NarrationMessage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
-Size: 4168 bytes
+Size: 4750 bytes
 
-Modified: 01/14/2026 22:51:11
+Modified: 01/14/2026 23:20:22
 
 ========================================
 
@@ -1355,7 +1355,7 @@ class _ChatListPageState extends State<ChatListPage> {
   void initState() {
     super.initState();
     _loadCharacterData();
-     setState(() {});  // 强制刷新，让 FutureBuilder 立即加载最后消息
+    setState(() {});  // 强制刷新，让 FutureBuilder 立即加载最后消息
   }
 
   Future<void> _loadCharacterData() async {
@@ -1394,7 +1394,9 @@ class _ChatListPageState extends State<ChatListPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ChatRoomPage()),
-              );
+              ).then((_) {
+                setState(() {});  // 返回时强制刷新整个列表页
+              });
             },
             leading: GestureDetector(
               onTap: () {
@@ -1429,32 +1431,37 @@ class _ChatListPageState extends State<ChatListPage> {
             subtitle: FutureBuilder<List<Message>>(
               future: _storage.loadChatHistory(),
               builder: (context, snapshot) {
-if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-  final lastMsg = snapshot.data!.last.content;
-  return Text(
-    lastMsg.length > 30 ? '${lastMsg.substring(0, 30)}...' : lastMsg,
-    style: const TextStyle(color: Colors.grey),
-    overflow: TextOverflow.ellipsis,
-  );
-}
-return const SizedBox.shrink();  // 无消息时完全空白
-                return const Text(
-                  '',
-                  style: TextStyle(color: Colors.grey),
-                );
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final lastMsg = snapshot.data!.last.content;
+                  return Text(
+                    lastMsg.length > 30 ? '${lastMsg.substring(0, 30)}...' : lastMsg,
+                    style: const TextStyle(color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }
+                return const SizedBox.shrink();  // 无消息时完全空白
               },
             ),
-            trailing: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  "22:04",
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                SizedBox(height: 4),
-                CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
-              ],
+            trailing: FutureBuilder<List<Message>>(
+              future: _storage.loadChatHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final lastTime = snapshot.data!.last.timestamp;
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        lastTime,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      const CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
           ),
           const Divider(height: 1, indent: 80),
@@ -2732,9 +2739,9 @@ class MomentsDetailPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\me\me_page.dart
 
-Size: 7813 bytes
+Size: 7812 bytes
 
-Modified: 01/04/2026 14:53:08
+Modified: 01/14/2026 23:50:09
 
 ========================================
 
@@ -2924,20 +2931,20 @@ class _MePageState extends State<MePage> {
           ),
         ),
         const SizedBox(height: 10),
-        
+      
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "爱意", Colors.green),
+        _buildListTile(Icons.wechat_outlined, "服务", Colors.green),
         const Divider(height: 1, indent: 60),
         _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.photo_outlined, "朋友圈", Colors.blue),
+        _buildListTile(Icons.photo_outlined, "相册", Colors.blue),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.credit_card_outlined, "小说", Colors.blueAccent),
+        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "相册", Colors.amber),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber),
         
         const SizedBox(height: 10),
-        
+      
         // 设置入口
         ListTile(
           leading: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
@@ -3650,28 +3657,37 @@ class ApiConfig {
 
 File: D:\D\my_new_app\lib\services\api_service.dart
 
-Size: 1350 bytes
+Size: 1697 bytes
 
-Modified: 01/14/2026 19:12:23
+Modified: 01/14/2026 23:43:39
 
 ========================================
 
 // lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // 硬编码 DeepSeek 配置（后续加自定义输入框时再改成动态读取）
-  static const String baseUrl = 'https://api.deepseek.com';
-  static const String apiKey = 'YOUR_DEEPSEEK_API_KEY_HERE';  // ← 替换成你的真实 Key
+  static const String defaultBaseUrl = 'https://api.deepseek.com/v1';
+  static const String defaultApiKey = 'YOUR_DEEPSEEK_API_KEY_HERE';
   static const String defaultModel = 'deepseek-chat';
 
   Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
-    final modelName = model ?? defaultModel;
+    final prefs = await SharedPreferences.getInstance();
+
+    // 优先用自定义配置，没有才用默认
+    final baseUrl = prefs.getString('custom_base_url') ?? defaultBaseUrl;
+    final apiKey = prefs.getString('custom_api_key') ?? defaultApiKey;
+    final modelName = model ?? (prefs.getString('custom_model') ?? defaultModel);
+
+    if (apiKey == defaultApiKey || apiKey.isEmpty) {
+      throw Exception('请先在设置中配置 API Key');
+    }
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/v1/chat/completions'),  // 注意加 /v1
+        Uri.parse('$baseUrl/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $apiKey',
@@ -3688,7 +3704,7 @@ class ApiService {
         final data = jsonDecode(response.body);
         return data['choices'][0]['message']['content'] as String?;
       } else {
-        throw Exception('DeepSeek API 错误: ${response.statusCode} - ${response.body}');
+        throw Exception('API 错误: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('网络请求失败: $e');

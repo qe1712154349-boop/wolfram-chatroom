@@ -190,11 +190,11 @@ class _MePageState extends State<MePage> {
         const Divider(height: 1, indent: 60),
         _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.photo_outlined, "朋友圈", Colors.blue),
+        _buildListTile(Icons.photo_outlined, "相册", Colors.blue),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.credit_card_outlined, "小说", Colors.blueAccent),
+        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent),
         const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "相册", Colors.amber),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber),
         
         const SizedBox(height: 10),
       
