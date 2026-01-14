@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/storage_service.dart';
 import '../../services/api_config.dart';
+import '../settings/developer_logs_page.dart'; // ⭐ 新增
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -779,72 +780,10 @@ Widget _buildFormatSelector() {
     }
   }
   void _showDebugLogs() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('格式解析日志'),
-        content: FutureBuilder<List<String>>(
-          future: _storage.getDebugLogs(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            
-            final logs = snapshot.data ?? [];
-            if (logs.isEmpty) {
-              return const Text('暂无日志记录\n\n提示：开启开发者模式后，进行对话即可记录日志');
-            }
-            
-            return SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: ListView.builder(
-                itemCount: logs.length,
-                reverse: true,
-                itemBuilder: (context, index) {
-                  final log = logs[logs.length - 1 - index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      log,
-                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _storage.exportDebugLogsText();
-              if (!mounted) return;  // ⬅️ 提前返回，更安全
-              
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('日志已准备，可添加分享功能')),
-              );
-            },
-            child: const Text('导出'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _storage.clearDebugLogs();
-              if (!mounted) return;  // ⬅️ 改成这样
-              
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('日志已清空')),
-              );
-            },
-            child: const Text('清空', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DeveloperLogsPage(),
       ),
     );
   }

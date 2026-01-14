@@ -302,12 +302,14 @@ Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async
       debugPrint('原始内容: $aiContent');
     }
     
-    // 记录日志
     await _storage.saveDebugLog('开始解析 AI 回复，长度: ${aiContent.length}');
+    await _storage.saveDebugLog('原始内容:\n$aiContent'); // ⭐ 新增
     
     // ⭐ 使用新的格式检测服务
-    final parsedItems = MessageFormatService.parseContent(aiContent);
     final format = MessageFormatService.detectFormat(aiContent);
+    await _storage.saveDebugLog('检测到格式: $format'); // ⭐ 移到这里
+    
+    final parsedItems = MessageFormatService.parseContent(aiContent);
     
     await _storage.saveDebugLog('检测到格式: $format');
     
@@ -339,6 +341,9 @@ Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async
       final (type, content) = parsedItems[i];
       
       if (content.isEmpty) continue;
+    
+          // ⭐ 记录每一条解析结果
+      await _storage.saveDebugLog('第${i + 1}条: [$type] "$content"');  
       
       if (type == 'narration') {
         messages.add(Message(
@@ -455,6 +460,14 @@ Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async
       
       // 调用API时传入当前选择的模型
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: selectedModel);
+
+      // ⭐ 记录AI原始回复到日志（用于调试）
+            if (aiReply != null && aiReply.isNotEmpty) {
+              await _storage.saveDebugLog('━━━ AI 原始回复 ━━━');
+              await _storage.saveDebugLog('长度: ${aiReply.length} 字符');
+              await _storage.saveDebugLog('内容:\n$aiReply');
+              await _storage.saveDebugLog('━━━━━━━━━━━━━━━');
+            }
 
       // AI回复的时间
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());

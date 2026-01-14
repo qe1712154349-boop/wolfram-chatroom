@@ -1457,9 +1457,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 31159 bytes
+Size: 31889 bytes
 
-Modified: 01/07/2026 23:59:00
+Modified: 01/08/2026 01:01:55
 
 ========================================
 
@@ -1767,12 +1767,14 @@ Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async
       debugPrint('原始内容: $aiContent');
     }
     
-    // 记录日志
     await _storage.saveDebugLog('开始解析 AI 回复，长度: ${aiContent.length}');
+    await _storage.saveDebugLog('原始内容:\n$aiContent'); // ⭐ 新增
     
     // ⭐ 使用新的格式检测服务
-    final parsedItems = MessageFormatService.parseContent(aiContent);
     final format = MessageFormatService.detectFormat(aiContent);
+    await _storage.saveDebugLog('检测到格式: $format'); // ⭐ 移到这里
+    
+    final parsedItems = MessageFormatService.parseContent(aiContent);
     
     await _storage.saveDebugLog('检测到格式: $format');
     
@@ -1804,6 +1806,9 @@ Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async
       final (type, content) = parsedItems[i];
       
       if (content.isEmpty) continue;
+    
+          // ⭐ 记录每一条解析结果
+      await _storage.saveDebugLog('第${i + 1}条: [$type] "$content"');  
       
       if (type == 'narration') {
         messages.add(Message(
@@ -1920,6 +1925,14 @@ Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async
       
       // 调用API时传入当前选择的模型
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: selectedModel);
+
+      // ⭐ 记录AI原始回复到日志（用于调试）
+            if (aiReply != null && aiReply.isNotEmpty) {
+              await _storage.saveDebugLog('━━━ AI 原始回复 ━━━');
+              await _storage.saveDebugLog('长度: ${aiReply.length} 字符');
+              await _storage.saveDebugLog('内容:\n$aiReply');
+              await _storage.saveDebugLog('━━━━━━━━━━━━━━━');
+            }
 
       // AI回复的时间
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -3519,9 +3532,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 30022 bytes
+Size: 27716 bytes
 
-Modified: 01/07/2026 23:36:35
+Modified: 01/08/2026 01:20:49
 
 ========================================
 
@@ -3529,6 +3542,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/storage_service.dart';
 import '../../services/api_config.dart';
+import '../settings/developer_logs_page.dart'; // ⭐ 新增
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -4306,72 +4320,10 @@ Widget _buildFormatSelector() {
     }
   }
   void _showDebugLogs() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('格式解析日志'),
-        content: FutureBuilder<List<String>>(
-          future: _storage.getDebugLogs(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            
-            final logs = snapshot.data ?? [];
-            if (logs.isEmpty) {
-              return const Text('暂无日志记录\n\n提示：开启开发者模式后，进行对话即可记录日志');
-            }
-            
-            return SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: ListView.builder(
-                itemCount: logs.length,
-                reverse: true,
-                itemBuilder: (context, index) {
-                  final log = logs[logs.length - 1 - index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      log,
-                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _storage.exportDebugLogsText();
-              if (!mounted) return;  // ⬅️ 提前返回，更安全
-              
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('日志已准备，可添加分享功能')),
-              );
-            },
-            child: const Text('导出'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _storage.clearDebugLogs();
-              if (!mounted) return;  // ⬅️ 改成这样
-              
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('日志已清空')),
-              );
-            },
-            child: const Text('清空', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DeveloperLogsPage(),
       ),
     );
   }
@@ -4385,6 +4337,166 @@ Widget _buildFormatSelector() {
     );
   }
 }
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\settings\custom_providers_page.dart
+
+Size: 0 bytes
+
+Modified: 01/14/2026 14:06:25
+
+========================================
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\settings\developer_logs_page.dart
+
+Size: 3966 bytes
+
+Modified: 01/08/2026 01:22:16
+
+========================================
+
+// lib/pages/settings/developer_logs_page.dart
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ⭐ 用于复制到剪贴板
+import '../../services/storage_service.dart';
+
+class DeveloperLogsPage extends StatefulWidget {
+  const DeveloperLogsPage({super.key});
+
+  @override
+  State<DeveloperLogsPage> createState() => _DeveloperLogsPageState();
+}
+
+class _DeveloperLogsPageState extends State<DeveloperLogsPage> {
+  final StorageService _storage = StorageService();
+  List<String> _logs = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final logs = await _storage.getDebugLogs();
+
+    setState(() {
+      _logs = logs;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('格式诊断'),
+        backgroundColor: Colors.white,
+        actions: [
+          // ⭐ 复制按钮
+          IconButton(
+            icon: const Icon(Icons.copy),
+            tooltip: '复制全部日志',
+            onPressed: () async {
+              if (_logs.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('日志为空')),
+                );
+                return;
+              }
+              
+              final allLogs = _logs.join('\n');
+              await Clipboard.setData(ClipboardData(text: allLogs));
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ 已复制到剪贴板'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
+          // 清空按钮
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: '清空日志',
+            onPressed: () async {
+              await _storage.clearDebugLogs();
+              await _loadLogs();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('日志已清空')),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _logs.isEmpty
+              ? const Center(
+                  child: Text(
+                    '暂无日志记录\n\n开启开发者模式后进行对话即可记录',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _logs.length,
+                  reverse: true, // 最新的在上面
+                  itemBuilder: (context, index) {
+                    final log = _logs[_logs.length - 1 - index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Text(
+                        log,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\test\test_providers_page.dart
+
+Size: 0 bytes
+
+Modified: 01/14/2026 14:17:23
+
+========================================
+
 
 
 
@@ -4570,9 +4682,9 @@ Modified: 01/02/2026 16:37:48
 
 File: D:\D\my_new_app\lib\services\message_format_service.dart
 
-Size: 6055 bytes
+Size: 9594 bytes
 
-Modified: 01/08/2026 00:17:21
+Modified: 01/08/2026 01:03:44
 
 ========================================
 
@@ -4581,10 +4693,11 @@ import 'package:flutter/foundation.dart';
 import 'package:xml/xml.dart' as xml;
 
 /// 消息格式检测和解析服务
-/// 支持三种格式：
+/// 支持四种格式：
 /// 1. XML 格式（原生）
-/// 2. 标记行格式（【旁白】/ 【对话】）
-/// 3. 纯文本（降级方案）
+/// 2. Markdown 格式（*旁白* "对话" 或 （动作）对话）
+/// 3. 标记行格式（【旁白】/ 【对话】）
+/// 4. 纯文本（降级方案）
 class MessageFormatService {
   
   /// 检测内容的格式类型
@@ -4601,7 +4714,7 @@ class MessageFormatService {
       }
     }
     
-    // ⭐ 检查是否是 Markdown 格式
+    // ⭐ 检查是否是 Markdown 格式（包括括号格式）
     if (_hasMarkdownFormat(content)) {
       return MessageFormatType.markdown;
     }
@@ -4617,20 +4730,29 @@ class MessageFormatService {
   
   /// 检测是否包含 Markdown 格式标记
   static bool _hasMarkdownFormat(String content) {
-    // 检查是否包含 *...* 或 "..."
+    // 检查常见的 Markdown 标记
     final hasAsterisk = RegExp(r'\*[^*]+\*').hasMatch(content);
     final hasQuote = RegExp(r'"[^"]+"').hasMatch(content);
+    final hasParenthesis = RegExp(r'[（(][^）)]+[）)]').hasMatch(content);
+    final hasBracket = RegExp(r'【[^】]+】').hasMatch(content);
     
-    return hasAsterisk || hasQuote;
+    return hasAsterisk || hasQuote || hasParenthesis || hasBracket;
   }
   
-  /// 解析内容，返回 (narration, dialogue) 对列表
+/// 解析内容，返回 (type, content) 对列表
   static List<(String type, String content)> parseContent(String content) {
     final format = detectFormat(content);
     
+    // ⭐ 输出详细的调试信息
     if (kDebugMode) {
-      debugPrint('📊 检测到格式: $format');
-    }
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('📊 格式检测：$format');
+      debugPrint('📝 原始内容（前100字符）：');
+      debugPrint(content.length > 100 
+          ? '${content.substring(0, 100)}...' 
+          : content);
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } // ⭐ 这里缺了这个闭合括号
     
     switch (format) {
       case MessageFormatType.xml:
@@ -4673,32 +4795,103 @@ class MessageFormatService {
     return result;
   }
   
-/// 解析 Markdown 格式（优化版：引号=对话，其余=旁白）
-static List<(String, String)> _parseMarkdown(String content) {
-  final result = <(String, String)>[];
-  final lines = content.split('\n');
-  
-  for (final line in lines) {
-    final trimmed = line.trim();
-    if (trimmed.isEmpty) continue;
+  /// 解析 Markdown 格式（语C风格优化版）
+  /// 核心规则：
+  /// 1. 括号内容 → 旁白
+  /// 2. 引号内容 → 对话
+  /// 3. 括号后第一行（非括号开头）→ 对话
+  /// 4. 连续括号 → 都是旁白
+  static List<(String, String)> _parseMarkdown(String content) {
+    final result = <(String, String)>[];
+    final lines = content.split('\n');
     
-    // ⭐ 核心逻辑：只要包含引号，就提取对话
-    final dialogueMatch = RegExp(r'"([^"]+)"').firstMatch(trimmed);
-    if (dialogueMatch != null) {
-      final text = dialogueMatch.group(1)?.trim() ?? '';
-      if (text.isNotEmpty) {
-        result.add(('dialogue', text));
+    String? pendingNarration; // 待处理的旁白（等待下一行判断）
+    
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line.isEmpty) continue;
+      
+      // ⭐ 规则1：提取所有括号（包括圆括号、全角括号、方括号、【】）
+      final parenthesisPatterns = [
+        RegExp(r'[（(]([^）)]+)[）)]'),  // （...） 或 (...)
+        RegExp(r'\*([^*]+)\*'),          // *...*
+        RegExp(r'【([^】]+)】'),          // 【...】
+      ];
+      
+      bool hasParenthesis = false;
+      String remainingLine = line;
+      
+      // 提取所有括号内容作为旁白
+      for (final pattern in parenthesisPatterns) {
+        final matches = pattern.allMatches(line);
+        for (final match in matches) {
+          final narrationText = match.group(1)?.trim() ?? '';
+          if (narrationText.isNotEmpty) {
+            // 如果有待处理的旁白，先输出
+            if (pendingNarration != null) {
+              result.add(('narration', pendingNarration));
+              pendingNarration = null;
+            }
+            
+            result.add(('narration', narrationText));
+            hasParenthesis = true;
+          }
+          
+          // 移除已处理的括号内容
+          remainingLine = remainingLine.replaceFirst(match.group(0)!, '').trim();
+        }
+      }
+      
+      // ⭐ 规则2：提取引号内容作为对话
+      final quoteMatch = RegExp(r'"([^"]+)"').firstMatch(remainingLine);
+      if (quoteMatch != null) {
+        final dialogueText = quoteMatch.group(1)?.trim() ?? '';
+        if (dialogueText.isNotEmpty) {
+          // 清空待处理的旁白（因为已经有对话了）
+          pendingNarration = null;
+          result.add(('dialogue', dialogueText));
+          continue;
+        }
+      }
+      
+      // ⭐ 规则3：括号后的非括号行 → 对话
+      if (hasParenthesis && remainingLine.isNotEmpty) {
+        // 检查下一行是否是括号开头（连续括号的情况）
+        final nextLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
+        final nextLineStartsWithParenthesis = parenthesisPatterns.any((p) => 
+          p.hasMatch(nextLine) && nextLine.startsWith(RegExp(r'[（(*【]'))
+        );
+        
+        if (!nextLineStartsWithParenthesis) {
+          // 不是连续括号，当作对话
+          result.add(('dialogue', remainingLine));
+          pendingNarration = null;
+        } else {
+          // 是连续括号，标记为待处理旁白
+          if (remainingLine.isNotEmpty) {
+            pendingNarration = remainingLine;
+          }
+        }
         continue;
+      }
+      
+      // ⭐ 规则4：其他情况 → 旁白
+      if (remainingLine.isNotEmpty) {
+        if (pendingNarration != null) {
+          result.add(('narration', pendingNarration));
+        }
+        pendingNarration = remainingLine;
       }
     }
     
-    // ⭐ 其余情况：全部当作旁白（包括 *...* 也是旁白）
-    result.add(('narration', trimmed));
+    // 处理最后的待处理旁白
+    if (pendingNarration != null) {
+      result.add(('narration', pendingNarration));
+    }
+    
+    return result;
   }
   
-  return result;
-}
-
   /// 解析标记行格式
   static List<(String, String)> _parseTaggedLines(String content) {
     final result = <(String, String)>[];
@@ -4725,48 +4918,47 @@ static List<(String, String)> _parseMarkdown(String content) {
   }
   
   /// 降级方案：超级宽容的纯文本解析
-static List<(String, String)> _parsePlainText(String content) {
-  final result = <(String, String)>[];
-  final lines = content.split('\n');
-  
-  for (final line in lines) {
-    final trimmed = line.trim();
-    if (trimmed.isEmpty) continue;
+  static List<(String, String)> _parsePlainText(String content) {
+    final result = <(String, String)>[];
+    final lines = content.split('\n');
     
-    // ⭐ 规则1：包含引号 → 对话
-    if (trimmed.contains('"') || trimmed.contains('"') || trimmed.contains('"')) {
-      // 提取引号内容
-      final match = RegExp(r'[""""]([^""""]*)[""""""]').firstMatch(trimmed);
-      if (match != null) {
-        final text = match.group(1)?.trim() ?? trimmed;
-        result.add(('dialogue', text));
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
+      
+      // ⭐ 规则1：包含引号 → 对话
+      if (trimmed.contains('"') || trimmed.contains('"') || trimmed.contains('"')) {
+        final match = RegExp(r'[""""]([^""""]*)[""""""]').firstMatch(trimmed);
+        if (match != null) {
+          final text = match.group(1)?.trim() ?? trimmed;
+          result.add(('dialogue', text));
+          continue;
+        }
+      }
+      
+      // ⭐ 规则2：以冒号/说开头 → 对话
+      if (trimmed.contains('：') || trimmed.contains(':') || 
+          trimmed.endsWith('说') || trimmed.startsWith('说')) {
+        result.add(('dialogue', trimmed));
         continue;
       }
+      
+      // ⭐ 默认：全部旁白
+      result.add(('narration', trimmed));
     }
     
-    // ⭐ 规则2：以冒号/说开头 → 对话
-    if (trimmed.contains('：') || trimmed.contains(':') || 
-        trimmed.endsWith('说') || trimmed.startsWith('说')) {
-      result.add(('dialogue', trimmed));
-      continue;
+    // 如果解析结果为空，整体作为旁白
+    if (result.isEmpty) {
+      return [('narration', content)];
     }
     
-    // ⭐ 默认：全部旁白
-    result.add(('narration', trimmed));
+    return result;
   }
-  
-  // 如果解析结果为空，整体作为旁白（不是对话）
-  if (result.isEmpty) {
-    return [('narration', content)];
-  }
-  
-  return result;
-}
 }
 
 enum MessageFormatType {
   xml,          // XML 格式
-  markdown,     // Markdown 格式（*旁白* "对话"）
+  markdown,     // Markdown 格式（*旁白* "对话" 或 （动作）对话）
   taggedLines,  // 【旁白】/【对话】标记行
   plainText,    // 纯文本
   unknown,      // 未知
