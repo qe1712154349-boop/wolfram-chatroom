@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../services/message_format_service.dart';
-import 'dart:math';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
@@ -34,50 +33,49 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String _characterName = 'name';
   String? _avatarPath;
   String? _userAvatarPath;
+ 
+  String _currentStatus = '空白';   // 当前状态，默认空白
   bool _showUserAvatar = true;
   String _systemPrompt = '';
-  bool _developerMode = false;  // ⬅️ 添加这行
 
-@override
-void initState() {
-  super.initState();
-  WidgetsBinding.instance.addObserver(this);
-  _loadDeveloperMode();  // ⬅️ 在 initState 中调用
-  _loadCharacterData();
-  _loadUserSettings();
-  _loadHistory();
-  
-  _scrollController.addListener(() {
-    if (!mounted) return;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadCharacterData();
+    _loadUserSettings();
+    _loadHistory();
     
-    final double maxScroll = _scrollController.position.maxScrollExtent;
-    final double currentScroll = _scrollController.position.pixels;
-    
-    if ((maxScroll - currentScroll) > 300.0) {
-      if (!_showScrollToBottomButton) {
-        setState(() {
-          _showScrollToBottomButton = true;
-        });
-        // 启动3秒后隐藏计时器
-        _scrollButtonTimer?.cancel();
-        _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-          if (mounted && _showScrollToBottomButton) {
-            setState(() {
-              _showScrollToBottomButton = false;
-            });
-          }
-        });
+    _scrollController.addListener(() {
+      if (!mounted) return;
+      
+      final double maxScroll = _scrollController.position.maxScrollExtent;
+      final double currentScroll = _scrollController.position.pixels;
+      
+      if ((maxScroll - currentScroll) > 300.0) {
+        if (!_showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = true;
+          });
+          _scrollButtonTimer?.cancel();
+          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted && _showScrollToBottomButton) {
+              setState(() {
+                _showScrollToBottomButton = false;
+              });
+            }
+          });
+        }
+      } else {
+        if (_showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = false;
+          });
+          _scrollButtonTimer?.cancel();
+        }
       }
-    } else {
-      if (_showScrollToBottomButton) {
-        setState(() {
-          _showScrollToBottomButton = false;
-        });
-        _scrollButtonTimer?.cancel();
-      }
-    }
-  });
-}
+    });
+  }
 
   @override
   void dispose() {
@@ -125,6 +123,7 @@ void initState() {
       });
     }
   }
+  
 
   Future<void> _loadUserSettings() async {
     final showAvatar = await _storage.getShowUserAvatar();
@@ -138,43 +137,23 @@ void initState() {
     }
   }
 
-    // ⬅️ 在这里添加
-    Future<void> _loadDeveloperMode() async {
-      final mode = await _storage.getDeveloperMode();
-      if (mounted) {
-        setState(() {
-          _developerMode = mode;
-        });
-      }
-    }
-
   Future<void> _loadHistory() async {
     final history = await _storage.loadChatHistory();
     if (history.isNotEmpty) {
-      // 检查是否需要添加时间戳消息
-      final List<Message> messagesWithTime = [];
-      
-      for (final msg in history) {
-        // 由于消息没有存储准确时间，我们暂时不添加时间戳
-        messagesWithTime.add(msg);
-      }
-      
       if (mounted) {
         setState(() {
           _messages.clear();
-          _messages.addAll(messagesWithTime);
+          _messages.addAll(history);
         });
       }
+
     } else {
-      // ⬅️ 这是新增的部分：历史为空时加载开场白
       await _loadOpeningMessage();
     }
     
-    // ⬅️ 注意：_scrollToBottom() 移到这里，无论有没有历史都执行
     _scrollToBottom();
   }
 
-/// 加载开场白（仅当消息为空时）
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
     if (opening.isEmpty) return;
@@ -182,11 +161,9 @@ void initState() {
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-    // 使用 Markdown 解析开场白
     final parsedItems = MessageFormatService.parseContent(opening);
     
     if (parsedItems.isEmpty) {
-      // 解析失败，整体作为对话
       final msg = Message(
         id: 'opening_${now.millisecondsSinceEpoch}',
         role: 'assistant',
@@ -203,7 +180,6 @@ void initState() {
       return;
     }
     
-    // 逐项添加
     for (int i = 0; i < parsedItems.length; i++) {
       final (type, content) = parsedItems[i];
       if (content.isEmpty) continue;
@@ -228,6 +204,7 @@ void initState() {
 
   Future<void> _saveHistory() async {
     await _storage.saveChatHistory(_messages);
+    print('保存聊天历史成功，消息数: ${_messages.length}');  // ← 加这一行
   }
 
   Future<void> _clearAllMessages() async {
@@ -239,270 +216,90 @@ void initState() {
     await _storage.clearChatHistory();
   }
 
-  /// 检查并插入时间戳消息
-  void _checkAndInsertTimestampMessage(DateTime currentTime) {
-    if (_messages.isEmpty) return;
-    
-    // 这里应该比较最后一条消息的时间
-    // 由于我们没有存储准确时间，暂时跳过时间戳插入逻辑
-    
-    // 如果要实现时间戳，可以这样添加：
-    // if (shouldInsertTimestamp) {
-    //   final timestampMessage = Message(
-    //     id: 'timestamp_${currentTime.millisecondsSinceEpoch}',
-    //     role: 'system',
-    //     content: DateFormat('HH:mm').format(currentTime),
-    //     timestamp: DateFormat('HH:mm').format(currentTime),
-    //     messageType: MessageType.system_time,
-    //   );
-    //   _messages.add(timestampMessage);
-    // }
-  }
+ Future<void> _sendMessage(String text) async {
+  if (text.trim().isEmpty || _isLoading) return;
 
-  /// 构建用于AI的上下文消息列表
-  List<Message> _buildContextMessages({int maxCount = 8}) {
-    if (_messages.isEmpty) return [];
+  final now = DateTime.now();
+  final timestamp = DateFormat('HH:mm').format(now);
+  
+  final MessageType messageType = text.trim().startsWith('/') 
+      ? MessageType.user_narration 
+      : MessageType.user_dialogue;
+  final String displayContent = messageType == MessageType.user_narration 
+      ? text.trim().substring(1).trim() 
+      : text.trim();
 
-    // 1. 过滤：只保留能进上下文的（排除 system_time）
-    final contextCandidates = _messages.where((m) {
-      return m.messageType != MessageType.system_time;
-    }).toList();
+  final userMessage = Message(
+    id: 'user_${now.millisecondsSinceEpoch}',
+    role: 'user',
+    content: displayContent,
+    timestamp: timestamp,
+    messageType: messageType,
+    metadata: {'originalText': text},
+  );
 
-    if (contextCandidates.isEmpty) return [];
+  if (!mounted) return;
+  
+  setState(() {
+    _messages.add(userMessage);
+    _isLoading = true;
+  });
 
-    // 2. 找最后一条用户消息（强制优先，锁定权重）
-    final lastUserMessage = contextCandidates.lastWhere(
-      (m) =>
-          m.messageType == MessageType.user_dialogue ||
-          m.messageType == MessageType.user_narration,
-      orElse: () => contextCandidates.last,
+  _scrollToBottom();
+  await _saveHistory();
+
+  try {
+    final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
+    final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
+    _systemPrompt = systemPrompt;
+
+    List<Map<String, String>> apiMessages = [
+      {'role': 'system', 'content': systemPrompt},
+    ];
+
+    final contextMessages = _buildContextMessages();
+    apiMessages.addAll(
+      contextMessages.map((msg) => {
+        'role': msg.role,
+        'content': msg.content,
+      }),
     );
 
-    // 3. 取前面的背景消息（从后往前取，保持时序）
-    final background = contextCandidates
-        .where((m) => m != lastUserMessage)
-        .toList()  // 先转换为 List
-        .reversed
-        .take(maxCount - 1)
-        .toList()
-        .reversed
-        .toList(); // 恢复正向顺序
+    // 清理后：模型固定为 deepseek-chat（后续加自定义时再改）
+    final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
 
-    // 4. 组合，保证最后一条用户消息在末尾
-    return [...background, lastUserMessage];
-  }
+    final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
-/// 解析AI回复，生成对应的Message对象（支持多格式）
-Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
-    final List<Message> messages = [];
-    final now = DateTime.now().millisecondsSinceEpoch;
-    
-    if (kDebugMode) {
-      debugPrint('=== 开始解析 AI 回复 ===');
-      debugPrint('原始内容: $aiContent');
+    if (mounted) {
+      final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
+      setState(() {
+        _messages.addAll(aiMessages);
+      });
+
+      await _saveHistory();
+      _scrollToBottom();
     }
-    
-    await _storage.saveDebugLog('开始解析 AI 回复，长度: ${aiContent.length}');
-    await _storage.saveDebugLog('原始内容:\n$aiContent'); // ⭐ 新增
-    
-    // ⭐ 使用新的格式检测服务
-    final format = MessageFormatService.detectFormat(aiContent);
-    await _storage.saveDebugLog('检测到格式: $format'); // ⭐ 移到这里
-    
-    final parsedItems = MessageFormatService.parseContent(aiContent);
-    
-    await _storage.saveDebugLog('检测到格式: $format');
-    
-    if (parsedItems.isEmpty) {
-      // 如果解析结果为空，当作整体对话
-      if (kDebugMode) {
-        debugPrint('⚠️ 无法解析，降级为纯对话');
-      }
-      
-      await _storage.saveDebugLog('⚠️ 格式解析失败，降级为纯对话');
-      
-      messages.add(Message(
-        id: 'ai_${now}_fallback',
-        role: 'assistant',
-        content: aiContent,
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-        metadata: {
-          'parseError': 'true', // 标记为解析失败
-        },
-      ));
-      return messages;
-    }
-    
-    await _storage.saveDebugLog('✅ 解析成功，共 ${parsedItems.length} 条');
-    
-    // ⭐ 逐项处理（第二层防线：逐行兜底）
-    for (int i = 0; i < parsedItems.length; i++) {
-      final (type, content) = parsedItems[i];
-      
-      if (content.isEmpty) continue;
-    
-          // ⭐ 记录每一条解析结果
-      await _storage.saveDebugLog('第${i + 1}条: [$type] "$content"');  
-      
-      if (type == 'narration') {
-        messages.add(Message(
-          id: 'ai_${now}_narration_$i',
+  } catch (e) {
+    final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
+    if (mounted) {
+      setState(() {
+        _messages.add(Message(
+          id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
           role: 'assistant',
-          content: content,
-          timestamp: timestamp,
-          messageType: MessageType.ai_narration,
-        ));
-        if (kDebugMode) {
-          debugPrint('✅ 添加旁白: ${content.substring(0, min(20, content.length))}...');
-        }
-      } else if (type == 'dialogue') {
-        messages.add(Message(
-          id: 'ai_${now}_dialogue_$i',
-          role: 'assistant',
-          content: content,
-          timestamp: timestamp,
+          content: '出错啦… $e',
+          timestamp: errorTimestamp,
           messageType: MessageType.ai_dialogue,
         ));
-        if (kDebugMode) {
-          debugPrint('✅ 添加对话: ${content.substring(0, min(20, content.length))}...');
-        }
-      }
+      });
     }
-    
-    // 确保至少有一条消息
-    if (messages.isEmpty) {
-      messages.add(Message(
-        id: 'ai_${now}_empty',
-        role: 'assistant',
-        content: '（思考中……）',
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      ));
-    }
-    
-    if (kDebugMode) {
-      debugPrint('=== 解析完成，共 ${messages.length} 条消息 ===\n');
-    }
-    
-    return messages;
-  }
-
-  Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty || _isLoading) return;
-
-    final now = DateTime.now();
-    final timestamp = DateFormat('HH:mm').format(now);
-    
-    // 检查是否需要添加时间戳消息
-    _checkAndInsertTimestampMessage(now);
-    
-    // 根据架构规则确定消息类型（核心逻辑）
-    final MessageType messageType;
-    final String role = 'user';
-    String displayContent = text.trim();
-    
-    if (displayContent.startsWith('/')) {
-      // 以/开头 → user_narration
-      messageType = MessageType.user_narration;
-      displayContent = displayContent.substring(1).trim();
-    } else {
-      // 否则 → user_dialogue
-      messageType = MessageType.user_dialogue;
-    }
-    
-    // 创建Message对象（必须包含显式messageType）
-    final userMessage = Message(
-      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      role: role,
-      content: displayContent,
-      timestamp: timestamp,
-      messageType: messageType,
-      metadata: {
-        'originalText': text,
-      },
-    );
-
-    if (!mounted) return;
-    
-    setState(() {
-      _messages.add(userMessage);
-      _isLoading = true;
-    });
-
-    _scrollToBottom();
     await _saveHistory();
-
-    try {
-      // 获取包含当前时间的系统提示
-      final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
-      final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
-      _systemPrompt = systemPrompt;
-
-      // 构建发送给API的完整上下文
-      List<Map<String, String>> apiMessages = [
-        {'role': 'system', 'content': systemPrompt},
-      ];
-
-      // 构建AI上下文（严格按 messageType 过滤）
-      final contextMessages = _buildContextMessages();
-
-      // 只发送有效上下文给AI（排除 system_time）
-      apiMessages.addAll(
-        contextMessages.map((msg) => {
-          'role': msg.role,
-          'content': msg.content,
-        }),
-      );
-
-      // 从StorageService获取选择的模型
-      final selectedModel = await _storage.getSelectedModel();
-      
-      // 调用API时传入当前选择的模型
-      final aiReply = await _apiService.sendChatMessage(apiMessages, model: selectedModel);
-
-      // ⭐ 记录AI原始回复到日志（用于调试）
-            if (aiReply != null && aiReply.isNotEmpty) {
-              await _storage.saveDebugLog('━━━ AI 原始回复 ━━━');
-              await _storage.saveDebugLog('长度: ${aiReply.length} 字符');
-              await _storage.saveDebugLog('内容:\n$aiReply');
-              await _storage.saveDebugLog('━━━━━━━━━━━━━━━');
-            }
-
-      // AI回复的时间
-      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
-
-if (mounted) {
-        // 解析AI回复，生成多个Message
-        final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
-        setState(() {
-          _messages.addAll(aiMessages);
-        });
-      }
-
-      await _saveHistory();
-      _scrollToBottom();
-    } catch (e) {
-      final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
-      if (mounted) {
-        setState(() {
-          _messages.add(Message(
-            id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
-            role: 'assistant',
-            content: '出错啦… $e',
-            timestamp: errorTimestamp,
-            messageType: MessageType.ai_dialogue,
-          ));
-        });
-      }
-      await _saveHistory();
-      _scrollToBottom();
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    _scrollToBottom();
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
 
   void _deleteMessage(int index) {
     if (!mounted) return;
@@ -518,110 +315,127 @@ if (mounted) {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        title: const Text(
-          "删除消息",
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: const Text(
-          "确定要删除这条消息吗？",
-          style: TextStyle(fontSize: 14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text("删除消息", style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        content: const Text("确定要删除这条消息吗？", style: TextStyle(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "取消",
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: const Text("取消", style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () {
               _deleteMessage(index);
               Navigator.pop(context);
             },
-            child: const Text(
-              "删除",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text("删除", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
-/// 构建消息Widget（使用缓存的开发者模式）
-Widget _buildMessageWidgetWithDevMode(Message msg) {
-  final hasParseError = msg.metadata?['parseError'] == 'true';
-  final messageWidget = _buildMessageWidget(msg);
-  
-  // 如果是解析失败的消息且开启了开发者模式，添加警告标记
-  if (hasParseError && _developerMode) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.warning_amber, size: 14, color: Colors.orange[700]),
-              const SizedBox(width: 4),
-              Text(
-                '格式识别异常（已降级处理）',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.orange[700],
-                ),
-              ),
-            ],
-          ),
-        ),
-        messageWidget,
-      ],
-    );
-  }
-  
-  return messageWidget;
-}
 
-/// 构建消息Widget - 使用正确的组件
+  List<Message> _buildContextMessages({int maxCount = 8}) {
+    if (_messages.isEmpty) return [];
+
+    final contextCandidates = _messages.where((m) {
+      return m.messageType != MessageType.system_time;
+    }).toList();
+
+    if (contextCandidates.isEmpty) return [];
+
+    final lastUserMessage = contextCandidates.lastWhere(
+      (m) => m.messageType == MessageType.user_dialogue || m.messageType == MessageType.user_narration,
+      orElse: () => contextCandidates.last,
+    );
+
+    final background = contextCandidates
+        .where((m) => m != lastUserMessage)
+        .toList()
+        .reversed
+        .take(maxCount - 1)
+        .toList()
+        .reversed
+        .toList();
+
+    return [...background, lastUserMessage];
+  }
+
+  Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
+    final List<Message> messages = [];
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    if (kDebugMode) {
+      debugPrint('=== 开始解析 AI 回复 ===');
+      debugPrint('原始内容: $aiContent');
+    }
+
+    final parsedItems = MessageFormatService.parseContent(aiContent);
+    
+    if (parsedItems.isEmpty) {
+      messages.add(Message(
+        id: 'ai_${now}_fallback',
+        role: 'assistant',
+        content: aiContent,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+        metadata: {'parseError': 'true'},
+      ));
+      return messages;
+    }
+    
+    for (int i = 0; i < parsedItems.length; i++) {
+      final (type, content) = parsedItems[i];
+      if (content.isEmpty) continue;
+      
+      messages.add(Message(
+        id: 'ai_${now}_${type}_$i',
+        role: 'assistant',
+        content: content,
+        timestamp: timestamp,
+        messageType: type == 'narration' ? MessageType.ai_narration : MessageType.ai_dialogue,
+      ));
+    }
+    
+        if (messages.isEmpty) {
+      messages.add(Message(
+        id: 'ai_${now}_empty',
+        role: 'assistant',
+        content: '（思考中……）',
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      ));
+    }
+
+    // 提取状态（如果最后一条是状态描述）
+    if (messages.isNotEmpty) {
+      final lastContent = messages.last.content.trim();
+      if (lastContent.startsWith('状态：') && lastContent.length > 3) {
+        final newStatus = lastContent.substring(3).trim();
+        if (newStatus.isNotEmpty) {
+          _currentStatus = newStatus;
+          await _storage.saveLastStatus(newStatus);
+        }
+      }
+    }
+
+    return messages;
+  }
+
+
+
   Widget _buildMessageWidget(Message msg) {
-    // 根据messageType渲染，使用正确的UI组件
     switch (msg.messageType) {
       case MessageType.user_narration:
-        return NarrationMessage(
-          text: msg.content,
-          isAI: false,
-          isCentered: false,
-        );
-
+        return NarrationMessage(text: msg.content, isAI: false, isCentered: false);
       case MessageType.ai_narration:
-        return NarrationMessage(
-          text: msg.content,
-          isAI: true,
-          isCentered: true,
-        );
-        
+        return NarrationMessage(text: msg.content, isAI: true, isCentered: true);
       case MessageType.user_dialogue:
-        return SentMessage(
-          text: msg.content,
-          userAvatarPath: _userAvatarPath,
-          showUserAvatar: _showUserAvatar,
-        );
-        
+        return SentMessage(text: msg.content, userAvatarPath: _userAvatarPath, showUserAvatar: _showUserAvatar);
       case MessageType.ai_dialogue:
-        return ReceivedMessage(
-          text: msg.content,
-          avatarPath: _avatarPath,
-        );
-        
+        return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
       case MessageType.system_time:
         return SystemTimeMessage(text: msg.content);
-        
       case MessageType.system_state:
         return Container();
     }
@@ -638,7 +452,7 @@ Widget _buildMessageWidgetWithDevMode(Message msg) {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: GestureDetector(
+                title: GestureDetector(
           onTap: () => _showAISetting(context),
           child: Row(
             children: [
@@ -664,12 +478,10 @@ Widget _buildMessageWidgetWithDevMode(Message msg) {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Text(
-                    "在线",
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                    ),
+                  Text(
+                    '状态：$_currentStatus',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -718,12 +530,8 @@ Widget _buildMessageWidgetWithDevMode(Message msg) {
                               CircleAvatar(
                                 radius: 18,
                                 backgroundColor: const Color(0xFFFFD2DD),
-                                backgroundImage: _avatarPath != null
-                                    ? FileImage(File(_avatarPath!))
-                                    : null,
-                                child: _avatarPath == null
-                                    ? const Icon(Icons.person, size: 20, color: Colors.white)
-                                    : null,
+                                backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+                                child: _avatarPath == null ? const Icon(Icons.person, size: 20, color: Colors.white) : null,
                               ),
                               const SizedBox(width: 8),
                               Container(
@@ -732,14 +540,7 @@ Widget _buildMessageWidgetWithDevMode(Message msg) {
                                   color: const Color(0xFFFFD2DD),
                                   borderRadius: BorderRadius.circular(18),
                                 ),
-                                child: const Text(
-                                  "正在输入...",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
-                                    height: 1.4,
-                                  ),
-                                ),
+                                child: const Text("正在输入...", style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.4)),
                               ),
                             ],
                           ),
@@ -747,14 +548,13 @@ Widget _buildMessageWidgetWithDevMode(Message msg) {
                       }
 
                       final msg = _messages[index];
-return GestureDetector(
-  onLongPress: () => _showDeleteDialog(index),
-  child: _buildMessageWidgetWithDevMode(msg),  // ⬅️ 直接调用同步方法
-);
+                      return GestureDetector(
+                        onLongPress: () => _showDeleteDialog(index),
+                        child: _buildMessageWidget(msg),
+                      );
                     },
                   ),
                 ),
-                // 底部输入区域
                 Container(
                   color: AppTheme.messageInputBackground,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -771,17 +571,13 @@ return GestureDetector(
                           onPressed: () {},
                         ),
                         const SizedBox(width: 4),
-                        
                         Expanded(
                           child: Container(
                             constraints: const BoxConstraints(minHeight: 40),
                             decoration: BoxDecoration(
                               color: AppTheme.messageFieldBackground,
                               borderRadius: BorderRadius.circular(36),
-                              border: Border.all(
-                                color: AppTheme.messageFieldBorder,
-                                width: 1,
-                              ),
+                              border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                             child: TextField(
@@ -804,15 +600,11 @@ return GestureDetector(
                                   _controller.clear();
                                 }
                               },
-                              onChanged: (value) {
-                                // 可以在这里添加实时搜索或其他功能
-                              },
+                              onChanged: (value) {},
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        
-                        // 发送按钮 - 改为圆形更可爱
                         GestureDetector(
                           onTap: () {
                             final text = _controller.text.trim();
@@ -826,15 +618,9 @@ return GestureDetector(
                             height: 36,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)],
-                              ),
+                              gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
                             ),
-                            child: const Icon(
-                              Icons.send_rounded,
-                              color: Colors.white,
-                              size: 18,
-                            ),
+                            child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                           ),
                         ),
                       ],
@@ -843,7 +629,6 @@ return GestureDetector(
                 ),
               ],
             ),
-            // 滚动到底部按钮
             if (_showScrollToBottomButton)
               Positioned(
                 bottom: 90,
@@ -854,18 +639,13 @@ return GestureDetector(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
-                    border: Border.all(
-                      color: AppTheme.aiBubbleBorder,
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
                     onPressed: () {
                       _scrollToBottom();
-                      setState(() {
-                        _showScrollToBottomButton = false;
-                      });
+                      setState(() => _showScrollToBottomButton = false);
                       _scrollButtonTimer?.cancel();
                     },
                   ),
@@ -896,30 +676,17 @@ return GestureDetector(
               child: Container(
                 width: 36,
                 height: 5,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFC7C7CC),
-                  borderRadius: BorderRadius.circular(2.5),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFFC7C7CC), borderRadius: BorderRadius.circular(2.5)),
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              "$_characterName 人物设定",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text("$_characterName 人物设定", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   _systemPrompt,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.6,
-                    color: Color(0xFF3C3C43),
-                  ),
+                  style: const TextStyle(fontSize: 15, height: 1.6, color: Color(0xFF3C3C43)),
                 ),
               ),
             ),
@@ -929,19 +696,10 @@ return GestureDetector(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF5A7E),
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text(
-                "关闭",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: const Text("关闭", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
             ),
           ],
         ),

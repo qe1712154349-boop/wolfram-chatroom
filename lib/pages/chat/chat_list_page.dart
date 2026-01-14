@@ -3,6 +3,7 @@ import 'dart:io';
 import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
 import '../../services/storage_service.dart';
+import '../../models/message.dart';  // 导入 Message 类
 import '../../app/theme.dart'; // 导入主题
 
 class ChatListPage extends StatefulWidget {
@@ -15,23 +16,21 @@ class ChatListPage extends StatefulWidget {
 class _ChatListPageState extends State<ChatListPage> {
   final StorageService _storage = StorageService();
   String _characterName = 'name';
-  String _characterIntro = 'Character Profile';
   String? _avatarPath;
 
   @override
   void initState() {
     super.initState();
     _loadCharacterData();
+    setState(() {});  // 强制刷新，让 FutureBuilder 立即加载最后消息
   }
 
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
-    final intro = await _storage.getCharacterIntro();
     final avatarPath = await _storage.getCharacterAvatarPath();
     
     setState(() {
       _characterName = name;
-      _characterIntro = intro.isNotEmpty ? intro : 'Character Profile';
       _avatarPath = avatarPath;
     });
   }
@@ -62,7 +61,9 @@ class _ChatListPageState extends State<ChatListPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ChatRoomPage()),
-              );
+              ).then((_) {
+                setState(() {});  // 返回时强制刷新整个列表页
+              });
             },
             leading: GestureDetector(
               onTap: () {
@@ -94,21 +95,40 @@ class _ChatListPageState extends State<ChatListPage> {
               _characterName,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            subtitle: Text(
-              _characterIntro,
-              style: const TextStyle(color: Colors.grey),
+            subtitle: FutureBuilder<List<Message>>(
+              future: _storage.loadChatHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final lastMsg = snapshot.data!.last.content;
+                  return Text(
+                    lastMsg.length > 30 ? '${lastMsg.substring(0, 30)}...' : lastMsg,
+                    style: const TextStyle(color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }
+                return const SizedBox.shrink();  // 无消息时完全空白
+              },
             ),
-            trailing: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  "22:04",
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                SizedBox(height: 4),
-                CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
-              ],
+            trailing: FutureBuilder<List<Message>>(
+              future: _storage.loadChatHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  final lastTime = snapshot.data!.last.timestamp;
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        lastTime,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      const CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
           ),
           const Divider(height: 1, indent: 80),

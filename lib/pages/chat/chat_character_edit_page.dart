@@ -44,7 +44,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
       
       setState(() {
         _avatarPath = avatarPath;
-        _nicknameController.text = characterData['nickname'] ?? 'name';
+        _nicknameController.text = characterData['nickname'] ?? '';
         _introController.text = characterData['intro'] ?? '';
         _privateSettingController.text = characterData['private_setting'] ?? '';
         _openingController.text = characterData['opening'] ?? '';
