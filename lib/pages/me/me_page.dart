@@ -184,9 +184,9 @@ class _MePageState extends State<MePage> {
           ),
         ),
         const SizedBox(height: 10),
-        
+      
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "爱意", Colors.green),
+        _buildListTile(Icons.wechat_outlined, "服务", Colors.green),
         const Divider(height: 1, indent: 60),
         _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
         const Divider(height: 1, indent: 60),
@@ -197,7 +197,7 @@ class _MePageState extends State<MePage> {
         _buildListTile(Icons.sentiment_satisfied_alt_outlined, "相册", Colors.amber),
         
         const SizedBox(height: 10),
-        
+      
         // 设置入口
         ListTile(
           leading: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
