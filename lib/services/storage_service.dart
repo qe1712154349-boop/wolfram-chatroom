@@ -105,16 +105,8 @@ class StorageService {
       prompt += '附加设定（私密，不对外展示）：\n$privateSetting\n\n';
     }
     
-    // 固定格式（清理后不再动态）
-    prompt += '''
-=== 输出格式要求 ===
-你的回复必须是：
-<message>
-  <narration>动作/表情</narration>
-  <dialogue>对话</dialogue>
-</message>
-不要在标签外写任何东西！
-''';
+    // 移除所有格式要求，让AI自由回复
+    prompt += '请用自然、生动的语言进行对话，自由发挥即可。';
     
     return prompt.trim();
   }

@@ -384,7 +384,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 Widget _buildMessageWidget(Message msg) {
   switch (msg.messageType) {
     case MessageType.user_narration:
-      return NarrationMessage(text: msg.content, isAI: false, isCentered: false);  // ✅ 用户旁白保留
+      return NarrationMessage(
+        text: msg.content, 
+        isAI: false, 
+        isCentered: true, // ← 改为 true 才能居中！
+      );  // ✅ 用户旁白保留
     case MessageType.ai_narration:
       // ✅ AI旁白也显示为对话气泡
       return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);

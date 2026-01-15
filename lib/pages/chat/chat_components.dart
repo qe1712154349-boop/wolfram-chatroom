@@ -216,36 +216,44 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0), // 上下间距从8改为2
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75, // 从0.8改为0.75
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,  // 从16改为14
-          vertical: 8,     // 从10改为8
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF0F3),  // 改为极浅粉色
-          borderRadius: BorderRadius.circular(24), // 从12改为24
-          border: Border.all(
-            color: const Color(0xFFFFD1DC),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha:0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Center(  // 关键：用 Center 包裹 Align
+        child: Align(
+          alignment: isCentered ? Alignment.center : Alignment.centerLeft,
+          child: Container(
+            margin: isCentered
+                ? const EdgeInsets.symmetric(horizontal: 0)
+                : const EdgeInsets.only(left: 32.0),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.65,
             ),
-          ],
-        ),
-        child: Text(
-          text,
-          textAlign: isCentered ? TextAlign.center : TextAlign.left,
-          style: AppTheme.narrationStyle.copyWith(
-            fontSize: 13,  // 确保使用13号字
-            height: 1.35,  // 确保使用1.35行高
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF0F3),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFFFD1DC),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Text(
+              text,
+              textAlign: isCentered ? TextAlign.center : TextAlign.left,
+              style: AppTheme.narrationStyle.copyWith(
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
           ),
         ),
       ),

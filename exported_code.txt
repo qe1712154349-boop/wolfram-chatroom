@@ -1059,9 +1059,9 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
 
-Size: 7987 bytes
+Size: 8243 bytes
 
-Modified: 01/05/2026 02:36:22
+Modified: 01/15/2026 01:17:41
 
 ========================================
 
@@ -1283,36 +1283,44 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0), // 上下间距从8改为2
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75, // 从0.8改为0.75
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,  // 从16改为14
-          vertical: 8,     // 从10改为8
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF0F3),  // 改为极浅粉色
-          borderRadius: BorderRadius.circular(24), // 从12改为24
-          border: Border.all(
-            color: const Color(0xFFFFD1DC),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha:0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Center(  // 关键：用 Center 包裹 Align
+        child: Align(
+          alignment: isCentered ? Alignment.center : Alignment.centerLeft,
+          child: Container(
+            margin: isCentered
+                ? const EdgeInsets.symmetric(horizontal: 0)
+                : const EdgeInsets.only(left: 32.0),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.65,
             ),
-          ],
-        ),
-        child: Text(
-          text,
-          textAlign: isCentered ? TextAlign.center : TextAlign.left,
-          style: AppTheme.narrationStyle.copyWith(
-            fontSize: 13,  // 确保使用13号字
-            height: 1.35,  // 确保使用1.35行高
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF0F3),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFFFD1DC),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Text(
+              text,
+              textAlign: isCentered ? TextAlign.center : TextAlign.left,
+              style: AppTheme.narrationStyle.copyWith(
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
           ),
         ),
       ),
@@ -1478,9 +1486,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 23010 bytes
+Size: 23083 bytes
 
-Modified: 01/15/2026 01:00:39
+Modified: 01/15/2026 01:30:37
 
 ========================================
 
@@ -1870,7 +1878,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 Widget _buildMessageWidget(Message msg) {
   switch (msg.messageType) {
     case MessageType.user_narration:
-      return NarrationMessage(text: msg.content, isAI: false, isCentered: false);  // ✅ 用户旁白保留
+      return NarrationMessage(
+        text: msg.content, 
+        isAI: false, 
+        isCentered: true, // ← 改为 true 才能居中！
+      );  // ✅ 用户旁白保留
     case MessageType.ai_narration:
       // ✅ AI旁白也显示为对话气泡
       return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
