@@ -1,3 +1,4 @@
+// lib/pages/me/settings_page.dart
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,12 +14,19 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storage = StorageService();
   bool _developerMode = false;
+  bool? _narrationCentered;  // 改为 nullable，初始 null 表示未加载
+
+  final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _keyController = TextEditingController();
+  final TextEditingController _modelController = TextEditingController();
+  String _testStatus = ''; // 测试结果提示
 
   @override
   void initState() {
     super.initState();
     _loadDeveloperMode();
-    _loadConfig();  // ← 加这一行，加载自定义 API 配置
+    _loadNarrationCentered();
+    _loadConfig();
   }
 
   Future<void> _loadDeveloperMode() async {
@@ -30,10 +38,14 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-   final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _keyController = TextEditingController();
-  final TextEditingController _modelController = TextEditingController();
-  String _testStatus = ''; // 测试结果提示
+  Future<void> _loadNarrationCentered() async {
+    final centered = await _storage.getNarrationCentered();
+    if (mounted) {
+      setState(() {
+        _narrationCentered = centered ?? true;  // 默认 true
+      });
+    }
+  }
 
   Future<void> _loadConfig() async {
     final prefs = await SharedPreferences.getInstance();
@@ -68,12 +80,16 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _saveNarrationCentered(bool value) async {
+    await _storage.saveNarrationCentered(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
       appBar: AppBar(
-        title: const Text("API 设置"),
+        title: const Text("设置"),
         backgroundColor: Colors.white,
       ),
       body: ListView(
@@ -126,7 +142,8 @@ class _SettingsPageState extends State<SettingsPage> {
           Text(_testStatus, style: TextStyle(color: _testStatus.contains('成功') ? Colors.green : Colors.red)),
 
           const SizedBox(height: 32),
-          const Text("开发者模式", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
           SwitchListTile(
             title: const Text("开发者模式"),
             subtitle: const Text("开启后可查看详细错误信息"),
@@ -137,6 +154,25 @@ class _SettingsPageState extends State<SettingsPage> {
             },
             activeThumbColor: const Color(0xFFFF5A7E),
           ),
+
+          // 旁白开关（如果未加载，禁用并显示 loading）
+          if (_narrationCentered == null)
+            const ListTile(
+              title: Text("旁白居中显示"),
+              subtitle: Text("加载中..."),
+              trailing: CircularProgressIndicator(),
+            )
+          else
+            SwitchListTile(
+              title: const Text("旁白居中显示"),
+              subtitle: const Text("开启为居中对齐，关闭为左对齐（小说风格）"),
+              value: _narrationCentered!,
+              onChanged: (value) async {
+                setState(() => _narrationCentered = value);
+                await _saveNarrationCentered(value);
+              },
+              activeThumbColor: const Color(0xFFFF5A7E),
+            ),
         ],
       ),
     );

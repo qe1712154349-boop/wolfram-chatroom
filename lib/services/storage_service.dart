@@ -252,4 +252,16 @@ class StorageService {
       rethrow;
     }
   }
+  // 保存旁白居中设置（使用 SharedPreferences）
+  Future<void> saveNarrationCentered(bool centered) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('narration_centered', centered);
+  }
+
+  // 读取旁白居中设置
+  Future<bool> getNarrationCentered() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
+  }
+
 }

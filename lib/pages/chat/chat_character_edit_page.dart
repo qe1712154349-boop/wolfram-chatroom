@@ -15,15 +15,20 @@ class ChatCharacterEditPage extends StatefulWidget {
 class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   final StorageService _storage = StorageService();
   final ImagePicker _picker = ImagePicker();
-  
+
   String? _avatarPath;
   bool _isLoading = true;
   bool _isSaving = false;
-  
+
+  // 基础字段（保留原样）
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _introController = TextEditingController();
   final TextEditingController _privateSettingController = TextEditingController();
   final TextEditingController _openingController = TextEditingController();
+
+  // 新增：自定义格式开关 + 控制器
+  bool _enableCustomFormat = false;
+  final TextEditingController _customFormatController = TextEditingController();
 
   @override
   void initState() {
@@ -32,32 +37,26 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   }
 
   Future<void> _loadCharacterData() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+    setState(() => _isLoading = true);
+
     try {
-      // 加载头像路径
       final avatarPath = await _storage.getCharacterAvatarPath();
-      
-      // 加载角色数据
-      final characterData = await _storage.loadCharacterData();
-      
+      final data = await _storage.loadCharacterData();
+
       setState(() {
         _avatarPath = avatarPath;
-        _nicknameController.text = characterData['nickname'] ?? '';
-        _introController.text = characterData['intro'] ?? '';
-        _privateSettingController.text = characterData['private_setting'] ?? '';
-        _openingController.text = characterData['opening'] ?? '';
+        _nicknameController.text = data['nickname'] ?? '';
+        _introController.text = data['intro'] ?? '';
+        _privateSettingController.text = data['private_setting'] ?? '';
+        _openingController.text = data['opening'] ?? '';
+        // 新增字段加载（如果之前没存过，默认 false 和空）
+        _enableCustomFormat = data['enable_custom_format'] == 'true';
+        _customFormatController.text = data['custom_format'] ?? '';
         _isLoading = false;
       });
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('加载角色数据失败: $e');
-      }
-      setState(() {
-        _isLoading = false;
-      });
+      debugPrint('加载角色数据失败: $e');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -69,46 +68,30 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
         maxHeight: 800,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
-        setState(() {
-          _isSaving = true;
-        });
-        
-        // 复制文件到应用目录
+        setState(() => _isSaving = true);
+
         final newPath = await _storage.copyFileToAppDir(image.path);
-        
-        // 保存新路径
         await _storage.saveCharacterAvatarPath(newPath);
-        
+
         setState(() {
           _avatarPath = newPath;
           _isSaving = false;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('头像已更新'),
-              duration: Duration(seconds: 2),
-            ),
+            const SnackBar(content: Text('头像已更新'), duration: Duration(seconds: 2)),
           );
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('选择图片失败: $e');
-      }
-      setState(() {
-        _isSaving = false;
-      });
-      
+      debugPrint('选择图片失败: $e');
+      setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('选择图片失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('选择图片失败: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -116,46 +99,34 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
   Future<void> _saveCharacterData() async {
     if (_isSaving) return;
-    
-    setState(() {
-      _isSaving = true;
-    });
-    
+    setState(() => _isSaving = true);
+
     try {
       final characterData = <String, String>{
         'nickname': _nicknameController.text.trim(),
         'intro': _introController.text.trim(),
         'private_setting': _privateSettingController.text.trim(),
         'opening': _openingController.text.trim(),
+        'enable_custom_format': _enableCustomFormat.toString(),
+        'custom_format': _customFormatController.text.trim(),
       };
-      
+
       await _storage.saveCharacterData(characterData);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('角色设定已保存'),
-            duration: Duration(seconds: 2),
-          ),
+          const SnackBar(content: Text('角色设定已保存'), duration: Duration(seconds: 2)),
         );
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('保存角色数据失败: $e');
-      }
-      
+      debugPrint('保存角色数据失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      setState(() => _isSaving = false);
     }
   }
 
@@ -170,15 +141,9 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                 CircleAvatar(
                   radius: 60,
                   backgroundColor: const Color(0xFFFFD1DC),
-                  backgroundImage: _avatarPath != null
-                      ? FileImage(File(_avatarPath!))
-                      : null,
+                  backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
                   child: _avatarPath == null
-                      ? const Icon(
-                          Icons.person,
-                          size: 70,
-                          color: Colors.white,
-                        )
+                      ? const Icon(Icons.person, size: 70, color: Colors.white)
                       : null,
                 ),
                 if (_isSaving)
@@ -188,9 +153,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(60),
                       ),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
+                      child: const Center(child: CircularProgressIndicator(color: Colors.white)),
                     ),
                   ),
                 if (!_isSaving)
@@ -203,11 +166,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                         color: Color(0xFFFF5A7E),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 22),
                     ),
                   ),
               ],
@@ -216,10 +175,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           const SizedBox(height: 12),
           Text(
             '点击更换头像',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
         ],
       ),
@@ -239,26 +195,16 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
-            if (required)
-              const Text(
-                ' *',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            if (required) const Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           maxLines: maxLines,
-          minLines: 1,
+          minLines: maxLines == 1 ? 1 : 3,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
@@ -286,14 +232,9 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.black87),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            '编辑 AI 人设',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-          ),
+          title: const Text('编辑 AI 人设', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
-        ),
+        body: const Center(child: CircularProgressIndicator(color: Color(0xFFFF5A7E))),
       );
     }
 
@@ -306,51 +247,40 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          '编辑 AI 人设',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('编辑 AI 人设', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 头像部分
+            // 头像
             _buildAvatarSection(),
             const SizedBox(height: 32),
 
             // 昵称
-            _buildTextField(
-              label: '昵称',
-              controller: _nicknameController,
-              required: true,
-            ),
+            _buildTextField(label: '昵称', controller: _nicknameController, required: true),
             const SizedBox(height: 24),
 
             // 简介
             _buildTextField(
-              label: '简介（对其他人展示）',
+              label: '简介（性格、爱好、职业等）',
               controller: _introController,
               maxLines: 4,
               required: true,
             ),
             const SizedBox(height: 24),
 
-            // 附加设定（私密）
+            // 附加设定
             _buildTextField(
-              label: '附加设定（私密，不对外展示）',
+              label: '附加设定（私密）',
               controller: _privateSettingController,
               maxLines: 8,
             ),
             const SizedBox(height: 16),
             Text(
-              '这些设定会作为AI的系统提示，影响AI的性格和行为',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
+              '这些设定会影响AI的性格和行为',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic),
             ),
             const SizedBox(height: 24),
 
@@ -370,33 +300,24 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                 onPressed: _isSaving ? null : _saveCharacterData,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF5A7E),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 0,
                 ),
                 child: _isSaving
                     ? const SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                       )
                     : const Text(
                         '保存设置',
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.bold),
                       ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
-            // 提示信息（移除格式相关提示）
+            // 提示信息
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -413,21 +334,14 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                       const SizedBox(width: 8),
                       const Text(
                         '提示',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD81B60),
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD81B60)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• 昵称和简介会显示在聊天列表中\n• 附加设定会影响AI的行为和性格\n• 修改后需要重启聊天才能生效',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 13,
-                      height: 1.6,
-                    ),
+                    '• 昵称和简介会显示在聊天列表\n• 自定义格式指令优先级最高\n• 修改后需要重新进入聊天室生效',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.6),
                   ),
                 ],
               ),
@@ -437,5 +351,15 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _introController.dispose();
+    _privateSettingController.dispose();
+    _openingController.dispose();
+    _customFormatController.dispose();
+    super.dispose();
   }
 }

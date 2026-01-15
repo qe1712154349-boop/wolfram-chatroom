@@ -36,12 +36,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String _currentStatus = '空白';   // 当前状态，默认空白
   bool _showUserAvatar = true;
   String _systemPrompt = '';
+  bool _narrationCentered = true;  // 默认居中对齐 ← 新增变量
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCharacterData();
+    _loadNarrationCentered();  // 加载旁白对齐设置
     _loadUserSettings();
     _loadHistory();
     
@@ -179,6 +181,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Future<void> _saveHistory() async {
     await _storage.saveChatHistory(_messages);
     print('保存聊天历史成功，消息数: ${_messages.length}');  // ← 加这一行
+  }
+
+  // 新增：加载旁白对齐设置
+  Future<void> _loadNarrationCentered() async {
+    final centered = await _storage.getNarrationCentered();
+    if (mounted && centered != null) {
+      setState(() {
+        _narrationCentered = centered;
+      });
+    }
   }
 
   Future<void> _clearAllMessages() async {
@@ -337,67 +349,130 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
-    final List<Message> messages = [];
-    final now = DateTime.now().millisecondsSinceEpoch;
-    
-    if (kDebugMode) {
-      debugPrint('=== AI 回复处理 ===');
-      debugPrint('内容长度: ${aiContent.length}');
-    }
+  final List<Message> messages = [];
+  final now = DateTime.now().millisecondsSinceEpoch;
 
-    // 简化：直接将整个AI回复作为一条对话消息
-    if (aiContent.isNotEmpty) {
-      messages.add(Message(
-        id: 'ai_${now}_dialogue',
-        role: 'assistant',
-        content: aiContent,
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      ));
-    } else {
-      messages.add(Message(
-        id: 'ai_${now}_empty',
-        role: 'assistant',
-        content: '（思考中……）',
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      ));
-    }
-    
-    // 提取状态（如果最后一行包含状态描述）
-    if (messages.isNotEmpty) {
-      final lastContent = messages.last.content.trim();
-      if (lastContent.startsWith('状态：') && lastContent.length > 3) {
-        final newStatus = lastContent.substring(3).trim();
-        if (newStatus.isNotEmpty) {
-          _currentStatus = newStatus;
-          await _storage.saveLastStatus(newStatus);
-        }
-      }
-    }
-
+  // 空回复兜底
+  if (aiContent.trim().isEmpty) {
+    messages.add(Message(
+      id: 'ai_${now}_empty',
+      role: 'assistant',
+      content: '（思考中……）',
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
     return messages;
   }
 
+  // 尝试提取 <environment> 和 <dialogue>
+  String environment = '';
+  String dialogue = '';
 
+  final startResponse = aiContent.indexOf('<response>');
+  final endResponse = aiContent.lastIndexOf('</response>');
+  if (startResponse == -1 || endResponse == -1 || endResponse <= startResponse) {
+    // 没有完整 <response> 标签 → 兜底整条
+    messages.add(Message(
+      id: 'ai_${now}_fallback',
+      role: 'assistant',
+      content: aiContent.trim(),
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
+    return messages;
+  }
+
+  // 取出 <response> 内部内容
+  final responseInner = aiContent.substring(
+    startResponse + '<response>'.length,
+    endResponse,
+  ).trim();
+
+  // 提取 environment
+  final envStart = responseInner.indexOf('<environment>');
+  final envEnd = responseInner.indexOf('</environment>');
+  if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
+    environment = responseInner
+        .substring(envStart + '<environment>'.length, envEnd)
+        .trim();
+  }
+
+  // 提取 dialogue
+  final diaStart = responseInner.indexOf('<dialogue>');
+  final diaEnd = responseInner.indexOf('</dialogue>');
+  if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
+    dialogue = responseInner
+        .substring(diaStart + '<dialogue>'.length, diaEnd)
+        .trim();
+  }
+
+  // 生成消息
+  if (environment.isNotEmpty) {
+    messages.add(Message(
+      id: 'ai_nar_${now}',
+      role: 'assistant',
+      content: environment,
+      timestamp: timestamp,
+      messageType: MessageType.ai_narration,  // 旁白类型
+    ));
+  }
+
+  if (dialogue.isNotEmpty) {
+    messages.add(Message(
+      id: 'ai_dia_${now}',
+      role: 'assistant',
+      content: dialogue,
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
+  }
+
+  // 如果什么都没解析出来，兜底
+  if (messages.isEmpty) {
+    messages.add(Message(
+      id: 'ai_${now}_raw',
+      role: 'assistant',
+      content: aiContent.trim(),
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
+  }
+
+  return messages;
+}
 
 Widget _buildMessageWidget(Message msg) {
   switch (msg.messageType) {
     case MessageType.user_narration:
       return NarrationMessage(
-        text: msg.content, 
-        isAI: false, 
-        isCentered: true, // ← 改为 true 才能居中！
-      );  // ✅ 用户旁白保留
+        text: msg.content,
+        isAI: false,
+        isCentered: _narrationCentered,  // 使用设置值
+      );
+
     case MessageType.ai_narration:
-      // ✅ AI旁白也显示为对话气泡
-      return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
+      return NarrationMessage(
+        text: msg.content,
+        isAI: true,
+        isCentered: _narrationCentered,  // 使用设置值
+      );
+
     case MessageType.user_dialogue:
-      return SentMessage(text: msg.content, userAvatarPath: _userAvatarPath, showUserAvatar: _showUserAvatar);
+      return SentMessage(
+        text: msg.content,
+        userAvatarPath: _userAvatarPath,
+        showUserAvatar: _showUserAvatar,
+      );
+
     case MessageType.ai_dialogue:
-      return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
+      return ReceivedMessage(
+        text: msg.content,
+        avatarPath: _avatarPath,
+      );
+
     case MessageType.system_time:
       return SystemTimeMessage(text: msg.content);
+
     case MessageType.system_state:
       return Container();
   }
@@ -480,7 +555,7 @@ Widget _buildMessageWidget(Message msg) {
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.only(bottom: 80),
+                    padding: const EdgeInsets.only(top: 20, bottom: 80),  // ← 这里加 top: 16 或 20
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (_isLoading && index == _messages.length) {

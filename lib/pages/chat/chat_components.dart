@@ -200,7 +200,7 @@ class SystemTimeMessage extends StatelessWidget {
   }
 }
 
-// 旁白消息组件
+// 旁白消息组件（最简版，先确认能显示文字）
 class NarrationMessage extends StatelessWidget {
   final String text;
   final bool isAI;
@@ -216,45 +216,40 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Center(  // 关键：用 Center 包裹 Align
-        child: Align(
-          alignment: isCentered ? Alignment.center : Alignment.centerLeft,
-          child: Container(
-            margin: isCentered
-                ? const EdgeInsets.symmetric(horizontal: 0)
-                : const EdgeInsets.only(left: 32.0),
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.65,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF0F3),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFFFD1DC),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Text(
-              text,
-              textAlign: isCentered ? TextAlign.center : TextAlign.left,
-              style: AppTheme.narrationStyle.copyWith(
-                fontSize: 13,
-                height: 1.35,
-              ),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+      child: Align(
+           alignment: isCentered 
+            ? Alignment.center 
+            : (isAI ? Alignment.centerLeft : Alignment.centerRight),
+        child: Container(
+          margin: isCentered 
+              ? null 
+              : (isAI 
+                  ? const EdgeInsets.only(left: 12)    // AI 左对齐时留左边距
+                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距  ← 关键：这里加 32px 右边距，让气泡不贴右边
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isAI
+                ? Colors.pink[50]               // 极浅粉底
+                : Colors.grey[200],             // 浅灰底
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isAI ? Colors.pink[200]! : Colors.grey[400]!,
+              width: 1,
             ),
           ),
+          child: Text(
+              text.trim(),
+              style: AppTheme.narrationStyle.copyWith(
+                color: isAI ? Colors.pink[800] : AppTheme.narrationText,
+                fontSize: 13,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.left,  // 固定左对齐，无论气泡居中还是左对齐
+            ),
         ),
       ),
     );

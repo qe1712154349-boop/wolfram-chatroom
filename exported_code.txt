@@ -605,9 +605,9 @@ class VowPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
-Size: 13822 bytes
+Size: 12716 bytes
 
-Modified: 01/15/2026 00:10:14
+Modified: 01/15/2026 17:11:53
 
 ========================================
 
@@ -628,15 +628,20 @@ class ChatCharacterEditPage extends StatefulWidget {
 class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   final StorageService _storage = StorageService();
   final ImagePicker _picker = ImagePicker();
-  
+
   String? _avatarPath;
   bool _isLoading = true;
   bool _isSaving = false;
-  
+
+  // 基础字段（保留原样）
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _introController = TextEditingController();
   final TextEditingController _privateSettingController = TextEditingController();
   final TextEditingController _openingController = TextEditingController();
+
+  // 新增：自定义格式开关 + 控制器
+  bool _enableCustomFormat = false;
+  final TextEditingController _customFormatController = TextEditingController();
 
   @override
   void initState() {
@@ -645,32 +650,26 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   }
 
   Future<void> _loadCharacterData() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+    setState(() => _isLoading = true);
+
     try {
-      // 加载头像路径
       final avatarPath = await _storage.getCharacterAvatarPath();
-      
-      // 加载角色数据
-      final characterData = await _storage.loadCharacterData();
-      
+      final data = await _storage.loadCharacterData();
+
       setState(() {
         _avatarPath = avatarPath;
-        _nicknameController.text = characterData['nickname'] ?? '';
-        _introController.text = characterData['intro'] ?? '';
-        _privateSettingController.text = characterData['private_setting'] ?? '';
-        _openingController.text = characterData['opening'] ?? '';
+        _nicknameController.text = data['nickname'] ?? '';
+        _introController.text = data['intro'] ?? '';
+        _privateSettingController.text = data['private_setting'] ?? '';
+        _openingController.text = data['opening'] ?? '';
+        // 新增字段加载（如果之前没存过，默认 false 和空）
+        _enableCustomFormat = data['enable_custom_format'] == 'true';
+        _customFormatController.text = data['custom_format'] ?? '';
         _isLoading = false;
       });
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('加载角色数据失败: $e');
-      }
-      setState(() {
-        _isLoading = false;
-      });
+      debugPrint('加载角色数据失败: $e');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -682,46 +681,30 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
         maxHeight: 800,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
-        setState(() {
-          _isSaving = true;
-        });
-        
-        // 复制文件到应用目录
+        setState(() => _isSaving = true);
+
         final newPath = await _storage.copyFileToAppDir(image.path);
-        
-        // 保存新路径
         await _storage.saveCharacterAvatarPath(newPath);
-        
+
         setState(() {
           _avatarPath = newPath;
           _isSaving = false;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('头像已更新'),
-              duration: Duration(seconds: 2),
-            ),
+            const SnackBar(content: Text('头像已更新'), duration: Duration(seconds: 2)),
           );
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('选择图片失败: $e');
-      }
-      setState(() {
-        _isSaving = false;
-      });
-      
+      debugPrint('选择图片失败: $e');
+      setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('选择图片失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('选择图片失败: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -729,46 +712,34 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
   Future<void> _saveCharacterData() async {
     if (_isSaving) return;
-    
-    setState(() {
-      _isSaving = true;
-    });
-    
+    setState(() => _isSaving = true);
+
     try {
       final characterData = <String, String>{
         'nickname': _nicknameController.text.trim(),
         'intro': _introController.text.trim(),
         'private_setting': _privateSettingController.text.trim(),
         'opening': _openingController.text.trim(),
+        'enable_custom_format': _enableCustomFormat.toString(),
+        'custom_format': _customFormatController.text.trim(),
       };
-      
+
       await _storage.saveCharacterData(characterData);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('角色设定已保存'),
-            duration: Duration(seconds: 2),
-          ),
+          const SnackBar(content: Text('角色设定已保存'), duration: Duration(seconds: 2)),
         );
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('保存角色数据失败: $e');
-      }
-      
+      debugPrint('保存角色数据失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      setState(() => _isSaving = false);
     }
   }
 
@@ -783,15 +754,9 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                 CircleAvatar(
                   radius: 60,
                   backgroundColor: const Color(0xFFFFD1DC),
-                  backgroundImage: _avatarPath != null
-                      ? FileImage(File(_avatarPath!))
-                      : null,
+                  backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
                   child: _avatarPath == null
-                      ? const Icon(
-                          Icons.person,
-                          size: 70,
-                          color: Colors.white,
-                        )
+                      ? const Icon(Icons.person, size: 70, color: Colors.white)
                       : null,
                 ),
                 if (_isSaving)
@@ -801,9 +766,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(60),
                       ),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
+                      child: const Center(child: CircularProgressIndicator(color: Colors.white)),
                     ),
                   ),
                 if (!_isSaving)
@@ -816,11 +779,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                         color: Color(0xFFFF5A7E),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 22),
                     ),
                   ),
               ],
@@ -829,10 +788,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           const SizedBox(height: 12),
           Text(
             '点击更换头像',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
         ],
       ),
@@ -852,26 +808,16 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
-            if (required)
-              const Text(
-                ' *',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            if (required) const Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           maxLines: maxLines,
-          minLines: 1,
+          minLines: maxLines == 1 ? 1 : 3,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
@@ -899,14 +845,9 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.black87),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            '编辑 AI 人设',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-          ),
+          title: const Text('编辑 AI 人设', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
-        ),
+        body: const Center(child: CircularProgressIndicator(color: Color(0xFFFF5A7E))),
       );
     }
 
@@ -919,51 +860,40 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          '编辑 AI 人设',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('编辑 AI 人设', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 头像部分
+            // 头像
             _buildAvatarSection(),
             const SizedBox(height: 32),
 
             // 昵称
-            _buildTextField(
-              label: '昵称',
-              controller: _nicknameController,
-              required: true,
-            ),
+            _buildTextField(label: '昵称', controller: _nicknameController, required: true),
             const SizedBox(height: 24),
 
             // 简介
             _buildTextField(
-              label: '简介（对其他人展示）',
+              label: '简介（性格、爱好、职业等）',
               controller: _introController,
               maxLines: 4,
               required: true,
             ),
             const SizedBox(height: 24),
 
-            // 附加设定（私密）
+            // 附加设定
             _buildTextField(
-              label: '附加设定（私密，不对外展示）',
+              label: '附加设定（私密）',
               controller: _privateSettingController,
               maxLines: 8,
             ),
             const SizedBox(height: 16),
             Text(
-              '这些设定会作为AI的系统提示，影响AI的性格和行为',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
+              '这些设定会影响AI的性格和行为',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic),
             ),
             const SizedBox(height: 24),
 
@@ -983,33 +913,24 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                 onPressed: _isSaving ? null : _saveCharacterData,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF5A7E),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 0,
                 ),
                 child: _isSaving
                     ? const SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                       )
                     : const Text(
                         '保存设置',
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.bold),
                       ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
-            // 提示信息（移除格式相关提示）
+            // 提示信息
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1026,21 +947,14 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                       const SizedBox(width: 8),
                       const Text(
                         '提示',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD81B60),
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD81B60)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• 昵称和简介会显示在聊天列表中\n• 附加设定会影响AI的行为和性格\n• 修改后需要重启聊天才能生效',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 13,
-                      height: 1.6,
-                    ),
+                    '• 昵称和简介会显示在聊天列表\n• 自定义格式指令优先级最高\n• 修改后需要重新进入聊天室生效',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.6),
                   ),
                 ],
               ),
@@ -1051,6 +965,16 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _introController.dispose();
+    _privateSettingController.dispose();
+    _openingController.dispose();
+    _customFormatController.dispose();
+    super.dispose();
+  }
 }
 
 
@@ -1059,9 +983,9 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
 
-Size: 8243 bytes
+Size: 8384 bytes
 
-Modified: 01/15/2026 01:17:41
+Modified: 01/15/2026 19:48:31
 
 ========================================
 
@@ -1267,7 +1191,7 @@ class SystemTimeMessage extends StatelessWidget {
   }
 }
 
-// 旁白消息组件
+// 旁白消息组件（最简版，先确认能显示文字）
 class NarrationMessage extends StatelessWidget {
   final String text;
   final bool isAI;
@@ -1283,45 +1207,40 @@ class NarrationMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Center(  // 关键：用 Center 包裹 Align
-        child: Align(
-          alignment: isCentered ? Alignment.center : Alignment.centerLeft,
-          child: Container(
-            margin: isCentered
-                ? const EdgeInsets.symmetric(horizontal: 0)
-                : const EdgeInsets.only(left: 32.0),
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.65,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF0F3),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFFFD1DC),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Text(
-              text,
-              textAlign: isCentered ? TextAlign.center : TextAlign.left,
-              style: AppTheme.narrationStyle.copyWith(
-                fontSize: 13,
-                height: 1.35,
-              ),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+      child: Align(
+           alignment: isCentered 
+            ? Alignment.center 
+            : (isAI ? Alignment.centerLeft : Alignment.centerRight),
+        child: Container(
+          margin: isCentered 
+              ? null 
+              : (isAI 
+                  ? const EdgeInsets.only(left: 12)    // AI 左对齐时留左边距
+                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距  ← 关键：这里加 32px 右边距，让气泡不贴右边
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isAI
+                ? Colors.pink[50]               // 极浅粉底
+                : Colors.grey[200],             // 浅灰底
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isAI ? Colors.pink[200]! : Colors.grey[400]!,
+              width: 1,
             ),
           ),
+          child: Text(
+              text.trim(),
+              style: AppTheme.narrationStyle.copyWith(
+                color: isAI ? Colors.pink[800] : AppTheme.narrationText,
+                fontSize: 13,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.left,  // 固定左对齐，无论气泡居中还是左对齐
+            ),
         ),
       ),
     );
@@ -1336,7 +1255,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
 Size: 4750 bytes
 
-Modified: 01/14/2026 23:20:22
+Modified: 01/15/2026 17:52:29
 
 ========================================
 
@@ -1486,9 +1405,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 23083 bytes
+Size: 24917 bytes
 
-Modified: 01/15/2026 01:30:37
+Modified: 01/15/2026 19:31:20
 
 ========================================
 
@@ -1530,12 +1449,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String _currentStatus = '空白';   // 当前状态，默认空白
   bool _showUserAvatar = true;
   String _systemPrompt = '';
+  bool _narrationCentered = true;  // 默认居中对齐 ← 新增变量
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCharacterData();
+    _loadNarrationCentered();  // 加载旁白对齐设置
     _loadUserSettings();
     _loadHistory();
     
@@ -1673,6 +1594,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Future<void> _saveHistory() async {
     await _storage.saveChatHistory(_messages);
     print('保存聊天历史成功，消息数: ${_messages.length}');  // ← 加这一行
+  }
+
+  // 新增：加载旁白对齐设置
+  Future<void> _loadNarrationCentered() async {
+    final centered = await _storage.getNarrationCentered();
+    if (mounted && centered != null) {
+      setState(() {
+        _narrationCentered = centered;
+      });
+    }
   }
 
   Future<void> _clearAllMessages() async {
@@ -1831,67 +1762,130 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
-    final List<Message> messages = [];
-    final now = DateTime.now().millisecondsSinceEpoch;
-    
-    if (kDebugMode) {
-      debugPrint('=== AI 回复处理 ===');
-      debugPrint('内容长度: ${aiContent.length}');
-    }
+  final List<Message> messages = [];
+  final now = DateTime.now().millisecondsSinceEpoch;
 
-    // 简化：直接将整个AI回复作为一条对话消息
-    if (aiContent.isNotEmpty) {
-      messages.add(Message(
-        id: 'ai_${now}_dialogue',
-        role: 'assistant',
-        content: aiContent,
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      ));
-    } else {
-      messages.add(Message(
-        id: 'ai_${now}_empty',
-        role: 'assistant',
-        content: '（思考中……）',
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      ));
-    }
-    
-    // 提取状态（如果最后一行包含状态描述）
-    if (messages.isNotEmpty) {
-      final lastContent = messages.last.content.trim();
-      if (lastContent.startsWith('状态：') && lastContent.length > 3) {
-        final newStatus = lastContent.substring(3).trim();
-        if (newStatus.isNotEmpty) {
-          _currentStatus = newStatus;
-          await _storage.saveLastStatus(newStatus);
-        }
-      }
-    }
-
+  // 空回复兜底
+  if (aiContent.trim().isEmpty) {
+    messages.add(Message(
+      id: 'ai_${now}_empty',
+      role: 'assistant',
+      content: '（思考中……）',
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
     return messages;
   }
 
+  // 尝试提取 <environment> 和 <dialogue>
+  String environment = '';
+  String dialogue = '';
 
+  final startResponse = aiContent.indexOf('<response>');
+  final endResponse = aiContent.lastIndexOf('</response>');
+  if (startResponse == -1 || endResponse == -1 || endResponse <= startResponse) {
+    // 没有完整 <response> 标签 → 兜底整条
+    messages.add(Message(
+      id: 'ai_${now}_fallback',
+      role: 'assistant',
+      content: aiContent.trim(),
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
+    return messages;
+  }
+
+  // 取出 <response> 内部内容
+  final responseInner = aiContent.substring(
+    startResponse + '<response>'.length,
+    endResponse,
+  ).trim();
+
+  // 提取 environment
+  final envStart = responseInner.indexOf('<environment>');
+  final envEnd = responseInner.indexOf('</environment>');
+  if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
+    environment = responseInner
+        .substring(envStart + '<environment>'.length, envEnd)
+        .trim();
+  }
+
+  // 提取 dialogue
+  final diaStart = responseInner.indexOf('<dialogue>');
+  final diaEnd = responseInner.indexOf('</dialogue>');
+  if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
+    dialogue = responseInner
+        .substring(diaStart + '<dialogue>'.length, diaEnd)
+        .trim();
+  }
+
+  // 生成消息
+  if (environment.isNotEmpty) {
+    messages.add(Message(
+      id: 'ai_nar_${now}',
+      role: 'assistant',
+      content: environment,
+      timestamp: timestamp,
+      messageType: MessageType.ai_narration,  // 旁白类型
+    ));
+  }
+
+  if (dialogue.isNotEmpty) {
+    messages.add(Message(
+      id: 'ai_dia_${now}',
+      role: 'assistant',
+      content: dialogue,
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
+  }
+
+  // 如果什么都没解析出来，兜底
+  if (messages.isEmpty) {
+    messages.add(Message(
+      id: 'ai_${now}_raw',
+      role: 'assistant',
+      content: aiContent.trim(),
+      timestamp: timestamp,
+      messageType: MessageType.ai_dialogue,
+    ));
+  }
+
+  return messages;
+}
 
 Widget _buildMessageWidget(Message msg) {
   switch (msg.messageType) {
     case MessageType.user_narration:
       return NarrationMessage(
-        text: msg.content, 
-        isAI: false, 
-        isCentered: true, // ← 改为 true 才能居中！
-      );  // ✅ 用户旁白保留
+        text: msg.content,
+        isAI: false,
+        isCentered: _narrationCentered,  // 使用设置值
+      );
+
     case MessageType.ai_narration:
-      // ✅ AI旁白也显示为对话气泡
-      return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
+      return NarrationMessage(
+        text: msg.content,
+        isAI: true,
+        isCentered: _narrationCentered,  // 使用设置值
+      );
+
     case MessageType.user_dialogue:
-      return SentMessage(text: msg.content, userAvatarPath: _userAvatarPath, showUserAvatar: _showUserAvatar);
+      return SentMessage(
+        text: msg.content,
+        userAvatarPath: _userAvatarPath,
+        showUserAvatar: _showUserAvatar,
+      );
+
     case MessageType.ai_dialogue:
-      return ReceivedMessage(text: msg.content, avatarPath: _avatarPath);
+      return ReceivedMessage(
+        text: msg.content,
+        avatarPath: _avatarPath,
+      );
+
     case MessageType.system_time:
       return SystemTimeMessage(text: msg.content);
+
     case MessageType.system_state:
       return Container();
   }
@@ -1974,7 +1968,7 @@ Widget _buildMessageWidget(Message msg) {
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.only(bottom: 80),
+                    padding: const EdgeInsets.only(top: 20, bottom: 80),  // ← 这里加 top: 16 或 20
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (_isLoading && index == _messages.length) {
@@ -3169,12 +3163,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 4988 bytes
+Size: 6242 bytes
 
-Modified: 01/14/2026 22:17:36
+Modified: 01/15/2026 20:03:40
 
 ========================================
 
+// lib/pages/me/settings_page.dart
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -3190,12 +3185,19 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storage = StorageService();
   bool _developerMode = false;
+  bool? _narrationCentered;  // 改为 nullable，初始 null 表示未加载
+
+  final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _keyController = TextEditingController();
+  final TextEditingController _modelController = TextEditingController();
+  String _testStatus = ''; // 测试结果提示
 
   @override
   void initState() {
     super.initState();
     _loadDeveloperMode();
-    _loadConfig();  // ← 加这一行，加载自定义 API 配置
+    _loadNarrationCentered();
+    _loadConfig();
   }
 
   Future<void> _loadDeveloperMode() async {
@@ -3207,10 +3209,14 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-   final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _keyController = TextEditingController();
-  final TextEditingController _modelController = TextEditingController();
-  String _testStatus = ''; // 测试结果提示
+  Future<void> _loadNarrationCentered() async {
+    final centered = await _storage.getNarrationCentered();
+    if (mounted) {
+      setState(() {
+        _narrationCentered = centered ?? true;  // 默认 true
+      });
+    }
+  }
 
   Future<void> _loadConfig() async {
     final prefs = await SharedPreferences.getInstance();
@@ -3245,12 +3251,16 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _saveNarrationCentered(bool value) async {
+    await _storage.saveNarrationCentered(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
       appBar: AppBar(
-        title: const Text("API 设置"),
+        title: const Text("设置"),
         backgroundColor: Colors.white,
       ),
       body: ListView(
@@ -3303,7 +3313,8 @@ class _SettingsPageState extends State<SettingsPage> {
           Text(_testStatus, style: TextStyle(color: _testStatus.contains('成功') ? Colors.green : Colors.red)),
 
           const SizedBox(height: 32),
-          const Text("开发者模式", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
           SwitchListTile(
             title: const Text("开发者模式"),
             subtitle: const Text("开启后可查看详细错误信息"),
@@ -3314,6 +3325,25 @@ class _SettingsPageState extends State<SettingsPage> {
             },
             activeThumbColor: const Color(0xFFFF5A7E),
           ),
+
+          // 旁白开关（如果未加载，禁用并显示 loading）
+          if (_narrationCentered == null)
+            const ListTile(
+              title: Text("旁白居中显示"),
+              subtitle: Text("加载中..."),
+              trailing: CircularProgressIndicator(),
+            )
+          else
+            SwitchListTile(
+              title: const Text("旁白居中显示"),
+              subtitle: const Text("开启为居中对齐，关闭为左对齐（小说风格）"),
+              value: _narrationCentered!,
+              onChanged: (value) async {
+                setState(() => _narrationCentered = value);
+                await _saveNarrationCentered(value);
+              },
+              activeThumbColor: const Color(0xFFFF5A7E),
+            ),
         ],
       ),
     );
@@ -3590,9 +3620,9 @@ Modified: 01/02/2026 16:37:48
 
 File: D:\D\my_new_app\lib\services\storage_service.dart
 
-Size: 8526 bytes
+Size: 8880 bytes
 
-Modified: 01/14/2026 21:56:53
+Modified: 01/15/2026 19:56:50
 
 ========================================
 
@@ -3703,16 +3733,8 @@ class StorageService {
       prompt += '附加设定（私密，不对外展示）：\n$privateSetting\n\n';
     }
     
-    // 固定格式（清理后不再动态）
-    prompt += '''
-=== 输出格式要求 ===
-你的回复必须是：
-<message>
-  <narration>动作/表情</narration>
-  <dialogue>对话</dialogue>
-</message>
-不要在标签外写任何东西！
-''';
+    // 移除所有格式要求，让AI自由回复
+    prompt += '请用自然、生动的语言进行对话，自由发挥即可。';
     
     return prompt.trim();
   }
@@ -3858,7 +3880,20 @@ class StorageService {
       rethrow;
     }
   }
+  // 保存旁白居中设置（使用 SharedPreferences）
+  Future<void> saveNarrationCentered(bool centered) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('narration_centered', centered);
+  }
+
+  // 读取旁白居中设置
+  Future<bool> getNarrationCentered() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
+  }
+
 }
+
 
 
 
