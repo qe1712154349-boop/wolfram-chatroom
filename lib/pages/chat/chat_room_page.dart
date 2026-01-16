@@ -529,6 +529,7 @@ final userMessage = Message(
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.appBackground,
+      resizeToAvoidBottomInset: false, // 关键修改：键盘不压缩界面
       appBar: AppBar(
         backgroundColor: AppTheme.chatRoomTop,
         elevation: 0.5,
@@ -593,20 +594,20 @@ final userMessage = Message(
           ),
         ],
       ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
+      body: Column(
+        children: [
+          // 聊天区域
+          Expanded(
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Stack(
+                children: [
+                  ListView.builder(
                     controller: _scrollController,
-                    reverse: true, // 关键修改：反向排列，最新消息在底部
+                    reverse: true,
                     padding: const EdgeInsets.only(top: 20, bottom: 80),
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                      // 处理 loading 指示器（现在在列表底部）
                       if (_isLoading && index == 0) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
@@ -633,8 +634,6 @@ final userMessage = Message(
                         );
                       }
 
-                      // 关键：因为 reverse: true，需要反转索引
-                      // index 0 = 最新消息（底部），需要取 _messages 的最后一个元素
                       final messageIndex = _isLoading ? index - 1 : index;
                       final reversedIndex = _messages.length - 1 - messageIndex;
                       
@@ -649,106 +648,114 @@ final userMessage = Message(
                       );
                     },
                   ),
-                ),
-                Container(
-                  color: AppTheme.messageInputBackground,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: SafeArea(
-                    top: false,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, size: 22),
-                          color: Colors.grey[700],
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {},
+                  
+                  if (_showScrollToBottomButton)
+                    Positioned(
+                      bottom: 90,
+                      right: 16,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
                         ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Container(
-                            constraints: const BoxConstraints(minHeight: 40),
-                            decoration: BoxDecoration(
-                              color: AppTheme.messageFieldBackground,
-                              borderRadius: BorderRadius.circular(36),
-                              border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                            child: TextField(
-                              controller: _controller,
-                              focusNode: _focusNode,  // 新增：绑定 FocusNode
-                              maxLines: 4,
-                              minLines: 1,
-                              textInputAction: TextInputAction.send,
-                              keyboardType: TextInputType.multiline,
-                              style: const TextStyle(fontSize: 15),
-                              decoration: const InputDecoration(
-                                hintText: "输入消息...",
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                hintStyle: TextStyle(color: Color(0xFF8E8E93)),
-                              ),
-                              onSubmitted: (value) {
-                                final text = _controller.text.trim();
-                                if (text.isNotEmpty) {
-                                  _sendMessage(text);
-                                  _controller.clear();
-                                }
-                              },
-                              onChanged: (value) {},
-                            ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                          onPressed: () {
+                            _scrollToBottom();
+                            setState(() => _showScrollToBottomButton = false);
+                            _scrollButtonTimer?.cancel();
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          
+          // 底部浅粉色区域（固定高度，不会被键盘压缩）
+          Container(
+            color: AppTheme.messageInputBackground, // 浅粉色延伸到屏幕底部
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom, // 给键盘留出空间
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, size: 22),
+                      color: Colors.grey[700],
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {},
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 40),
+                        decoration: BoxDecoration(
+                          color: AppTheme.messageFieldBackground,
+                          borderRadius: BorderRadius.circular(36),
+                          border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          maxLines: 4,
+                          minLines: 1,
+                          textInputAction: TextInputAction.send,
+                          keyboardType: TextInputType.multiline,
+                          style: const TextStyle(fontSize: 15),
+                          decoration: const InputDecoration(
+                            hintText: "输入消息...",
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintStyle: TextStyle(color: Color(0xFF8E8E93)),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
+                          onSubmitted: (value) {
                             final text = _controller.text.trim();
                             if (text.isNotEmpty) {
                               _sendMessage(text);
                               _controller.clear();
                             }
                           },
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
-                            ),
-                            child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                          ),
+                          onChanged: (value) {},
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            if (_showScrollToBottomButton)
-              Positioned(
-                bottom: 90,
-                right: 16,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
-                    onPressed: () {
-                      _scrollToBottom();
-                      setState(() => _showScrollToBottomButton = false);
-                      _scrollButtonTimer?.cancel();
-                    },
-                  ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        final text = _controller.text.trim();
+                        if (text.isNotEmpty) {
+                          _sendMessage(text);
+                          _controller.clear();
+                        }
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
+                        ),
+                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
