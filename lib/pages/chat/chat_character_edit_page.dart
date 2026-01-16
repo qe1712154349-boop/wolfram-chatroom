@@ -25,9 +25,12 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   final TextEditingController _privateSettingController = TextEditingController();
   final TextEditingController _openingController = TextEditingController();
 
-  // 新增：自定义格式开关 + 控制器
+  // 自定义格式开关
   bool _enableCustomFormat = false;
-  final TextEditingController _customFormatController = TextEditingController();
+  
+  // 🎯 关键修改：两个独立的控制器
+  final TextEditingController _plainPromptController = TextEditingController(); // 关闭时的普通提示词
+  final TextEditingController _xmlFormatController = TextEditingController();   // 开启时的XML格式指令
 
   @override
   void initState() {
@@ -48,9 +51,14 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
         _introController.text = data['intro'] ?? '';
         _privateSettingController.text = data['private_setting'] ?? '';
         _openingController.text = data['opening'] ?? '';
-        // 新增字段加载
+        
+        // 加载开关状态
         _enableCustomFormat = data['enable_custom_format'] == 'true';
-        _customFormatController.text = data['custom_format'] ?? '';
+        
+        // 🎯 关键修改：分别加载两个字段
+        _plainPromptController.text = data['plain_prompt'] ?? '';      // 普通提示词
+        _xmlFormatController.text = data['custom_format'] ?? '';       // XML格式指令
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -63,15 +71,14 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 800,  // 限制图片尺寸，避免内存过大
+        maxWidth: 800,
         maxHeight: 800,
-        imageQuality: 85, // 压缩质量
+        imageQuality: 85,
       );
 
       if (image != null) {
         setState(() => _isSaving = true);
         
-        // 直接复制选中的图片到应用目录（不裁剪）
         final newPath = await _storage.copyFileToAppDir(image.path);
         await _storage.saveCharacterAvatarPath(newPath);
 
@@ -103,20 +110,22 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     }
   }
 
-  // 移除裁剪功能，只保留图片选择
-
   Future<void> _saveCharacterData() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
 
     try {
+      // 🎯 关键修改：保存两个独立的字段
       final characterData = <String, String>{
         'nickname': _nicknameController.text.trim(),
         'intro': _introController.text.trim(),
         'private_setting': _privateSettingController.text.trim(),
         'opening': _openingController.text.trim(),
         'enable_custom_format': _enableCustomFormat.toString(),
-        'custom_format': _customFormatController.text.trim(),
+        
+        // 保存两个不同的内容
+        'plain_prompt': _plainPromptController.text.trim(),      // 普通提示词
+        'custom_format': _xmlFormatController.text.trim(),       // XML格式指令
       };
 
       await _storage.saveCharacterData(characterData);
@@ -178,7 +187,6 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                       ),
                     ),
                   ),
-                // 已移除：头像右下角的粉色圆圈 + 相机图标
               ],
             ),
           ),
@@ -201,6 +209,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     int maxLines = 1,
     bool required = false,
     bool enabled = true,
+    String? hintText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +247,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
               borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.all(16),
-            hintText: '请输入${label.replaceAll('*', '').trim()}',
+            hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
             hintStyle: TextStyle(
               color: enabled ? Colors.grey[500] : Colors.grey[400],
             ),
@@ -251,54 +260,102 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     );
   }
 
-  Widget _buildSwitchOption({
-    required String title,
-    required String description,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
+  // 开关组件
+  Widget _buildCustomFormatSwitch() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey[200]!,
-            width: 1,
-          ),
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+          Text(
+            '自定义格式',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
           Switch(
-            value: value,
-            onChanged: onChanged,
+            value: _enableCustomFormat,
+            onChanged: (value) {
+              setState(() {
+                _enableCustomFormat = value;
+              });
+            },
             activeColor: const Color(0xFFFF5A7E),
             activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
           ),
         ],
       ),
+    );
+  }
+
+  // 🎯 关键修改：两个独立的输入框
+  Widget _buildCustomFormatSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!_enableCustomFormat) ...[
+          // 关闭状态：普通提示词输入框（灰色）
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[200]!.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _plainPromptController,
+              maxLines: 4,
+              minLines: 3,
+              enabled: true,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[200]!.withOpacity(0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(16),
+                hintText: '粘贴普通提示词...',
+                hintStyle: const TextStyle(
+                  color: Colors.grey,
+                ),
+              ),
+              style: TextStyle(
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+        ] else ...[
+          // 开启状态：XML格式指令输入框（白色）
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _xmlFormatController,
+              maxLines: 4,
+              minLines: 3,
+              enabled: true,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.7),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(16),
+                hintText: '粘贴XML格式指令...',
+                hintStyle: const TextStyle(
+                  color: Colors.grey,
+                ),
+              ),
+              style: const TextStyle(
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -375,10 +432,11 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
             // 简介
             _buildTextField(
-              label: '简介（性格、爱好、职业等）',
+              label: '简介',
               controller: _introController,
               maxLines: 4,
               required: true,
+              hintText: '请输入简介（性格、爱好、职业等）',
             ),
             const SizedBox(height: 24),
 
@@ -401,43 +459,20 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
             // 开场白
             _buildTextField(
-              label: '开场白（对话开始时使用）',
+              label: '开场白',
               controller: _openingController,
               maxLines: 3,
+              hintText: '请输入开场白（对话开始时使用）',
             ),
             const SizedBox(height: 24),
 
             // 自定义格式开关
-            _buildSwitchOption(
-              title: '启用自定义格式',
-              description: '使用自定义的格式化指令覆盖默认格式',
-              value: _enableCustomFormat,
-              onChanged: (value) {
-                setState(() {
-                  _enableCustomFormat = value;
-                });
-              },
-            ),
+            _buildCustomFormatSwitch(),
             const SizedBox(height: 16),
 
-            // 自定义格式输入框
-            if (_enableCustomFormat) ...[
-              _buildTextField(
-                label: '自定义格式指令',
-                controller: _customFormatController,
-                maxLines: 4,
-                enabled: _enableCustomFormat,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"',
-                style: TextStyle(
-                  color: Colors.grey[600], 
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+            // 🎯 关键修改：显示不同的输入框
+            _buildCustomFormatSection(),
+            const SizedBox(height: 24),
 
             // 保存按钮
             SizedBox(
@@ -534,7 +569,8 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     _introController.dispose();
     _privateSettingController.dispose();
     _openingController.dispose();
-    _customFormatController.dispose();
+    _plainPromptController.dispose();  // 🎯 新增
+    _xmlFormatController.dispose();    // 🎯 新增
     super.dispose();
   }
 }

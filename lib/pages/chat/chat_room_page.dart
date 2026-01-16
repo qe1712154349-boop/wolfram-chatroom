@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart'; // 物理动画（现在不需要了，但保留也没关系）
+import 'package:flutter/physics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
@@ -30,24 +30,23 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
-  // 新增：用于控制输入框焦点
   final FocusNode _focusNode = FocusNode();
   
   String _characterName = 'name';
   String? _avatarPath;
   String? _userAvatarPath;
  
-  String _currentStatus = '空白';   // 当前状态，默认空白
+  String _currentStatus = '空白';
   bool _showUserAvatar = true;
   String _systemPrompt = '';
-  bool _narrationCentered = true;  // 默认居中对齐 ← 新增变量
+  bool _narrationCentered = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadCharacterData();
-    _loadNarrationCentered();  // 加载旁白对齐设置
+    _loadNarrationCentered();
     _loadUserSettings();
     _loadHistory();
     
@@ -57,7 +56,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
       
-      // 修改：因为 reversed: true，所以滚动到顶部（index 0）时显示滚动按钮
       if (currentScroll > 300.0) {
         if (!_showScrollToBottomButton) {
           setState(() {
@@ -82,7 +80,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       }
     });
     
-    // 首次加载后滚动到底部
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _scrollToBottom(animate: false);
@@ -93,7 +90,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _focusNode.dispose();  // 新增：释放 FocusNode
+    _focusNode.dispose();
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
@@ -105,29 +102,21 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.didChangeAppLifecycleState(state);
     
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // App进入后台（息屏、切换App）时：移除输入框焦点
-      // 这样iOS/Andoid恢复时就不会自动弹出键盘
       _focusNode.unfocus();
-      // 双重保险：确保所有焦点都被移除
       FocusScope.of(context).unfocus();
     }
   }
 
-     @override
+  @override
   void didChangeMetrics() {
     if (!mounted) return;
     
-    // 立即执行，不要等待下一帧
     if (_scrollController.hasClients && _messages.isNotEmpty) {
-      // 检测键盘是否显示
       final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
       
-      // 键盘弹出：用弹簧动画
       if (keyboardVisible) {
-        _scrollToBottom(isKeyboard: true); // 用弹性动画
-      }
-      // 键盘收起：直接跳转，不要动画！
-      else {
+        _scrollToBottom(isKeyboard: true);
+      } else {
         _scrollController.jumpTo(0.0);
       }
     }
@@ -135,19 +124,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.didChangeMetrics();
   }
 
-  // 修改：简化弹簧滚动方法，使用内置弹性曲线
   void _scrollWithSpring({double velocity = 0.0}) {
     if (!mounted || !_scrollController.hasClients) return;
     
-    // 使用内置的弹性曲线模拟弹簧效果
     _scrollController.animateTo(
       0.0,
-      duration: const Duration(milliseconds: 380), // 比普通动画稍长
-      curve: Curves.elasticOut, // 内置的弹性曲线，有回弹效果
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.elasticOut,
     );
   }
 
-  // 修改：区分键盘弹出和其他滚动
   void _scrollToBottom({bool animate = true, bool isKeyboard = false}) {
     if (!mounted) return;
     
@@ -155,13 +141,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       if (_scrollController.hasClients) {
         if (animate) {
           if (isKeyboard) {
-            // 键盘弹出：用弹性动画，模拟"被顶"的感觉
             _scrollWithSpring();
           } else {
-            // 其他情况：快速平滑的普通动画
             _scrollController.animateTo(
               0.0,
-              duration: const Duration(milliseconds: 200), // 快速但不突兀
+              duration: const Duration(milliseconds: 200),
               curve: Curves.fastOutSlowIn,
             );
           }
@@ -183,7 +167,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       });
     }
   }
-  
 
   Future<void> _loadUserSettings() async {
     final showAvatar = await _storage.getShowUserAvatar();
@@ -206,7 +189,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           _messages.addAll(history);
         });
       }
-
     } else {
       await _loadOpeningMessage();
     }
@@ -214,6 +196,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollToBottom(animate: false);
   }
 
+  // 修复：确保开场白能显示在聊天列表
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
     if (opening.isEmpty) return;
@@ -221,11 +204,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-    // 简化：直接将开场白作为一条AI对话消息
+    // 关键修改：明确设置displayContent
     final msg = Message(
       id: 'opening_${now.millisecondsSinceEpoch}',
       role: 'assistant',
       rawContent: opening,
+      displayContent: opening, // 明确设置displayContent
       timestamp: timestamp,
       messageType: MessageType.ai_dialogue,
     );
@@ -234,15 +218,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       setState(() {
         _messages.add(msg);
       });
+      await _saveHistory(); // 保存到历史记录，确保聊天列表能读取
     }
   }
 
   Future<void> _saveHistory() async {
     await _storage.saveChatHistory(_messages);
-    print('保存聊天历史成功，消息数: ${_messages.length}');
+    if (kDebugMode) {
+      print('保存聊天历史成功，消息数: ${_messages.length}');
+    }
   }
 
-  // 新增：加载旁白对齐设置
   Future<void> _loadNarrationCentered() async {
     final centered = await _storage.getNarrationCentered();
     if (mounted) {
@@ -271,7 +257,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         ? MessageType.user_narration 
         : MessageType.user_dialogue;
 
-    // 处理内容：旁白去掉斜杠，对话保持不变
     final processedContent = messageType == MessageType.user_narration
         ? text.trim().substring(1).trim()
         : text.trim();
@@ -291,12 +276,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       _isLoading = true;
     });
 
-    _scrollToBottom(isKeyboard: false); // 发送消息用普通动画
+    _scrollToBottom(isKeyboard: false);
     await _saveHistory();
 
     try {
-      final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
-      final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
+      // 不再传入currentTime参数，因为已经在StorageService中删除
+      final systemPrompt = await _storage.getCharacterSystemPrompt();
       _systemPrompt = systemPrompt;
 
       List<Map<String, String>> apiMessages = [
@@ -311,9 +296,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         }),
       );
 
-      // 模型固定为 deepseek-chat
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
-
       final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
       if (mounted) {
@@ -323,7 +306,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         });
 
         await _saveHistory();
-        _scrollToBottom(isKeyboard: false); // AI回复也用普通动画
+        _scrollToBottom(isKeyboard: false);
       }
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -343,8 +326,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
-        // 发送消息后键盘保持打开，用户可以直接输入下一条消息
-        // 如果想隐藏键盘，用户可以点击聊天区域其他地方
       }
     }
   }
@@ -409,10 +390,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final List<Map<String, String>> apiMessages = [];
 
     for (final msg in [...background, lastUserMessage]) {
-      // 关键：AI消息发送原始XML，用户消息发送纯文本
       final String content = msg.role == 'assistant' 
-          ? msg.rawContent  // AI消息：发送原始XML格式
-          : msg.displayContent; // 用户消息：发送纯文本
+          ? msg.rawContent
+          : msg.displayContent;
       
       apiMessages.add({
         'role': msg.role,
@@ -423,90 +403,107 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     return apiMessages;
   }
   
+  // 修复：添加自定义格式与XML解析的联动
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // 保存AI的原始回复（带XML标签）
+    // 获取当前是否启用自定义格式
+    final characterData = await _storage.loadCharacterData();
+    final enableCustomFormat = characterData['enable_custom_format'] == 'true';
+    
     final String rawContent = aiContent.trim();
 
-    // 空回复兜底
     if (rawContent.isEmpty) {
       messages.add(Message(
         id: 'ai_${now}_empty',
         role: 'assistant',
         rawContent: '（思考中……）',
+        displayContent: '（思考中……）',
         timestamp: timestamp,
         messageType: MessageType.ai_dialogue,
       ));
       return messages;
     }
 
-    // 尝试解析XML格式用于UI显示
-    String displayEnvironment = '';
-    String displayDialogue = '';
+    // 如果启用自定义格式，尝试解析XML
+    if (enableCustomFormat) {
+      String displayEnvironment = '';
+      String displayDialogue = '';
 
-    final startResponse = rawContent.indexOf('<response>');
-    final endResponse = rawContent.lastIndexOf('</response>');
-    
-    if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
-      final responseInner = rawContent.substring(
-        startResponse + '<response>'.length,
-        endResponse,
-      ).trim();
+      final startResponse = rawContent.indexOf('<response>');
+      final endResponse = rawContent.lastIndexOf('</response>');
+      
+      if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
+        final responseInner = rawContent.substring(
+          startResponse + '<response>'.length,
+          endResponse,
+        ).trim();
 
-      // 提取environment显示文本
-      final envStart = responseInner.indexOf('<environment>');
-      final envEnd = responseInner.indexOf('</environment>');
-      if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
-        displayEnvironment = responseInner
-            .substring(envStart + '<environment>'.length, envEnd)
-            .trim();
+        // 提取environment显示文本
+        final envStart = responseInner.indexOf('<environment>');
+        final envEnd = responseInner.indexOf('</environment>');
+        if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
+          displayEnvironment = responseInner
+              .substring(envStart + '<environment>'.length, envEnd)
+              .trim();
+        }
+
+        // 提取dialogue显示文本
+        final diaStart = responseInner.indexOf('<dialogue>');
+        final diaEnd = responseInner.indexOf('</dialogue>');
+        if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
+          displayDialogue = responseInner
+              .substring(diaStart + '<dialogue>'.length, diaEnd)
+              .trim();
+        }
+      } else {
+        // 没有XML标签，整个作为对话显示
+        displayDialogue = rawContent;
       }
 
-      // 提取dialogue显示文本
-      final diaStart = responseInner.indexOf('<dialogue>');
-      final diaEnd = responseInner.indexOf('</dialogue>');
-      if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
-        displayDialogue = responseInner
-            .substring(diaStart + '<dialogue>'.length, diaEnd)
-            .trim();
+      // 创建AI旁白消息（如果存在环境描述）
+      if (displayEnvironment.isNotEmpty) {
+        messages.add(Message(
+          id: 'ai_nar_${now}',
+          role: 'assistant',
+          rawContent: rawContent,
+          displayContent: displayEnvironment,
+          timestamp: timestamp,
+          messageType: MessageType.ai_narration,
+        ));
+      }
+
+      // 创建AI对话消息（如果存在对话）
+      if (displayDialogue.isNotEmpty) {
+        messages.add(Message(
+          id: 'ai_dia_${now}',
+          role: 'assistant',
+          rawContent: rawContent,
+          displayContent: displayDialogue,
+          timestamp: timestamp,
+          messageType: MessageType.ai_dialogue,
+        ));
+      }
+
+      // 兜底：如果什么都没解析出来
+      if (messages.isEmpty) {
+        messages.add(Message(
+          id: 'ai_${now}_raw',
+          role: 'assistant',
+          rawContent: rawContent,
+          displayContent: rawContent,
+          timestamp: timestamp,
+          messageType: MessageType.ai_dialogue,
+        ));
       }
     } else {
-      // 没有XML标签，整个作为对话显示
-      displayDialogue = rawContent;
-    }
-
-    // 创建AI旁白消息（如果存在环境描述）
-    if (displayEnvironment.isNotEmpty) {
+      // 未启用自定义格式，整个作为普通对话
       messages.add(Message(
-        id: 'ai_nar_${now}',
+        id: 'ai_${now}_simple',
         role: 'assistant',
         rawContent: rawContent,
-        displayContent: displayEnvironment,
-        timestamp: timestamp,
-        messageType: MessageType.ai_narration,
-      ));
-    }
-
-    // 创建AI对话消息（如果存在对话）
-    if (displayDialogue.isNotEmpty) {
-      messages.add(Message(
-        id: 'ai_dia_${now}',
-        role: 'assistant',
-        rawContent: rawContent,
-        displayContent: displayDialogue,
-        timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
-      ));
-    }
-
-    // 兜底：如果什么都没解析出来
-    if (messages.isEmpty) {
-      messages.add(Message(
-        id: 'ai_${now}_raw',
-        role: 'assistant',
-        rawContent: rawContent,
+        displayContent: rawContent,
         timestamp: timestamp,
         messageType: MessageType.ai_dialogue,
       ));
@@ -516,7 +513,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   Widget _buildMessageWidget(Message msg) {
-    // 使用displayContent显示，而不是rawContent
     final displayText = msg.displayContent;
     
     switch (msg.messageType) {
@@ -559,7 +555,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.appBackground,
-      resizeToAvoidBottomInset: false, // 关键修改：键盘不压缩界面
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: AppTheme.chatRoomTop,
         elevation: 0.5,
@@ -694,7 +690,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         child: IconButton(
                           icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
                           onPressed: () {
-                            _scrollToBottom(isKeyboard: false); // 点击按钮用普通动画
+                            _scrollToBottom(isKeyboard: false);
                             setState(() => _showScrollToBottomButton = false);
                             _scrollButtonTimer?.cancel();
                           },
@@ -706,12 +702,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             ),
           ),
           
-          // 底部浅粉色区域（固定高度，不会被键盘压缩）
+          // 底部输入区域
           AnimatedContainer(
-             duration: const Duration(milliseconds: 80), // 超快速动画
-            color: AppTheme.messageInputBackground, // 浅粉色延伸到屏幕底部
+            duration: const Duration(milliseconds: 2),
+            color: AppTheme.messageInputBackground,
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom, // 给键盘留出空间
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

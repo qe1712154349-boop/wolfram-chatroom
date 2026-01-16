@@ -78,35 +78,53 @@ class StorageService {
     }
   }
 
-  Future<String> getCharacterSystemPrompt({String? currentTime}) async {
+  // 🎯 关键修改：无论开关状态，自定义格式文本都会发送
+  Future<String> getCharacterSystemPrompt() async {
     final data = await loadCharacterData();
+    
+    // 读取基础字段
     final nickname = data['nickname'] ?? 'Master';
     final intro = data['intro'] ?? '';
     final privateSetting = data['private_setting'] ?? '';
     final opening = data['opening'] ?? '';
     
+    // 🎯 关键：总是读取自定义格式文本，无论开关状态
+    final customFormat = data['custom_format'] ?? '';
+    
     String prompt = '';
     
-    if (currentTime != null && currentTime.isNotEmpty) {
-      prompt += '当前时间：$currentTime\n\n';
+    // 1. 拼接基础设定
+    if (nickname.isNotEmpty) {
+      prompt += '角色名称：$nickname\n\n';
     }
-    
-    prompt += '角色名称：$nickname\n\n';
     
     if (intro.isNotEmpty) {
-      prompt += '角色设定：\n$intro\n\n';
-    }
-    
-    if (opening.isNotEmpty) {
-      prompt += '开场白示例：\n$opening\n\n';
+      prompt += '角色设定：$intro\n\n';
     }
     
     if (privateSetting.isNotEmpty) {
-      prompt += '附加设定（私密，不对外展示）：\n$privateSetting\n\n';
+      prompt += '附加设定（私密，不对外展示）：$privateSetting\n\n';
     }
     
-    // 移除所有格式要求，让AI自由回复
-    prompt += '请用自然、生动的语言进行对话，自由发挥即可。';
+    if (opening.isNotEmpty) {
+      prompt += '开场白示例：$opening\n\n';
+    }
+    
+    // 🎯 关键修改：无论开关状态，只要有自定义格式文本就追加
+    if (customFormat.isNotEmpty) {
+      // 检查是否启用自定义格式
+      final enableCustomFormat = data['enable_custom_format'] == 'true';
+      
+      if (enableCustomFormat) {
+        // 启用时：作为格式要求
+        prompt += '\n=== 以下为格式要求 ===\n';
+        prompt += '$customFormat\n';
+      } else {
+        // 禁用时：作为附加提示
+        prompt += '\n=== 附加提示 ===\n';
+        prompt += '$customFormat\n';
+      }
+    }
     
     return prompt.trim();
   }
@@ -123,7 +141,7 @@ class StorageService {
   
   Future<String> getCharacterNickname() async {
     final data = await loadCharacterData();
-    return data['nickname'] ?? '';  // ← 改成空字符串
+    return data['nickname'] ?? '';
   }
 
   Future<String> getCharacterIntro() async {
@@ -204,7 +222,7 @@ class StorageService {
 
   Future<String> getUserName() async {
     final prefs = await _prefs;
-    return prefs.getString('user_name') ?? '';  // ← 改成空字符串
+    return prefs.getString('user_name') ?? '';
   }
 
   Future<void> saveShowUserAvatar(bool show) async {
@@ -252,6 +270,7 @@ class StorageService {
       rethrow;
     }
   }
+  
   // 保存旁白居中设置（使用 SharedPreferences）
   Future<void> saveNarrationCentered(bool centered) async {
     final prefs = await SharedPreferences.getInstance();
@@ -263,5 +282,4 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
   }
-
 }

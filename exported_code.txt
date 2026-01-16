@@ -622,9 +622,9 @@ class VowPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
-Size: 18578 bytes
+Size: 17331 bytes
 
-Modified: 01/16/2026 02:17:39
+Modified: 01/16/2026 17:11:50
 
 ========================================
 
@@ -808,46 +808,13 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                       ),
                     ),
                   ),
-                if (!_isSaving && _avatarPath == null)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5A7E),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_a_photo, 
-                        color: Colors.white, 
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                if (!_isSaving && _avatarPath != null)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5A7E),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt, 
-                        color: Colors.white, 
-                        size: 22,
-                      ),
-                    ),
-                  ),
+                // 已移除：头像右下角的粉色圆圈 + 相机图标
               ],
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            _avatarPath == null ? '点击添加头像' : '点击更换头像',
+            _avatarPath == null ? '点击头像选择图片' : '点击头像更换图片',
             style: TextStyle(
               color: Colors.grey[600], 
               fontSize: 14,
@@ -1634,9 +1601,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 25756 bytes
+Size: 29225 bytes
 
-Modified: 01/16/2026 16:48:00
+Modified: 01/17/2026 00:13:23
 
 ========================================
 
@@ -1644,6 +1611,7 @@ Modified: 01/16/2026 16:48:00
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart'; // 物理动画（现在不需要了，但保留也没关系）
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
@@ -1671,6 +1639,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
+  // 新增：用于控制输入框焦点
+  final FocusNode _focusNode = FocusNode();
+  
   String _characterName = 'name';
   String? _avatarPath;
   String? _userAvatarPath;
@@ -1695,7 +1666,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
       
-      if ((maxScroll - currentScroll) > 300.0) {
+      // 修改：因为 reversed: true，所以滚动到顶部（index 0）时显示滚动按钮
+      if (currentScroll > 300.0) {
         if (!_showScrollToBottomButton) {
           setState(() {
             _showScrollToBottomButton = true;
@@ -1718,11 +1690,19 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         }
       }
     });
+    
+    // 首次加载后滚动到底部
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scrollToBottom(animate: false);
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _focusNode.dispose();  // 新增：释放 FocusNode
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
@@ -1730,27 +1710,73 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // App进入后台（息屏、切换App）时：移除输入框焦点
+      // 这样iOS/Andoid恢复时就不会自动弹出键盘
+      _focusNode.unfocus();
+      // 双重保险：确保所有焦点都被移除
+      FocusScope.of(context).unfocus();
+    }
+  }
+
+     @override
   void didChangeMetrics() {
     if (!mounted) return;
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && _messages.isNotEmpty) {
-        _scrollToBottom();
+    // 立即执行，不要等待下一帧
+    if (_scrollController.hasClients && _messages.isNotEmpty) {
+      // 检测键盘是否显示
+      final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+      
+      // 键盘弹出：用弹簧动画
+      if (keyboardVisible) {
+        _scrollToBottom(isKeyboard: true); // 用弹性动画
       }
-    });
+      // 键盘收起：直接跳转，不要动画！
+      else {
+        _scrollController.jumpTo(0.0);
+      }
+    }
+    
     super.didChangeMetrics();
   }
 
-  void _scrollToBottom() {
+  // 修改：简化弹簧滚动方法，使用内置弹性曲线
+  void _scrollWithSpring({double velocity = 0.0}) {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    // 使用内置的弹性曲线模拟弹簧效果
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 380), // 比普通动画稍长
+      curve: Curves.elasticOut, // 内置的弹性曲线，有回弹效果
+    );
+  }
+
+  // 修改：区分键盘弹出和其他滚动
+  void _scrollToBottom({bool animate = true, bool isKeyboard = false}) {
     if (!mounted) return;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (animate) {
+          if (isKeyboard) {
+            // 键盘弹出：用弹性动画，模拟"被顶"的感觉
+            _scrollWithSpring();
+          } else {
+            // 其他情况：快速平滑的普通动画
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 200), // 快速但不突兀
+              curve: Curves.fastOutSlowIn,
+            );
+          }
+        } else {
+          _scrollController.jumpTo(0.0);
+        }
       }
     });
   }
@@ -1794,7 +1820,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       await _loadOpeningMessage();
     }
     
-    _scrollToBottom();
+    _scrollToBottom(animate: false);
   }
 
   Future<void> _loadOpeningMessage() async {
@@ -1825,10 +1851,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     print('保存聊天历史成功，消息数: ${_messages.length}');
   }
 
-// 新增：加载旁白对齐设置
-Future<void> _loadNarrationCentered() async {
-  final centered = await _storage.getNarrationCentered();
-  if (mounted) {
+  // 新增：加载旁白对齐设置
+  Future<void> _loadNarrationCentered() async {
+    final centered = await _storage.getNarrationCentered();
+    if (mounted) {
       setState(() {
         _narrationCentered = centered;
       });
@@ -1850,22 +1876,22 @@ Future<void> _loadNarrationCentered() async {
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-final MessageType messageType = text.trim().startsWith('/') 
-    ? MessageType.user_narration 
-    : MessageType.user_dialogue;
+    final MessageType messageType = text.trim().startsWith('/') 
+        ? MessageType.user_narration 
+        : MessageType.user_dialogue;
 
-// 处理内容：旁白去掉斜杠，对话保持不变
-final processedContent = messageType == MessageType.user_narration
-    ? text.trim().substring(1).trim()
-    : text.trim();
+    // 处理内容：旁白去掉斜杠，对话保持不变
+    final processedContent = messageType == MessageType.user_narration
+        ? text.trim().substring(1).trim()
+        : text.trim();
 
-final userMessage = Message(
-  id: 'user_${now.millisecondsSinceEpoch}',
-  role: 'user',
-  rawContent: processedContent,
-  timestamp: timestamp,
-  messageType: messageType,
-);
+    final userMessage = Message(
+      id: 'user_${now.millisecondsSinceEpoch}',
+      role: 'user',
+      rawContent: processedContent,
+      timestamp: timestamp,
+      messageType: messageType,
+    );
 
     if (!mounted) return;
     
@@ -1874,7 +1900,7 @@ final userMessage = Message(
       _isLoading = true;
     });
 
-    _scrollToBottom();
+    _scrollToBottom(isKeyboard: false); // 发送消息用普通动画
     await _saveHistory();
 
     try {
@@ -1906,7 +1932,7 @@ final userMessage = Message(
         });
 
         await _saveHistory();
-        _scrollToBottom();
+        _scrollToBottom(isKeyboard: false); // AI回复也用普通动画
       }
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -1922,10 +1948,12 @@ final userMessage = Message(
         });
       }
       await _saveHistory();
-      _scrollToBottom();
+      _scrollToBottom(isKeyboard: false);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        // 发送消息后键盘保持打开，用户可以直接输入下一条消息
+        // 如果想隐藏键盘，用户可以点击聊天区域其他地方
       }
     }
   }
@@ -2140,6 +2168,7 @@ final userMessage = Message(
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.appBackground,
+      resizeToAvoidBottomInset: false, // 关键修改：键盘不压缩界面
       appBar: AppBar(
         backgroundColor: AppTheme.chatRoomTop,
         elevation: 0.5,
@@ -2204,19 +2233,21 @@ final userMessage = Message(
           ),
         ],
       ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
+      body: Column(
+        children: [
+          // 聊天区域
+          Expanded(
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Stack(
+                children: [
+                  ListView.builder(
                     controller: _scrollController,
+                    reverse: true,
                     padding: const EdgeInsets.only(top: 20, bottom: 80),
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (_isLoading && index == _messages.length) {
+                      if (_isLoading && index == 0) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
                           child: Row(
@@ -2242,112 +2273,129 @@ final userMessage = Message(
                         );
                       }
 
-                      final msg = _messages[index];
+                      final messageIndex = _isLoading ? index - 1 : index;
+                      final reversedIndex = _messages.length - 1 - messageIndex;
+                      
+                      if (reversedIndex < 0 || reversedIndex >= _messages.length) {
+                        return const SizedBox.shrink();
+                      }
+                      
+                      final msg = _messages[reversedIndex];
                       return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(index),
+                        onLongPress: () => _showDeleteDialog(reversedIndex),
                         child: _buildMessageWidget(msg),
                       );
                     },
                   ),
-                ),
-                Container(
-                  color: AppTheme.messageInputBackground,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: SafeArea(
-                    top: false,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, size: 22),
-                          color: Colors.grey[700],
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {},
+                  
+                  if (_showScrollToBottomButton)
+                    Positioned(
+                      bottom: 90,
+                      right: 16,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
                         ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Container(
-                            constraints: const BoxConstraints(minHeight: 40),
-                            decoration: BoxDecoration(
-                              color: AppTheme.messageFieldBackground,
-                              borderRadius: BorderRadius.circular(36),
-                              border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                            child: TextField(
-                              controller: _controller,
-                              maxLines: 4,
-                              minLines: 1,
-                              textInputAction: TextInputAction.send,
-                              keyboardType: TextInputType.multiline,
-                              style: const TextStyle(fontSize: 15),
-                              decoration: const InputDecoration(
-                                hintText: "输入消息...",
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                hintStyle: TextStyle(color: Color(0xFF8E8E93)),
-                              ),
-                              onSubmitted: (value) {
-                                final text = _controller.text.trim();
-                                if (text.isNotEmpty) {
-                                  _sendMessage(text);
-                                  _controller.clear();
-                                }
-                              },
-                              onChanged: (value) {},
-                            ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                          onPressed: () {
+                            _scrollToBottom(isKeyboard: false); // 点击按钮用普通动画
+                            setState(() => _showScrollToBottomButton = false);
+                            _scrollButtonTimer?.cancel();
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          
+          // 底部浅粉色区域（固定高度，不会被键盘压缩）
+          AnimatedContainer(
+             duration: const Duration(milliseconds: 2), // 超快速动画
+            color: AppTheme.messageInputBackground, // 浅粉色延伸到屏幕底部
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom, // 给键盘留出空间
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, size: 22),
+                      color: Colors.grey[700],
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {},
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 40),
+                        decoration: BoxDecoration(
+                          color: AppTheme.messageFieldBackground,
+                          borderRadius: BorderRadius.circular(36),
+                          border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          maxLines: 4,
+                          minLines: 1,
+                          textInputAction: TextInputAction.send,
+                          keyboardType: TextInputType.multiline,
+                          style: const TextStyle(fontSize: 15),
+                          decoration: const InputDecoration(
+                            hintText: "输入消息...",
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintStyle: TextStyle(color: Color(0xFF8E8E93)),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
+                          onSubmitted: (value) {
                             final text = _controller.text.trim();
                             if (text.isNotEmpty) {
                               _sendMessage(text);
                               _controller.clear();
                             }
                           },
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
-                            ),
-                            child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                          ),
+                          onChanged: (value) {},
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            if (_showScrollToBottomButton)
-              Positioned(
-                bottom: 90,
-                right: 16,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
-                    onPressed: () {
-                      _scrollToBottom();
-                      setState(() => _showScrollToBottomButton = false);
-                      _scrollButtonTimer?.cancel();
-                    },
-                  ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        final text = _controller.text.trim();
+                        if (text.isNotEmpty) {
+                          _sendMessage(text);
+                          _controller.clear();
+                        }
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
+                        ),
+                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2837,9 +2885,9 @@ class MomentsDetailPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\me\me_page.dart
 
-Size: 7706 bytes
+Size: 7042 bytes
 
-Modified: 01/16/2026 16:34:45
+Modified: 01/16/2026 17:13:37
 
 ========================================
 
@@ -2937,7 +2985,6 @@ class _MePageState extends State<MePage> {
   }
 }
 
-
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -2986,23 +3033,7 @@ class _MePageState extends State<MePage> {
                             ),
                           ),
                         ),
-                      if (!_isLoadingAvatar)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Colors.pink,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
+                      // 已移除：头像右下角的粉色圆圈 + 相机图标
                     ],
                   ),
                 ),
@@ -3084,9 +3115,9 @@ class _MePageState extends State<MePage> {
 
 File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
 
-Size: 9111 bytes
+Size: 9306 bytes
 
-Modified: 01/04/2026 14:54:01
+Modified: 01/16/2026 17:19:49
 
 ========================================
 
@@ -3375,13 +3406,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
           const Divider(indent: 16),
           
-          // 头像显示开关 - 修复：使用 activeThumbColor 替代 activeColor
+          // 头像显示开关 - 往右靠，视觉更自然
           ListTile(
             leading: const Text('头像显示', style: TextStyle(fontSize: 16)),
-            title: Switch(
-              value: _showUserAvatar,
-              onChanged: _toggleShowUserAvatar,
-              activeThumbColor: const Color(0xFFFF5A7E), // 修复这里
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Switch(
+                  value: _showUserAvatar,
+                  onChanged: _toggleShowUserAvatar,
+                  activeThumbColor: const Color(0xFFFF5A7E),
+                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+                ),
+              ],
             ),
           ),
           const Divider(indent: 16),
@@ -3409,9 +3446,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 6263 bytes
+Size: 8165 bytes
 
-Modified: 01/16/2026 16:45:59
+Modified: 01/16/2026 18:51:34
 
 ========================================
 
@@ -3436,7 +3473,10 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _keyController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
+
   String _testStatus = ''; // 测试结果提示
+  bool _isConnected = false;
+  Color _dotColor = Colors.grey;  // 小圆点颜色
 
   @override
   void initState() {
@@ -3459,7 +3499,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final centered = await _storage.getNarrationCentered();
     if (mounted) {
       setState(() {
-        _narrationCentered = centered;  // centered已经是bool，不需要?? true
+        _narrationCentered = centered;
       });
     }
   }
@@ -3477,23 +3517,54 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setString('custom_base_url', _urlController.text.trim());
     await prefs.setString('custom_api_key', _keyController.text.trim());
     await prefs.setString('custom_model', _modelController.text.trim());
+// 去掉下面这几行提示
+  // if (mounted) {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(content: Text('配置已保存')),
+  //   );
+  // }
   }
 
   Future<void> _testConnection() async {
-    setState(() => _testStatus = '测试中...');
+    setState(() {
+      _testStatus = '测试中...';
+      _dotColor = Colors.orange;
+    });
+
     try {
       final response = await http.get(
         Uri.parse('${_urlController.text.trim()}/models'),
         headers: {'Authorization': 'Bearer ${_keyController.text.trim()}'},
       );
+
       if (response.statusCode == 200) {
-        setState(() => _testStatus = '连接成功！');
-        await _saveConfig();
+        setState(() {
+          _testStatus = '连接成功！';
+          _dotColor = Colors.green;
+          _isConnected = true;
+        });
+        await _saveConfig(); // 成功后自动保存
       } else {
-        setState(() => _testStatus = '连接失败: ${response.statusCode}');
+        setState(() {
+          _testStatus = '连接失败: ${response.statusCode}';
+          _dotColor = Colors.red;
+          _isConnected = false;
+        });
       }
     } catch (e) {
-      setState(() => _testStatus = '连接失败: $e');
+      setState(() {
+        _testStatus = '连接失败: $e';
+        _dotColor = Colors.red;
+        _isConnected = false;
+      });
+    }
+
+    // 3秒后自动消失提示文字（小灯保持最后颜色）
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      setState(() {
+        _testStatus = '';
+      });
     }
   }
 
@@ -3512,6 +3583,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ==================== 自定义 API 配置 ====================
           const Text("自定义 API 配置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
@@ -3547,18 +3619,50 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
 
           ElevatedButton(
-            onPressed: _testConnection,
+            onPressed: _saveConfig,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5A7E),
               minimumSize: const Size(double.infinity, 50),
             ),
-            child: const Text("测试连接", style: TextStyle(color: Colors.white)),
+            child: const Text('保存配置', style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
 
-          const SizedBox(height: 16),
-          Text(_testStatus, style: TextStyle(color: _testStatus.contains('成功') ? Colors.green : Colors.red)),
+          const SizedBox(height: 32),
+
+          // 测试连接 + 灯 + 结果文字（全部同一行，靠左，灯在按钮右，文字占剩余空间靠右）
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              TextButton(
+                onPressed: _testConnection,
+                child: const Text('测试连接', style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _dotColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _testStatus,
+                  style: TextStyle(
+                    color: _testStatus.contains('成功') ? Colors.green : Colors.red,
+                    fontSize: 15,
+                  ),
+                  textAlign: TextAlign.right, // 文字靠右
+                ),
+              ),
+            ],
+          ),
 
           const SizedBox(height: 32),
+
+          // ==================== 界面设置 ====================
           const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 
           SwitchListTile(
@@ -3572,7 +3676,6 @@ class _SettingsPageState extends State<SettingsPage> {
             activeThumbColor: const Color(0xFFFF5A7E),
           ),
 
-          // 旁白开关（如果未加载，禁用并显示 loading）
           if (_narrationCentered == null)
             const ListTile(
               title: Text("旁白居中显示"),
