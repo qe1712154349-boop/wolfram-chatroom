@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart'; // 物理动画（现在不需要了，但保留也没关系）
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
@@ -112,29 +113,58 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
-  @override
+     @override
   void didChangeMetrics() {
     if (!mounted) return;
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && _messages.isNotEmpty) {
-        _scrollToBottom();
+    // 立即执行，不要等待下一帧
+    if (_scrollController.hasClients && _messages.isNotEmpty) {
+      // 检测键盘是否显示
+      final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+      
+      // 键盘弹出：用弹簧动画
+      if (keyboardVisible) {
+        _scrollToBottom(isKeyboard: true); // 用弹性动画
       }
-    });
+      // 键盘收起：直接跳转，不要动画！
+      else {
+        _scrollController.jumpTo(0.0);
+      }
+    }
+    
     super.didChangeMetrics();
   }
 
-  void _scrollToBottom({bool animate = true}) {
+  // 修改：简化弹簧滚动方法，使用内置弹性曲线
+  void _scrollWithSpring({double velocity = 0.0}) {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    // 使用内置的弹性曲线模拟弹簧效果
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 380), // 比普通动画稍长
+      curve: Curves.elasticOut, // 内置的弹性曲线，有回弹效果
+    );
+  }
+
+  // 修改：区分键盘弹出和其他滚动
+  void _scrollToBottom({bool animate = true, bool isKeyboard = false}) {
     if (!mounted) return;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         if (animate) {
-          _scrollController.animateTo(
-            0.0, // 修改：reversed: true 时，底部是 0.0
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
+          if (isKeyboard) {
+            // 键盘弹出：用弹性动画，模拟"被顶"的感觉
+            _scrollWithSpring();
+          } else {
+            // 其他情况：快速平滑的普通动画
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 200), // 快速但不突兀
+              curve: Curves.fastOutSlowIn,
+            );
+          }
         } else {
           _scrollController.jumpTo(0.0);
         }
@@ -212,10 +242,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     print('保存聊天历史成功，消息数: ${_messages.length}');
   }
 
-// 新增：加载旁白对齐设置
-Future<void> _loadNarrationCentered() async {
-  final centered = await _storage.getNarrationCentered();
-  if (mounted) {
+  // 新增：加载旁白对齐设置
+  Future<void> _loadNarrationCentered() async {
+    final centered = await _storage.getNarrationCentered();
+    if (mounted) {
       setState(() {
         _narrationCentered = centered;
       });
@@ -237,22 +267,22 @@ Future<void> _loadNarrationCentered() async {
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-final MessageType messageType = text.trim().startsWith('/') 
-    ? MessageType.user_narration 
-    : MessageType.user_dialogue;
+    final MessageType messageType = text.trim().startsWith('/') 
+        ? MessageType.user_narration 
+        : MessageType.user_dialogue;
 
-// 处理内容：旁白去掉斜杠，对话保持不变
-final processedContent = messageType == MessageType.user_narration
-    ? text.trim().substring(1).trim()
-    : text.trim();
+    // 处理内容：旁白去掉斜杠，对话保持不变
+    final processedContent = messageType == MessageType.user_narration
+        ? text.trim().substring(1).trim()
+        : text.trim();
 
-final userMessage = Message(
-  id: 'user_${now.millisecondsSinceEpoch}',
-  role: 'user',
-  rawContent: processedContent,
-  timestamp: timestamp,
-  messageType: messageType,
-);
+    final userMessage = Message(
+      id: 'user_${now.millisecondsSinceEpoch}',
+      role: 'user',
+      rawContent: processedContent,
+      timestamp: timestamp,
+      messageType: messageType,
+    );
 
     if (!mounted) return;
     
@@ -261,7 +291,7 @@ final userMessage = Message(
       _isLoading = true;
     });
 
-    _scrollToBottom();
+    _scrollToBottom(isKeyboard: false); // 发送消息用普通动画
     await _saveHistory();
 
     try {
@@ -293,7 +323,7 @@ final userMessage = Message(
         });
 
         await _saveHistory();
-        _scrollToBottom();
+        _scrollToBottom(isKeyboard: false); // AI回复也用普通动画
       }
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -309,7 +339,7 @@ final userMessage = Message(
         });
       }
       await _saveHistory();
-      _scrollToBottom();
+      _scrollToBottom(isKeyboard: false);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -664,7 +694,7 @@ final userMessage = Message(
                         child: IconButton(
                           icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
                           onPressed: () {
-                            _scrollToBottom();
+                            _scrollToBottom(isKeyboard: false); // 点击按钮用普通动画
                             setState(() => _showScrollToBottomButton = false);
                             _scrollButtonTimer?.cancel();
                           },
@@ -677,7 +707,8 @@ final userMessage = Message(
           ),
           
           // 底部浅粉色区域（固定高度，不会被键盘压缩）
-          Container(
+          AnimatedContainer(
+             duration: const Duration(milliseconds: 80), // 超快速动画
             color: AppTheme.messageInputBackground, // 浅粉色延伸到屏幕底部
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom, // 给键盘留出空间
