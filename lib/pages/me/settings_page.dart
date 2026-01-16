@@ -19,7 +19,10 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _keyController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
+
   String _testStatus = ''; // 测试结果提示
+  bool _isConnected = false;
+  Color _dotColor = Colors.grey;  // 小圆点颜色
 
   @override
   void initState() {
@@ -42,7 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final centered = await _storage.getNarrationCentered();
     if (mounted) {
       setState(() {
-        _narrationCentered = centered;  // centered已经是bool，不需要?? true
+        _narrationCentered = centered;
       });
     }
   }
@@ -60,23 +63,54 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setString('custom_base_url', _urlController.text.trim());
     await prefs.setString('custom_api_key', _keyController.text.trim());
     await prefs.setString('custom_model', _modelController.text.trim());
+// 去掉下面这几行提示
+  // if (mounted) {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(content: Text('配置已保存')),
+  //   );
+  // }
   }
 
   Future<void> _testConnection() async {
-    setState(() => _testStatus = '测试中...');
+    setState(() {
+      _testStatus = '测试中...';
+      _dotColor = Colors.orange;
+    });
+
     try {
       final response = await http.get(
         Uri.parse('${_urlController.text.trim()}/models'),
         headers: {'Authorization': 'Bearer ${_keyController.text.trim()}'},
       );
+
       if (response.statusCode == 200) {
-        setState(() => _testStatus = '连接成功！');
-        await _saveConfig();
+        setState(() {
+          _testStatus = '连接成功！';
+          _dotColor = Colors.green;
+          _isConnected = true;
+        });
+        await _saveConfig(); // 成功后自动保存
       } else {
-        setState(() => _testStatus = '连接失败: ${response.statusCode}');
+        setState(() {
+          _testStatus = '连接失败: ${response.statusCode}';
+          _dotColor = Colors.red;
+          _isConnected = false;
+        });
       }
     } catch (e) {
-      setState(() => _testStatus = '连接失败: $e');
+      setState(() {
+        _testStatus = '连接失败: $e';
+        _dotColor = Colors.red;
+        _isConnected = false;
+      });
+    }
+
+    // 3秒后自动消失提示文字（小灯保持最后颜色）
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      setState(() {
+        _testStatus = '';
+      });
     }
   }
 
@@ -95,6 +129,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ==================== 自定义 API 配置 ====================
           const Text("自定义 API 配置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
@@ -130,18 +165,50 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
 
           ElevatedButton(
-            onPressed: _testConnection,
+            onPressed: _saveConfig,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5A7E),
               minimumSize: const Size(double.infinity, 50),
             ),
-            child: const Text("测试连接", style: TextStyle(color: Colors.white)),
+            child: const Text('保存配置', style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
 
-          const SizedBox(height: 16),
-          Text(_testStatus, style: TextStyle(color: _testStatus.contains('成功') ? Colors.green : Colors.red)),
+          const SizedBox(height: 32),
+
+          // 测试连接 + 灯 + 结果文字（全部同一行，靠左，灯在按钮右，文字占剩余空间靠右）
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              TextButton(
+                onPressed: _testConnection,
+                child: const Text('测试连接', style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _dotColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _testStatus,
+                  style: TextStyle(
+                    color: _testStatus.contains('成功') ? Colors.green : Colors.red,
+                    fontSize: 15,
+                  ),
+                  textAlign: TextAlign.right, // 文字靠右
+                ),
+              ),
+            ],
+          ),
 
           const SizedBox(height: 32),
+
+          // ==================== 界面设置 ====================
           const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 
           SwitchListTile(
@@ -155,7 +222,6 @@ class _SettingsPageState extends State<SettingsPage> {
             activeThumbColor: const Color(0xFFFF5A7E),
           ),
 
-          // 旁白开关（如果未加载，禁用并显示 loading）
           if (_narrationCentered == null)
             const ListTile(
               title: Text("旁白居中显示"),
