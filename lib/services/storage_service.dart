@@ -78,8 +78,7 @@ class StorageService {
     }
   }
 
-  // 🎯 关键修改：无论开关状态，自定义格式文本都会发送
-  Future<String> getCharacterSystemPrompt() async {
+  Future<String> getCharacterSystemPrompt({String? currentTime}) async {
     final data = await loadCharacterData();
     
     // 读取基础字段
@@ -88,7 +87,8 @@ class StorageService {
     final privateSetting = data['private_setting'] ?? '';
     final opening = data['opening'] ?? '';
     
-    // 🎯 关键：总是读取自定义格式文本，无论开关状态
+    // 读取自定义格式相关字段
+    final enableCustomFormat = data['enable_custom_format'] == 'true';
     final customFormat = data['custom_format'] ?? '';
     
     String prompt = '';
@@ -110,20 +110,10 @@ class StorageService {
       prompt += '开场白示例：$opening\n\n';
     }
     
-    // 🎯 关键修改：无论开关状态，只要有自定义格式文本就追加
-    if (customFormat.isNotEmpty) {
-      // 检查是否启用自定义格式
-      final enableCustomFormat = data['enable_custom_format'] == 'true';
-      
-      if (enableCustomFormat) {
-        // 启用时：作为格式要求
-        prompt += '\n=== 以下为格式要求 ===\n';
-        prompt += '$customFormat\n';
-      } else {
-        // 禁用时：作为附加提示
-        prompt += '\n=== 附加提示 ===\n';
-        prompt += '$customFormat\n';
-      }
+    // 2. 如果启用自定义格式且有内容，作为单独段落追加
+    if (enableCustomFormat && customFormat.isNotEmpty) {
+      prompt += '\n=== 以下为格式要求 ===\n';
+      prompt += '$customFormat\n';
     }
     
     return prompt.trim();
