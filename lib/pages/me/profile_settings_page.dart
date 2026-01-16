@@ -283,13 +283,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
           const Divider(indent: 16),
           
-          // 头像显示开关 - 修复：使用 activeThumbColor 替代 activeColor
+          // 头像显示开关 - 往右靠，视觉更自然
           ListTile(
             leading: const Text('头像显示', style: TextStyle(fontSize: 16)),
-            title: Switch(
-              value: _showUserAvatar,
-              onChanged: _toggleShowUserAvatar,
-              activeThumbColor: const Color(0xFFFF5A7E), // 修复这里
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Switch(
+                  value: _showUserAvatar,
+                  onChanged: _toggleShowUserAvatar,
+                  activeThumbColor: const Color(0xFFFF5A7E),
+                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+                ),
+              ],
             ),
           ),
           const Divider(indent: 16),

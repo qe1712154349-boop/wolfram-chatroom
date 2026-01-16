@@ -42,7 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final centered = await _storage.getNarrationCentered();
     if (mounted) {
       setState(() {
-        _narrationCentered = centered ?? true;  // 默认 true
+        _narrationCentered = centered;  // centered已经是bool，不需要?? true
       });
     }
   }

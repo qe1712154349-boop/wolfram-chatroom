@@ -166,7 +166,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final msg = Message(
       id: 'opening_${now.millisecondsSinceEpoch}',
       role: 'assistant',
-      content: opening,
+      rawContent: opening,
       timestamp: timestamp,
       messageType: MessageType.ai_dialogue,
     );
@@ -180,13 +180,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   Future<void> _saveHistory() async {
     await _storage.saveChatHistory(_messages);
-    print('保存聊天历史成功，消息数: ${_messages.length}');  // ← 加这一行
+    print('保存聊天历史成功，消息数: ${_messages.length}');
   }
 
-  // 新增：加载旁白对齐设置
-  Future<void> _loadNarrationCentered() async {
-    final centered = await _storage.getNarrationCentered();
-    if (mounted && centered != null) {
+// 新增：加载旁白对齐设置
+Future<void> _loadNarrationCentered() async {
+  final centered = await _storage.getNarrationCentered();
+  if (mounted) {
       setState(() {
         _narrationCentered = centered;
       });
@@ -202,91 +202,91 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     await _storage.clearChatHistory();
   }
 
- Future<void> _sendMessage(String text) async {
-  if (text.trim().isEmpty || _isLoading) return;
+  Future<void> _sendMessage(String text) async {
+    if (text.trim().isEmpty || _isLoading) return;
 
-  final now = DateTime.now();
-  final timestamp = DateFormat('HH:mm').format(now);
-  
-  final MessageType messageType = text.trim().startsWith('/') 
-      ? MessageType.user_narration 
-      : MessageType.user_dialogue;
-  final String displayContent = messageType == MessageType.user_narration 
-      ? text.trim().substring(1).trim() 
-      : text.trim();
+    final now = DateTime.now();
+    final timestamp = DateFormat('HH:mm').format(now);
+    
+final MessageType messageType = text.trim().startsWith('/') 
+    ? MessageType.user_narration 
+    : MessageType.user_dialogue;
 
-  final userMessage = Message(
-    id: 'user_${now.millisecondsSinceEpoch}',
-    role: 'user',
-    content: displayContent,
-    timestamp: timestamp,
-    messageType: messageType,
-    metadata: {'originalText': text},
-  );
+// 处理内容：旁白去掉斜杠，对话保持不变
+final processedContent = messageType == MessageType.user_narration
+    ? text.trim().substring(1).trim()
+    : text.trim();
 
-  if (!mounted) return;
-  
-  setState(() {
-    _messages.add(userMessage);
-    _isLoading = true;
-  });
+final userMessage = Message(
+  id: 'user_${now.millisecondsSinceEpoch}',
+  role: 'user',
+  rawContent: processedContent,
+  timestamp: timestamp,
+  messageType: messageType,
+);
 
-  _scrollToBottom();
-  await _saveHistory();
+    if (!mounted) return;
+    
+    setState(() {
+      _messages.add(userMessage);
+      _isLoading = true;
+    });
 
-  try {
-    final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
-    final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
-    _systemPrompt = systemPrompt;
+    _scrollToBottom();
+    await _saveHistory();
 
-    List<Map<String, String>> apiMessages = [
-      {'role': 'system', 'content': systemPrompt},
-    ];
+    try {
+      final currentTimeForAI = DateFormat('yyyy年MM月dd日 HH时mm分').format(now);
+      final systemPrompt = await _storage.getCharacterSystemPrompt(currentTime: currentTimeForAI);
+      _systemPrompt = systemPrompt;
 
-    final contextMessages = _buildContextMessages();
-    apiMessages.addAll(
-      contextMessages.map((msg) => {
-        'role': msg.role,
-        'content': msg.content,
-      }),
-    );
+      List<Map<String, String>> apiMessages = [
+        {'role': 'system', 'content': systemPrompt},
+      ];
 
-    // 清理后：模型固定为 deepseek-chat（后续加自定义时再改）
-    final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
+      final contextMessages = _buildContextMessages();
+      apiMessages.addAll(
+        contextMessages.map((msg) => {
+          'role': msg['role']!,
+          'content': msg['content']!,
+        }),
+      );
 
-    final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      // 模型固定为 deepseek-chat
+      final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
 
-    if (mounted) {
-      // 简化：直接将AI回复作为一条对话消息
-      final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
-      setState(() {
-        _messages.addAll(aiMessages);
-      });
+      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
 
+      if (mounted) {
+        final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
+        setState(() {
+          _messages.addAll(aiMessages);
+        });
+
+        await _saveHistory();
+        _scrollToBottom();
+      }
+    } catch (e) {
+      final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      if (mounted) {
+        setState(() {
+          _messages.add(Message(
+            id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
+            role: 'assistant',
+            rawContent: '出错啦… $e',
+            timestamp: errorTimestamp,
+            messageType: MessageType.ai_dialogue,
+          ));
+        });
+      }
       await _saveHistory();
       _scrollToBottom();
-    }
-  } catch (e) {
-    final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
-    if (mounted) {
-      setState(() {
-        _messages.add(Message(
-          id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
-          role: 'assistant',
-          content: '出错啦… $e',
-          timestamp: errorTimestamp,
-          messageType: MessageType.ai_dialogue,
-        ));
-      });
-    }
-    await _saveHistory();
-    _scrollToBottom();
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-}
 
   void _deleteMessage(int index) {
     if (!mounted) return;
@@ -322,7 +322,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     );
   }
 
-  List<Message> _buildContextMessages({int maxCount = 8}) {
+  List<Map<String, String>> _buildContextMessages({int maxCount = 8}) {
     if (_messages.isEmpty) return [];
 
     final contextCandidates = _messages.where((m) {
@@ -345,138 +345,154 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         .reversed
         .toList();
 
-    return [...background, lastUserMessage];
-  }
+    final List<Map<String, String>> apiMessages = [];
 
+    for (final msg in [...background, lastUserMessage]) {
+      // 关键：AI消息发送原始XML，用户消息发送纯文本
+      final String content = msg.role == 'assistant' 
+          ? msg.rawContent  // AI消息：发送原始XML格式
+          : msg.displayContent; // 用户消息：发送纯文本
+      
+      apiMessages.add({
+        'role': msg.role,
+        'content': content.trim(),
+      });
+    }
+
+    return apiMessages;
+  }
+  
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
-  final List<Message> messages = [];
-  final now = DateTime.now().millisecondsSinceEpoch;
+    final List<Message> messages = [];
+    final now = DateTime.now().millisecondsSinceEpoch;
 
-  // 空回复兜底
-  if (aiContent.trim().isEmpty) {
-    messages.add(Message(
-      id: 'ai_${now}_empty',
-      role: 'assistant',
-      content: '（思考中……）',
-      timestamp: timestamp,
-      messageType: MessageType.ai_dialogue,
-    ));
+    // 保存AI的原始回复（带XML标签）
+    final String rawContent = aiContent.trim();
+
+    // 空回复兜底
+    if (rawContent.isEmpty) {
+      messages.add(Message(
+        id: 'ai_${now}_empty',
+        role: 'assistant',
+        rawContent: '（思考中……）',
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      ));
+      return messages;
+    }
+
+    // 尝试解析XML格式用于UI显示
+    String displayEnvironment = '';
+    String displayDialogue = '';
+
+    final startResponse = rawContent.indexOf('<response>');
+    final endResponse = rawContent.lastIndexOf('</response>');
+    
+    if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
+      final responseInner = rawContent.substring(
+        startResponse + '<response>'.length,
+        endResponse,
+      ).trim();
+
+      // 提取environment显示文本
+      final envStart = responseInner.indexOf('<environment>');
+      final envEnd = responseInner.indexOf('</environment>');
+      if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
+        displayEnvironment = responseInner
+            .substring(envStart + '<environment>'.length, envEnd)
+            .trim();
+      }
+
+      // 提取dialogue显示文本
+      final diaStart = responseInner.indexOf('<dialogue>');
+      final diaEnd = responseInner.indexOf('</dialogue>');
+      if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
+        displayDialogue = responseInner
+            .substring(diaStart + '<dialogue>'.length, diaEnd)
+            .trim();
+      }
+    } else {
+      // 没有XML标签，整个作为对话显示
+      displayDialogue = rawContent;
+    }
+
+    // 创建AI旁白消息（如果存在环境描述）
+    if (displayEnvironment.isNotEmpty) {
+      messages.add(Message(
+        id: 'ai_nar_${now}',
+        role: 'assistant',
+        rawContent: rawContent,
+        displayContent: displayEnvironment,
+        timestamp: timestamp,
+        messageType: MessageType.ai_narration,
+      ));
+    }
+
+    // 创建AI对话消息（如果存在对话）
+    if (displayDialogue.isNotEmpty) {
+      messages.add(Message(
+        id: 'ai_dia_${now}',
+        role: 'assistant',
+        rawContent: rawContent,
+        displayContent: displayDialogue,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      ));
+    }
+
+    // 兜底：如果什么都没解析出来
+    if (messages.isEmpty) {
+      messages.add(Message(
+        id: 'ai_${now}_raw',
+        role: 'assistant',
+        rawContent: rawContent,
+        timestamp: timestamp,
+        messageType: MessageType.ai_dialogue,
+      ));
+    }
+
     return messages;
   }
 
-  // 尝试提取 <environment> 和 <dialogue>
-  String environment = '';
-  String dialogue = '';
+  Widget _buildMessageWidget(Message msg) {
+    // 使用displayContent显示，而不是rawContent
+    final displayText = msg.displayContent;
+    
+    switch (msg.messageType) {
+      case MessageType.user_narration:
+        return NarrationMessage(
+          text: displayText,
+          isAI: false,
+          isCentered: _narrationCentered,
+        );
 
-  final startResponse = aiContent.indexOf('<response>');
-  final endResponse = aiContent.lastIndexOf('</response>');
-  if (startResponse == -1 || endResponse == -1 || endResponse <= startResponse) {
-    // 没有完整 <response> 标签 → 兜底整条
-    messages.add(Message(
-      id: 'ai_${now}_fallback',
-      role: 'assistant',
-      content: aiContent.trim(),
-      timestamp: timestamp,
-      messageType: MessageType.ai_dialogue,
-    ));
-    return messages;
+      case MessageType.ai_narration:
+        return NarrationMessage(
+          text: displayText,
+          isAI: true,
+          isCentered: _narrationCentered,
+        );
+
+      case MessageType.user_dialogue:
+        return SentMessage(
+          text: displayText,
+          userAvatarPath: _userAvatarPath,
+          showUserAvatar: _showUserAvatar,
+        );
+
+      case MessageType.ai_dialogue:
+        return ReceivedMessage(
+          text: displayText,
+          avatarPath: _avatarPath,
+        );
+
+      case MessageType.system_time:
+        return SystemTimeMessage(text: displayText);
+
+      case MessageType.system_state:
+        return Container();
+    }
   }
-
-  // 取出 <response> 内部内容
-  final responseInner = aiContent.substring(
-    startResponse + '<response>'.length,
-    endResponse,
-  ).trim();
-
-  // 提取 environment
-  final envStart = responseInner.indexOf('<environment>');
-  final envEnd = responseInner.indexOf('</environment>');
-  if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
-    environment = responseInner
-        .substring(envStart + '<environment>'.length, envEnd)
-        .trim();
-  }
-
-  // 提取 dialogue
-  final diaStart = responseInner.indexOf('<dialogue>');
-  final diaEnd = responseInner.indexOf('</dialogue>');
-  if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
-    dialogue = responseInner
-        .substring(diaStart + '<dialogue>'.length, diaEnd)
-        .trim();
-  }
-
-  // 生成消息
-  if (environment.isNotEmpty) {
-    messages.add(Message(
-      id: 'ai_nar_${now}',
-      role: 'assistant',
-      content: environment,
-      timestamp: timestamp,
-      messageType: MessageType.ai_narration,  // 旁白类型
-    ));
-  }
-
-  if (dialogue.isNotEmpty) {
-    messages.add(Message(
-      id: 'ai_dia_${now}',
-      role: 'assistant',
-      content: dialogue,
-      timestamp: timestamp,
-      messageType: MessageType.ai_dialogue,
-    ));
-  }
-
-  // 如果什么都没解析出来，兜底
-  if (messages.isEmpty) {
-    messages.add(Message(
-      id: 'ai_${now}_raw',
-      role: 'assistant',
-      content: aiContent.trim(),
-      timestamp: timestamp,
-      messageType: MessageType.ai_dialogue,
-    ));
-  }
-
-  return messages;
-}
-
-Widget _buildMessageWidget(Message msg) {
-  switch (msg.messageType) {
-    case MessageType.user_narration:
-      return NarrationMessage(
-        text: msg.content,
-        isAI: false,
-        isCentered: _narrationCentered,  // 使用设置值
-      );
-
-    case MessageType.ai_narration:
-      return NarrationMessage(
-        text: msg.content,
-        isAI: true,
-        isCentered: _narrationCentered,  // 使用设置值
-      );
-
-    case MessageType.user_dialogue:
-      return SentMessage(
-        text: msg.content,
-        userAvatarPath: _userAvatarPath,
-        showUserAvatar: _showUserAvatar,
-      );
-
-    case MessageType.ai_dialogue:
-      return ReceivedMessage(
-        text: msg.content,
-        avatarPath: _avatarPath,
-      );
-
-    case MessageType.system_time:
-      return SystemTimeMessage(text: msg.content);
-
-    case MessageType.system_state:
-      return Container();
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -489,7 +505,7 @@ Widget _buildMessageWidget(Message msg) {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-                title: GestureDetector(
+        title: GestureDetector(
           onTap: () => _showAISetting(context),
           child: Row(
             children: [
@@ -555,7 +571,7 @@ Widget _buildMessageWidget(Message msg) {
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.only(top: 20, bottom: 80),  // ← 这里加 top: 16 或 20
+                    padding: const EdgeInsets.only(top: 20, bottom: 80),
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (_isLoading && index == _messages.length) {

@@ -178,46 +178,13 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
                       ),
                     ),
                   ),
-                if (!_isSaving && _avatarPath == null)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5A7E),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_a_photo, 
-                        color: Colors.white, 
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                if (!_isSaving && _avatarPath != null)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5A7E),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt, 
-                        color: Colors.white, 
-                        size: 22,
-                      ),
-                    ),
-                  ),
+                // 已移除：头像右下角的粉色圆圈 + 相机图标
               ],
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            _avatarPath == null ? '点击添加头像' : '点击更换头像',
+            _avatarPath == null ? '点击头像选择图片' : '点击头像更换图片',
             style: TextStyle(
               color: Colors.grey[600], 
               fontSize: 14,

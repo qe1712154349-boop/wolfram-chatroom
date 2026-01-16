@@ -38,59 +38,59 @@ class _MePageState extends State<MePage> {
     });
   }
 
-  Future<void> _pickUserAvatar() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-      
-      if (image != null) {
-        setState(() {
-          _isLoadingAvatar = true;
-        });
-        
-        // 复制文件到应用目录
-        final newPath = await _storage.copyUserAvatarToAppDir(image.path);
-        
-        // 保存新路径
-        await _storage.saveUserAvatarPath(newPath);
-        
-        setState(() {
-          _userAvatarPath = newPath;
-          _isLoadingAvatar = false;
-        });
-        
-        // 显示成功提示
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('头像已更新'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('选择用户头像失败: $e');
-      }
+ Future<void> _pickUserAvatar() async {
+  try {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+    
+    if (image != null) {
       setState(() {
+        _isLoadingAvatar = true;
+      });
+      
+      // 简单复制，不裁剪
+      final newPath = await _storage.copyUserAvatarToAppDir(image.path);
+      
+      // 保存新路径
+      await _storage.saveUserAvatarPath(newPath);
+      
+      setState(() {
+        _userAvatarPath = newPath;
         _isLoadingAvatar = false;
       });
       
+      // 显示成功提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('选择头像失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
+          const SnackBar(
+            content: Text('头像已更新'),
+            duration: Duration(seconds: 2),
           ),
         );
       }
     }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('选择用户头像失败: $e');
+    }
+    setState(() {
+      _isLoadingAvatar = false;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('选择头像失败: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -140,23 +140,7 @@ class _MePageState extends State<MePage> {
                             ),
                           ),
                         ),
-                      if (!_isLoadingAvatar)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Colors.pink,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
+                      // 已移除：头像右下角的粉色圆圈 + 相机图标
                     ],
                   ),
                 ),

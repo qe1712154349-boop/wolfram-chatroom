@@ -1,3 +1,4 @@
+// lib/pages/chat/chat_list_page.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'chat_room_page.dart';
@@ -99,7 +100,10 @@ class _ChatListPageState extends State<ChatListPage> {
               future: _storage.loadChatHistory(),
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                  final lastMsg = snapshot.data!.last.content;
+                  // 关键修改：使用 displayContent 而不是 content
+                  final lastMsg = snapshot.data!.last.displayContent;
+                  if (lastMsg.isEmpty) return const SizedBox.shrink();
+                  
                   return Text(
                     lastMsg.length > 30 ? '${lastMsg.substring(0, 30)}...' : lastMsg,
                     style: const TextStyle(color: Colors.grey),
