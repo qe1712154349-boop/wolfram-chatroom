@@ -29,6 +29,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
   
+  // 新增：用于控制输入框焦点
+  final FocusNode _focusNode = FocusNode();
+  
   String _characterName = 'name';
   String? _avatarPath;
   String? _userAvatarPath;
@@ -53,7 +56,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
       
-      if ((maxScroll - currentScroll) > 300.0) {
+      // 修改：因为 reversed: true，所以滚动到顶部（index 0）时显示滚动按钮
+      if (currentScroll > 300.0) {
         if (!_showScrollToBottomButton) {
           setState(() {
             _showScrollToBottomButton = true;
@@ -76,15 +80,36 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         }
       }
     });
+    
+    // 首次加载后滚动到底部
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scrollToBottom(animate: false);
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _focusNode.dispose();  // 新增：释放 FocusNode
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // App进入后台（息屏、切换App）时：移除输入框焦点
+      // 这样iOS/Andoid恢复时就不会自动弹出键盘
+      _focusNode.unfocus();
+      // 双重保险：确保所有焦点都被移除
+      FocusScope.of(context).unfocus();
+    }
   }
 
   @override
@@ -99,16 +124,20 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.didChangeMetrics();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animate = true}) {
     if (!mounted) return;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (animate) {
+          _scrollController.animateTo(
+            0.0, // 修改：reversed: true 时，底部是 0.0
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        } else {
+          _scrollController.jumpTo(0.0);
+        }
       }
     });
   }
@@ -152,7 +181,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       await _loadOpeningMessage();
     }
     
-    _scrollToBottom();
+    _scrollToBottom(animate: false);
   }
 
   Future<void> _loadOpeningMessage() async {
@@ -284,6 +313,8 @@ final userMessage = Message(
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        // 发送消息后键盘保持打开，用户可以直接输入下一条消息
+        // 如果想隐藏键盘，用户可以点击聊天区域其他地方
       }
     }
   }
@@ -571,10 +602,12 @@ final userMessage = Message(
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
+                    reverse: true, // 关键修改：反向排列，最新消息在底部
                     padding: const EdgeInsets.only(top: 20, bottom: 80),
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (_isLoading && index == _messages.length) {
+                      // 处理 loading 指示器（现在在列表底部）
+                      if (_isLoading && index == 0) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
                           child: Row(
@@ -600,9 +633,18 @@ final userMessage = Message(
                         );
                       }
 
-                      final msg = _messages[index];
+                      // 关键：因为 reverse: true，需要反转索引
+                      // index 0 = 最新消息（底部），需要取 _messages 的最后一个元素
+                      final messageIndex = _isLoading ? index - 1 : index;
+                      final reversedIndex = _messages.length - 1 - messageIndex;
+                      
+                      if (reversedIndex < 0 || reversedIndex >= _messages.length) {
+                        return const SizedBox.shrink();
+                      }
+                      
+                      final msg = _messages[reversedIndex];
                       return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(index),
+                        onLongPress: () => _showDeleteDialog(reversedIndex),
                         child: _buildMessageWidget(msg),
                       );
                     },
@@ -635,6 +677,7 @@ final userMessage = Message(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                             child: TextField(
                               controller: _controller,
+                              focusNode: _focusNode,  // 新增：绑定 FocusNode
                               maxLines: 4,
                               minLines: 1,
                               textInputAction: TextInputAction.send,
