@@ -109,50 +109,50 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void didChangeMetrics() {
     if (!mounted) return;
     
-    if (_scrollController.hasClients && _messages.isNotEmpty) {
-      final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-      
-      if (keyboardVisible) {
-        _scrollToBottom(isKeyboard: true);
-      } else {
-        _scrollController.jumpTo(0.0);
-      }
-    }
+if (_scrollController.hasClients && _messages.isNotEmpty) {
+  final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+  
+  if (keyboardVisible) {
+    _scrollToBottom(isKeyboard: true);
+  } else {
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);  // 改为 maxScrollExtent
+  }
+}
     
     super.didChangeMetrics();
   }
 
-  void _scrollWithSpring() {  // 移除 velocity 参数
-    if (!mounted || !_scrollController.hasClients) return;
-    
-    _scrollController.animateTo(
-      0.0,
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.elasticOut,
-    );
-  }
+void _scrollWithSpring() {
+  if (!mounted || !_scrollController.hasClients) return;
+  
+  _scrollController.animateTo(
+    _scrollController.position.maxScrollExtent,  // 改为 maxScrollExtent
+    duration: const Duration(milliseconds: 380),
+    curve: Curves.elasticOut,
+  );
+}
 
   void _scrollToBottom({bool animate = true, bool isKeyboard = false}) {
-    if (!mounted) return;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        if (animate) {
-          if (isKeyboard) {
-            _scrollWithSpring();
-          } else {
-            _scrollController.animateTo(
-              0.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.fastOutSlowIn,
-            );
-          }
+  if (!mounted) return;
+  
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scrollController.hasClients) {
+      if (animate) {
+        if (isKeyboard) {
+          _scrollWithSpring();
         } else {
-          _scrollController.jumpTo(0.0);
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,  // 改为 maxScrollExtent
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.fastOutSlowIn,
+          );
         }
+      } else {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);  // 改为 maxScrollExtent
       }
-    });
-  }
+    }
+  });
+}
 
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
@@ -639,57 +639,54 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 children: [
                   ListView.builder(
                     controller: _scrollController,
-                    reverse: true,
-                    padding: const EdgeInsets.only(top: 20, bottom: 80),
+                     reverse: false,  // 改为 false
+                   padding: const EdgeInsets.only(top: 20, bottom: 80),  // top改为20,让第一条消息不贴顶
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (_isLoading && index == 0) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                child: _avatarPath == null 
-                                    ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
-                                    : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Text(
-                                  "正在输入...", 
-                                  style: TextStyle(
-                                    fontSize: 16, 
-                                    color: isDark ? Colors.white : Colors.black87, 
-                                    height: 1.4
-                                  )
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                    if (_isLoading && index == _messages.length) {  // Loading在最后
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+          backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+          child: _avatarPath == null 
+              ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Text(
+            "正在输入...", 
+            style: TextStyle(
+              fontSize: 16, 
+              color: isDark ? Colors.white : Colors.black87, 
+              height: 1.4
+            )
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-                      final messageIndex = _isLoading ? index - 1 : index;
-                      final reversedIndex = _messages.length - 1 - messageIndex;
-                      
-                      if (reversedIndex < 0 || reversedIndex >= _messages.length) {
-                        return const SizedBox.shrink();
-                      }
-                      
-                      final msg = _messages[reversedIndex];
-                      return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(reversedIndex),
-                        child: _buildMessageWidget(msg),
-                      );
+if (index >= _messages.length) {
+  return const SizedBox.shrink();
+}
+
+final msg = _messages[index];  // 直接使用 index，不再需要 reversedIndex
+return GestureDetector(
+  onLongPress: () => _showDeleteDialog(index),  // 改为 index
+  child: _buildMessageWidget(msg),
+);  
                     },
                   ),
                   

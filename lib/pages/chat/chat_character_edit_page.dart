@@ -153,17 +153,18 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     }
   }
 
-  Widget _buildAvatarSection() {
-    return Center(
-      child: Column(
-        children: [
+Widget _buildAvatarSection() {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+ return Center(
+    child: Column(
+      children: [
           GestureDetector(
             onTap: _isSaving ? null : _pickImageFromGallery,
             child: Stack(
               children: [
                 CircleAvatar(
                   radius: 60,
-                  backgroundColor: const Color(0xFFFFD1DC),
+                  backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFFFD1DC), // 动态背景
                   backgroundImage: _avatarPath != null 
                       ? FileImage(File(_avatarPath!)) 
                       : null,
@@ -190,12 +191,12 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _avatarPath == null ? '点击头像选择图片' : '点击头像更换图片',
-            style: TextStyle(
-              color: Colors.grey[600], 
-              fontSize: 14,
+           const SizedBox(height: 12),
+        Text(
+          _avatarPath == null ? '点击头像选择图片' : '点击头像更换图片',
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600], // 动态文本颜色
+            fontSize: 14,
             ),
           ),
         ],
@@ -211,6 +212,8 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   bool enabled = true,
   String? hintText,
 }) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -218,9 +221,10 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold, 
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
               fontSize: 15,
+              color: isDark ? Colors.white : Colors.black87, // 动态标签颜色
             ),
           ),
           if (required) 
@@ -241,9 +245,10 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
         enabled: enabled,
         decoration: InputDecoration(
           filled: true,
-          fillColor: enabled ? Colors.white : Colors.grey[100],
+          fillColor: isDark 
+            ? (enabled ? Colors.grey[800] : Colors.grey[900]) 
+            : (enabled ? Colors.white : Colors.grey[100]),
           
-          // 🎯 关键修复：设置所有边框状态
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -260,11 +265,13 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
           contentPadding: const EdgeInsets.all(16),
           hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
           hintStyle: TextStyle(
-            color: enabled ? Colors.grey[500] : Colors.grey[400],
+            color: isDark ? Colors.grey[500] : Colors.grey[400],
           ),
         ),
         style: TextStyle(
-          color: enabled ? Colors.black87 : Colors.grey[600],
+          color: isDark 
+            ? (enabled ? Colors.white : Colors.grey[400]) 
+            : (enabled ? Colors.black87 : Colors.grey[600]),
         ),
       ),
     ],
@@ -273,12 +280,14 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
  // 开关组件 - 带底部分割线
 Widget _buildCustomFormatSwitch() {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
   return Container(
-    padding: const EdgeInsets.fromLTRB(0, 8, 0, 4), // 上8px，下2px
+    padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
     decoration: BoxDecoration(
       border: Border(
         bottom: BorderSide(
-          color: Colors.grey.shade300, // 使用安全的.shade300
+           color: isDark ? Colors.grey.shade700 : Colors.grey.shade300, // 使用 .shade 避免空值
           width: 1,
         ),
       ),
@@ -291,7 +300,7 @@ Widget _buildCustomFormatSwitch() {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: Colors.grey[800],
+            color: isDark ? Colors.white : Colors.grey[800], // 动态文本颜色
           ),
         ),
         Switch(
@@ -311,156 +320,156 @@ Widget _buildCustomFormatSwitch() {
 
   // 🎯 关键修改：两个独立的输入框
   Widget _buildCustomFormatSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!_enableCustomFormat) ...[
-         // 关闭状态：普通提示词输入框（灰色）
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[200]!.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(25),
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (!_enableCustomFormat) ...[
+        // 关闭状态：普通提示词输入框
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[800] : Colors.grey[200]!.withOpacity(0.5), // 动态背景
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: TextField(
+            controller: _plainPromptController,
+            maxLines: 4,
+            minLines: 3,
+            enabled: true,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: isDark ? Colors.grey[800] : Colors.grey[200]!.withOpacity(0.5),
+              
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              
+              contentPadding: const EdgeInsets.all(16),
+              hintText: '粘贴普通提示词...',
+              hintStyle: TextStyle(
+                color: isDark ? Colors.grey[500] : Colors.grey,
+              ),
             ),
-            child: TextField(
-              controller: _plainPromptController,
-              maxLines: 4,
-              minLines: 3,
-              enabled: true,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.grey[200]!.withOpacity(0.5),
-                
-                // 🎯 设置所有边框状态
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                
-                contentPadding: const EdgeInsets.all(16),
-                hintText: '粘贴普通提示词...',
-                hintStyle: const TextStyle(
-                  color: Colors.grey,
-                ),
-              ),
-              style: TextStyle(
-                color: Colors.grey[700],
-              ),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.grey[700],
             ),
           ),
-        ] else ...[
-
-          // 开启状态：XML格式指令输入框（白色）
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(25),
+        ),
+      ] else ...[
+        // 开启状态：XML格式指令输入框
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[800] : Colors.white.withOpacity(0.7), // 动态背景
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: TextField(
+            controller: _xmlFormatController,
+            maxLines: 4,
+            minLines: 3,
+            enabled: true,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: isDark ? Colors.grey[800] : Colors.white.withOpacity(0.7),
+              
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              
+              contentPadding: const EdgeInsets.all(16),
+              hintText: '粘贴XML格式指令...',
+              hintStyle: TextStyle(
+                color: isDark ? Colors.grey[500] : Colors.grey,
+              ),
             ),
-            child: TextField(
-              controller: _xmlFormatController,
-              maxLines: 4,
-              minLines: 3,
-              enabled: true,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.7),
-                
-                // 🎯 设置所有边框状态
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                
-                contentPadding: const EdgeInsets.all(16),
-                hintText: '粘贴XML格式指令...',
-                hintStyle: const TextStyle(
-                  color: Colors.grey,
-                ),
-              ),
-              style: const TextStyle(
-                color: Colors.black87,
-              ),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
-        ],
+        ),
       ],
-    );
-  }
+    ],
+  );
+}
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFFFF8FA),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFFF8FA),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black87),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            '编辑 AI 人设',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+   if (_isLoading) {
+  return Scaffold(
+    backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA), // 动态背景
+    appBar: AppBar(
+      backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        '编辑 AI 人设',
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.bold,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
-        ),
-      );
-    }
+      ),
+    ),
+    body: const Center(
+      child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
+    ),
+  );
+}
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF8FA),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          '编辑 AI 人设',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          if (!_isLoading)
-            IconButton(
-              icon: Icon(
-                Icons.refresh,
-                color: Colors.grey[700],
-              ),
-              onPressed: _loadCharacterData,
-              tooltip: '刷新数据',
-            ),
-        ],
+  backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+  appBar: AppBar(
+    backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+    elevation: 0,
+    leading: IconButton(
+      icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+      onPressed: () => Navigator.pop(context),
+    ),
+    title: Text(
+      '编辑 AI 人设',
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black87,
+        fontWeight: FontWeight.bold,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    ),
+    actions: [
+      if (!_isLoading)
+        IconButton(
+          icon: Icon(
+            Icons.refresh,
+            color: isDark ? Colors.grey[400] : Colors.grey[700],
+          ),
+          onPressed: _loadCharacterData,
+          tooltip: '刷新数据',
+        ),
+    ],
+  ),
+  body: SingleChildScrollView(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
             // 头像
             _buildAvatarSection(),
             const SizedBox(height: 32),
@@ -490,14 +499,14 @@ Widget _buildCustomFormatSwitch() {
               maxLines: 8,
             ),
             const SizedBox(height: 8),
-            Text(
-              '这些设定会影响AI的性格和行为，不会直接显示给用户',
-              style: TextStyle(
-                color: Colors.grey[600], 
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
+Text(
+  '这些设定会影响AI的性格和行为，不会直接显示给用户',
+  style: TextStyle(
+    color: isDark ? Colors.grey[400] : Colors.grey[600], // 动态颜色
+    fontSize: 12,
+    fontStyle: FontStyle.italic,
+  ),
+),
             const SizedBox(height: 24),
 
             // 在build方法的Column中找到这段：
@@ -555,52 +564,52 @@ Widget _buildCustomFormatSwitch() {
             ),
             const SizedBox(height: 32),
 
-            // 提示信息
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF0F5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFFD1DC), 
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline, 
-                        color: Colors.pink[300], 
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '提示',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD81B60),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '• 昵称和简介会显示在聊天列表\n'
-                    '• 附加设定是AI的核心人格设定\n'
-                    '• 自定义格式指令优先级最高\n'
-                    '• 修改后需要重新进入聊天室生效',
-                    style: TextStyle(
-                      color: Colors.grey[700], 
-                      fontSize: 13, 
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
+  // 提示信息
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFFF0F5), // 动态背景
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(
+      color: isDark ? Colors.grey.shade800 : const Color(0xFFFFD1DC), // 使用 .shade800
+      width: 1,
+    ),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Icon(
+            Icons.info_outline, 
+            color: isDark ? Colors.pink[200] : Colors.pink[300], // 动态图标颜色
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '提示',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.pink[200] : const Color(0xFFD81B60), // 动态文本颜色
             ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Text(
+        '• 昵称和简介会显示在聊天列表\n'
+        '• 附加设定是AI的核心人格设定\n'
+        '• 自定义格式指令优先级最高\n'
+        '• 修改后需要重新进入聊天室生效',
+        style: TextStyle(
+          color: isDark ? Colors.grey[300] : Colors.grey[700], // 动态文本颜色
+          fontSize: 13, 
+          height: 1.6,
+        ),
+      ),
+    ],
+  ),
+),
             const SizedBox(height: 40),
           ],
         ),
