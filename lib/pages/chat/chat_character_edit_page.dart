@@ -203,91 +203,111 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    int maxLines = 1,
-    bool required = false,
-    bool enabled = true,
-    String? hintText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold, 
-                fontSize: 15,
-              ),
-            ),
-            if (required) 
-              const Text(
-                ' *', 
-                style: TextStyle(
-                  color: Colors.red, 
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          minLines: maxLines == 1 ? 1 : 3,
-          enabled: enabled,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: enabled ? Colors.white : Colors.grey[100],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.all(16),
-            hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
-            hintStyle: TextStyle(
-              color: enabled ? Colors.grey[500] : Colors.grey[400],
-            ),
-          ),
-          style: TextStyle(
-            color: enabled ? Colors.black87 : Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 开关组件
-  Widget _buildCustomFormatSwitch() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+ Widget _buildTextField({
+  required String label,
+  required TextEditingController controller,
+  int maxLines = 1,
+  bool required = false,
+  bool enabled = true,
+  String? hintText,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
         children: [
           Text(
-            '自定义格式',
+            label,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontWeight: FontWeight.bold, 
+              fontSize: 15,
             ),
           ),
-          Switch(
-            value: _enableCustomFormat,
-            onChanged: (value) {
-              setState(() {
-                _enableCustomFormat = value;
-              });
-            },
-            activeColor: const Color(0xFFFF5A7E),
-            activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
-          ),
+          if (required) 
+            const Text(
+              ' *', 
+              style: TextStyle(
+                color: Colors.red, 
+                fontWeight: FontWeight.bold,
+              ),
+            ),
         ],
       ),
-    );
-  }
+      const SizedBox(height: 8),
+      TextField(
+        controller: controller,
+        maxLines: maxLines,
+        minLines: maxLines == 1 ? 1 : 3,
+        enabled: enabled,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: enabled ? Colors.white : Colors.grey[100],
+          
+          // 🎯 关键修复：设置所有边框状态
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          
+          contentPadding: const EdgeInsets.all(16),
+          hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
+          hintStyle: TextStyle(
+            color: enabled ? Colors.grey[500] : Colors.grey[400],
+          ),
+        ),
+        style: TextStyle(
+          color: enabled ? Colors.black87 : Colors.grey[600],
+        ),
+      ),
+    ],
+  );
+}
+
+ // 开关组件 - 带底部分割线
+Widget _buildCustomFormatSwitch() {
+  return Container(
+    padding: const EdgeInsets.fromLTRB(0, 8, 0, 4), // 上8px，下2px
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: Colors.grey.shade300, // 使用安全的.shade300
+          width: 1,
+        ),
+      ),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '启用自定义格式',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.grey[800],
+          ),
+        ),
+        Switch(
+          value: _enableCustomFormat,
+          onChanged: (value) {
+            setState(() {
+              _enableCustomFormat = value;
+            });
+          },
+          activeColor: const Color(0xFFFF5A7E),
+          activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+        ),
+      ],
+    ),
+  );
+}
 
   // 🎯 关键修改：两个独立的输入框
   Widget _buildCustomFormatSection() {
@@ -295,11 +315,11 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!_enableCustomFormat) ...[
-          // 关闭状态：普通提示词输入框（灰色）
+         // 关闭状态：普通提示词输入框（灰色）
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[200]!.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(25),
             ),
             child: TextField(
               controller: _plainPromptController,
@@ -309,10 +329,21 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.grey[200]!.withOpacity(0.5),
+                
+                // 🎯 设置所有边框状态
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                
                 contentPadding: const EdgeInsets.all(16),
                 hintText: '粘贴普通提示词...',
                 hintStyle: const TextStyle(
@@ -325,11 +356,12 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             ),
           ),
         ] else ...[
+
           // 开启状态：XML格式指令输入框（白色）
           Container(
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(25),
             ),
             child: TextField(
               controller: _xmlFormatController,
@@ -339,10 +371,21 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.7),
+                
+                // 🎯 设置所有边框状态
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                
                 contentPadding: const EdgeInsets.all(16),
                 hintText: '粘贴XML格式指令...',
                 hintStyle: const TextStyle(
@@ -457,24 +500,26 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             ),
             const SizedBox(height: 24),
 
+            // 在build方法的Column中找到这段：
+
             // 开场白
             _buildTextField(
-              label: '开场白',
+              label: '开场白（对话开始时使用）',
               controller: _openingController,
               maxLines: 3,
               hintText: '请输入开场白（对话开始时使用）',
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 24), // 保持24px间距
 
             // 自定义格式开关
             _buildCustomFormatSwitch(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 23.5), // 改为23.5px空白
 
             // 🎯 关键修改：显示不同的输入框
             _buildCustomFormatSection(),
             const SizedBox(height: 24),
 
-            // 保存按钮
+            // 保存按钮...
             SizedBox(
               width: double.infinity,
               height: 56,
