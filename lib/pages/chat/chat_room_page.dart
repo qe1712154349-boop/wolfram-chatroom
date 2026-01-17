@@ -754,7 +754,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                     const SizedBox(width: 4),
                     Expanded(
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 40),
+                        constraints: const BoxConstraints(minHeight: 36),  // 从40改成36或34
                         decoration: BoxDecoration(
                           color: isDark ? AppTheme.messageFieldBackgroundDark : AppTheme.messageFieldBackgroundLight,
                           borderRadius: BorderRadius.circular(36),
@@ -763,7 +763,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             width: 1
                           ),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),//输入框最里面嵌入宽vertical高度
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
@@ -778,6 +778,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                           decoration: InputDecoration(
                             hintText: "输入消息...",
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,    // 加这行：关闭非焦点灰线
+                            focusedBorder: InputBorder.none,    // 加这行：关闭焦点玫红线
                             contentPadding: EdgeInsets.zero,
                             hintStyle: TextStyle(
                               color: isDark ? Colors.grey[500] : const Color(0xFF8E8E93)
