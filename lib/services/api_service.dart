@@ -1,31 +1,31 @@
 // lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'api_config.dart';
 
 class ApiService {
-  static const String defaultBaseUrl = 'https://api.deepseek.com/v1';
-  static const String defaultApiKey = 'YOUR_DEEPSEEK_API_KEY_HERE';
-  static const String defaultModel = 'deepseek-chat';
-
   Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
-    final prefs = await SharedPreferences.getInstance();
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) {
+      throw Exception('没有选择服务商');
+    }
 
-    // 优先用自定义配置，没有才用默认
-    final baseUrl = prefs.getString('custom_base_url') ?? defaultBaseUrl;
-    final apiKey = prefs.getString('custom_api_key') ?? defaultApiKey;
-    final modelName = model ?? (prefs.getString('custom_model') ?? defaultModel);
+    final modelName = model ?? await ApiConfig.getCurrentModel();
 
-    if (apiKey == defaultApiKey || apiKey.isEmpty) {
-      throw Exception('请先在设置中配置 API Key');
+    if (provider.apiKey.isEmpty) {
+      throw Exception('请先在设置中配置 ${provider.name} 的 API Key');
+    }
+
+    if (!provider.isOpenAiCompatible) {
+      throw Exception('当前服务商 ${provider.name} 不支持 OpenAI 格式，请切换其他服务商');
     }
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/chat/completions'),
+        Uri.parse('${provider.baseUrl}/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
+          'Authorization': 'Bearer ${provider.apiKey}',
         },
         body: jsonEncode({
           'model': modelName,
@@ -43,6 +43,45 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('网络请求失败: $e');
+    }
+  }
+
+  // 新增：获取当前服务商的可用模型
+  Future<List<String>> getAvailableModels() async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) return [];
+    return provider.models;
+  }
+
+  // 测试连接（兼容原有）
+  Future<bool> testConnection({
+    String? baseUrl,
+    String? apiKey,
+    String? model,
+  }) async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) return false;
+
+    final testBaseUrl = baseUrl ?? provider.baseUrl;
+    final testApiKey = apiKey ?? provider.apiKey;
+    
+    if (testApiKey.isEmpty) {
+      throw Exception('API Key 为空');
+    }
+
+    if (!provider.isOpenAiCompatible) {
+      throw Exception('当前服务商不支持 OpenAI 格式');
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$testBaseUrl/models'),
+        headers: {'Authorization': 'Bearer $testApiKey'},
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      throw Exception('连接失败: $e');
     }
   }
 }

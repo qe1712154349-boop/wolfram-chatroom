@@ -22,7 +22,7 @@ File: D:\D\my_new_app\lib\app\app.dart
 
 Size: 772 bytes
 
-Modified: 01/03/2026 23:31:42
+Modified: 01/17/2026 02:52:18
 
 ========================================
 
@@ -59,7 +59,7 @@ File: D:\D\my_new_app\lib\app\theme.dart
 
 Size: 2753 bytes
 
-Modified: 01/04/2026 04:21:11
+Modified: 01/17/2026 02:52:18
 
 ========================================
 
@@ -324,7 +324,7 @@ File: D:\D\my_new_app\lib\models\message.dart
 
 Size: 3623 bytes
 
-Modified: 01/16/2026 16:48:00
+Modified: 01/17/2026 02:39:05
 
 ========================================
 
@@ -3478,17 +3478,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 8165 bytes
+Size: 17280 bytes
 
-Modified: 01/16/2026 18:51:34
+Modified: 01/17/2026 15:41:27
 
 ========================================
 
 // lib/pages/me/settings_page.dart
 import 'package:flutter/material.dart';
-import '../../services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../services/api_config.dart';
+import '../../services/storage_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -3501,21 +3503,23 @@ class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storage = StorageService();
   bool _developerMode = false;
   bool? _narrationCentered;  // 改为 nullable，初始 null 表示未加载
-
-  final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _keyController = TextEditingController();
-  final TextEditingController _modelController = TextEditingController();
-
-  String _testStatus = ''; // 测试结果提示
-  bool _isConnected = false;
-  Color _dotColor = Colors.grey;  // 小圆点颜色
+  
+  // API 配置相关变量
+  bool _isCustomMode = true; // 默认自定义
+  final _baseUrlController = TextEditingController();
+  final _apiKeyController = TextEditingController();
+  final _modelController = TextEditingController();
+  List<String> _availableModels = [];
+  String _selectedModel = '';
+  String _testStatus = ''; // 'valid', 'invalid', ''
+  String _testMessage = '';
 
   @override
   void initState() {
     super.initState();
     _loadDeveloperMode();
     _loadNarrationCentered();
-    _loadConfig();
+    _loadApiConfig();
   }
 
   Future<void> _loadDeveloperMode() async {
@@ -3536,66 +3540,146 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _loadConfig() async {
-    final prefs = await SharedPreferences.getInstance();
-    _urlController.text = prefs.getString('custom_base_url') ?? 'https://api.deepseek.com/v1';
-    _keyController.text = prefs.getString('custom_api_key') ?? '';
-    _modelController.text = prefs.getString('custom_model') ?? 'deepseek-chat';
-    setState(() {});
+  Future<void> _loadApiConfig() async {
+    // 加载当前 provider 设置
+    final currentId = await ApiConfig.getCurrentProviderId();
+    final currentModel = await ApiConfig.getCurrentModel();
+    
+    setState(() {
+      _selectedModel = currentModel;
+      _isCustomMode = currentId == 'custom';
+    });
+    
+    // 如果是自定义模式，加载自定义配置
+    if (_isCustomMode) {
+      final prefs = await SharedPreferences.getInstance();
+      _baseUrlController.text = prefs.getString('custom_base_url') ?? 'https://api.deepseek.com';
+      _apiKeyController.text = prefs.getString('custom_api_key') ?? '';
+      _modelController.text = prefs.getString('custom_model') ?? 'deepseek-chat';
+      _selectedModel = _modelController.text;
+    } else {
+      // 预设模式：加载预设 provider
+      final providers = await ApiConfig.loadProviders();
+      final provider = providers.firstWhere(
+        (p) => p.id == currentId,
+        orElse: () => ApiConfig.defaultProviders.first,
+      );
+      
+      _baseUrlController.text = provider.baseUrl;
+      _apiKeyController.text = provider.apiKey;
+      _availableModels = provider.models;
+      if (_availableModels.isNotEmpty && !_availableModels.contains(_selectedModel)) {
+        _selectedModel = _availableModels.first;
+      }
+    }
   }
 
   Future<void> _saveConfig() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('custom_base_url', _urlController.text.trim());
-    await prefs.setString('custom_api_key', _keyController.text.trim());
-    await prefs.setString('custom_model', _modelController.text.trim());
-// 去掉下面这几行提示
-  // if (mounted) {
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(content: Text('配置已保存')),
-  //   );
-  // }
+    // 保存逻辑：如果是自定义，保存到 prefs
+    if (_isCustomMode) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('custom_base_url', _baseUrlController.text.trim());
+      await prefs.setString('custom_api_key', _apiKeyController.text.trim());
+      await prefs.setString('custom_model', _selectedModel);
+    }
+    
+    // 统一保存当前 providerId 和 model
+    final currentId = _isCustomMode ? 'custom' : (await ApiConfig.getCurrentProviderId());
+    await ApiConfig.setCurrent(currentId, _selectedModel);
+    
+    // 更新 preset 的 API Key
+    if (!_isCustomMode) {
+      final providers = await ApiConfig.loadProviders();
+      final index = providers.indexWhere((p) => p.id == currentId);
+      if (index != -1) {
+        await ApiConfig.updateProvider(
+          id: currentId,
+          apiKey: _apiKeyController.text.trim(),
+        );
+      }
+    }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('配置已保存')),
+      );
+    }
   }
 
   Future<void> _testConnection() async {
+    // 先把 UI 置为"测试中"（同步）
     setState(() {
-      _testStatus = '测试中...';
-      _dotColor = Colors.orange;
+      _testStatus = '';
+      _testMessage = '测试中...';
     });
 
     try {
+      final baseUrl = _baseUrlController.text.trim();
+      final apiKey = _apiKeyController.text.trim();
+
+      if (apiKey.isEmpty) {
+        throw Exception('API Key 不能为空');
+      }
+
+      if (baseUrl.isEmpty) {
+        throw Exception('Base URL 不能为空');
+      }
+
+      final url = Uri.parse('$baseUrl/models');
       final response = await http.get(
-        Uri.parse('${_urlController.text.trim()}/models'),
-        headers: {'Authorization': 'Bearer ${_keyController.text.trim()}'},
-      );
+        url,
+        headers: {'Authorization': 'Bearer $apiKey'},
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
+        // 先在 setState 外面处理所有 await 操作
+        String newTestMessage = '连接成功！';
+        List<String> newModels = _availableModels;
+
+        try {
+          final data = jsonDecode(response.body);
+          final models = (data['data'] as List<dynamic>?)
+              ?.map((e) => e['id'].toString())
+              .toList() ?? [];
+
+          if (models.isNotEmpty) {
+            newModels = models;
+
+            if (!_isCustomMode) {
+              final currentId = await ApiConfig.getCurrentProviderId();
+              await ApiConfig.updateProvider(
+                id: currentId,
+                models: models,
+              );
+            }
+          }
+        } catch (parseError) {
+          // 解析失败不影响连接成功状态
+          debugPrint('模型列表解析失败: $parseError');
+        }
+
+        // 所有异步操作完成后，再统一更新 UI（同步）
         setState(() {
-          _testStatus = '连接成功！';
-          _dotColor = Colors.green;
-          _isConnected = true;
+          _testStatus = 'valid';
+          _testMessage = newTestMessage;
+          _availableModels = newModels;
+          if (newModels.isNotEmpty && !_selectedModel.isNotEmpty) {
+            _selectedModel = newModels.first;
+          }
         });
-        await _saveConfig(); // 成功后自动保存
+
+        // 成功后自动保存
+        await _saveConfig();
       } else {
         setState(() {
-          _testStatus = '连接失败: ${response.statusCode}';
-          _dotColor = Colors.red;
-          _isConnected = false;
+          _testStatus = 'invalid';
+          _testMessage = '失败: ${response.statusCode} - ${response.body.length > 100 ? response.body.substring(0, 100) + '...' : response.body}';
         });
       }
     } catch (e) {
       setState(() {
-        _testStatus = '连接失败: $e';
-        _dotColor = Colors.red;
-        _isConnected = false;
-      });
-    }
-
-    // 3秒后自动消失提示文字（小灯保持最后颜色）
-    await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
-      setState(() {
-        _testStatus = '';
+        _testStatus = 'invalid';
+        _testMessage = '错误: $e';
       });
     }
   }
@@ -3615,84 +3699,202 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ==================== 自定义 API 配置 ====================
-          const Text("自定义 API 配置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-
-          TextField(
-            controller: _urlController,
-            decoration: const InputDecoration(
-              labelText: "Base URL",
-              hintText: "https://api.deepseek.com/v1",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          TextField(
-            controller: _keyController,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: "API Key",
-              hintText: "sk-...",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          TextField(
-            controller: _modelController,
-            decoration: const InputDecoration(
-              labelText: "Model",
-              hintText: "deepseek-chat",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          ElevatedButton(
-            onPressed: _saveConfig,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5A7E),
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: const Text('保存配置', style: TextStyle(color: Colors.white, fontSize: 16)),
-          ),
-
-          const SizedBox(height: 32),
-
-          // 测试连接 + 灯 + 结果文字（全部同一行，靠左，灯在按钮右，文字占剩余空间靠右）
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              TextButton(
-                onPressed: _testConnection,
-                child: const Text('测试连接', style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _dotColor,
+          // ==================== API 配置 ====================
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'API 配置',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  _testStatus,
-                  style: TextStyle(
-                    color: _testStatus.contains('成功') ? Colors.green : Colors.red,
-                    fontSize: 15,
+                const SizedBox(height: 8),
+
+                // 1. 下拉菜单：选择 API 来源
+                FutureBuilder<List<ApiProvider>>(
+                  future: ApiConfig.loadProviders(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const CircularProgressIndicator();
+                    }
+                    final providers = snapshot.data!;
+                    final currentIdFuture = ApiConfig.getCurrentProviderId();
+
+                    return FutureBuilder<String>(
+                      future: currentIdFuture,
+                      builder: (context, currentSnap) {
+                        String? currentId = currentSnap.data;
+                        if (currentId == null || !providers.any((p) => p.id == currentId)) {
+                          currentId = 'custom'; // 默认自定义
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: currentId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: 'API 来源',
+                          ),
+                          items: [
+                            ...providers.map((p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(p.name),
+                                )),
+                            const DropdownMenuItem(
+                              value: 'custom',
+                              child: Text('自定义 (兼容 OpenAI)'),
+                            ),
+                          ],
+                          onChanged: (newValue) async {  // 修复：添加 async
+                            if (newValue == null) return;
+
+                            if (newValue == 'custom') {
+                              // 自定义模式：清空或保留上次输入
+                              final prefs = await SharedPreferences.getInstance();
+                              setState(() {
+                                _isCustomMode = true;
+                                _baseUrlController.text = prefs.getString('custom_base_url') ?? '';
+                                _apiKeyController.text = prefs.getString('custom_api_key') ?? '';
+                                _modelController.text = prefs.getString('custom_model') ?? '';
+                                _selectedModel = _modelController.text;
+                                _availableModels = [];
+                              });
+                            } else {
+                              // 预设模式：填充并锁定
+                              final selected = providers.firstWhere((p) => p.id == newValue);
+                              setState(() {
+                                _isCustomMode = false;
+                                _baseUrlController.text = selected.baseUrl;
+                                _apiKeyController.text = selected.apiKey;
+                                _availableModels = selected.models;
+                                if (_availableModels.isNotEmpty && !_availableModels.contains(_selectedModel)) {
+                                  _selectedModel = _availableModels.first;
+                                }
+                              });
+                              // 保存当前选择
+                              await ApiConfig.setCurrent(newValue, _selectedModel);
+                            }
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // 2. Base URL（自定义可编辑，预设锁定）
+                TextField(
+                  controller: _baseUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Base URL',
+                    border: OutlineInputBorder(),
+                    hintText: 'https://api.example.com/v1',
                   ),
-                  textAlign: TextAlign.right, // 文字靠右
+                  enabled: _isCustomMode, // 预设模式下禁用（锁定）
+                  readOnly: !_isCustomMode,
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 12),
 
-          const SizedBox(height: 32),
+                // 3. API Key（一直可编辑）
+                TextField(
+                  controller: _apiKeyController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'API Key',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 4. Model（下拉或手动输入）
+                if (_availableModels.isNotEmpty)
+                  DropdownButtonFormField<String>(
+                    value: _selectedModel.isNotEmpty ? _selectedModel : null,
+                    hint: const Text('选择模型'),
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: '模型',
+                    ),
+                    items: _availableModels.map((m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(m),
+                        )).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedModel = value);
+                      }
+                    },
+                  )
+                else if (_isCustomMode)
+                  TextField(
+                    controller: _modelController,
+                    decoration: const InputDecoration(
+                      labelText: '模型名（手动输入）',
+                      border: OutlineInputBorder(),
+                      helperText: '如 deepseek-chat',
+                    ),
+                    onChanged: (val) {
+                      setState(() => _selectedModel = val);
+                    },
+                  )
+                else
+                  const Text('请选择 API 来源后自动加载模型'),
+
+                const SizedBox(height: 16),
+
+                // 5. 保存按钮（保存当前配置）
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF5A7E),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: _saveConfig,
+                    child: const Text('保存配置', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // 6. 测试连接
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    TextButton(
+                      onPressed: _testConnection,
+                      child: const Text('测试连接', style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _testStatus == 'valid' ? Colors.green : (_testStatus == 'invalid' ? Colors.red : Colors.grey),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        _testMessage,
+                        style: TextStyle(
+                          color: _testStatus == 'valid' ? Colors.green : (_testStatus == 'invalid' ? Colors.red : null),
+                          fontSize: 15,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
 
           // ==================== 界面设置 ====================
           const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -3737,187 +3939,275 @@ class _SettingsPageState extends State<SettingsPage> {
 
 File: D:\D\my_new_app\lib\services\api_config.dart
 
-Size: 5937 bytes
+Size: 9428 bytes
 
-Modified: 01/16/2026 02:19:12
+Modified: 01/17/2026 14:38:43
 
 ========================================
 
 // lib/services/api_config.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class ApiProvider {
-  final String id;
-  final String name;
-  final String baseUrl;
-  final List<String> availableModels;
-  final String defaultModel;
-  final bool requiresProxy; // 仅用于提示用户，App不控制代理
-  final String setupGuide;
-  final bool isCustom; // 新增：标记是否是自定义服务商
-  
-  const ApiProvider({
+  final String id;                // 唯一标识，如 'deepseek', 'groq', 'custom_1'
+  final String name;              // 显示名
+  final String baseUrl;           // 基础 URL
+  final String apiKey;            // 密钥（保存时加密更好，但先明文）
+  final List<String> models;      // 可用模型列表
+  final bool isOpenAiCompatible;  // 是否 OpenAI 格式（header Bearer, /chat/completions）
+  final bool isCustom;            // 是否用户自定义
+  final bool requiresProxy;       // 仅用于提示用户，App不控制代理
+  final String setupGuide;        // 设置指南
+
+  ApiProvider({
     required this.id,
     required this.name,
     required this.baseUrl,
-    required this.availableModels,
-    required this.defaultModel,
-    this.requiresProxy = false,
-    required this.setupGuide,
+    required this.apiKey,
+    this.models = const [],
+    this.isOpenAiCompatible = true,
     this.isCustom = false,
+    this.requiresProxy = false,
+    this.setupGuide = '',
   });
-  
-  // 转换为Map以便存储
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'baseUrl': baseUrl,
-      'availableModels': availableModels,
-      'defaultModel': defaultModel,
-      'requiresProxy': requiresProxy,
-      'setupGuide': setupGuide,
-      'isCustom': isCustom,
-    };
-  }
-  
-  // 从Map创建
-  factory ApiProvider.fromMap(Map<String, dynamic> map) {
-    return ApiProvider(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      baseUrl: map['baseUrl'] as String,
-      availableModels: List<String>.from(map['availableModels']),
-      defaultModel: map['defaultModel'] as String,
-      requiresProxy: map['requiresProxy'] as bool,
-      setupGuide: map['setupGuide'] as String,
-      isCustom: map['isCustom'] as bool? ?? false,
-    );
-  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'name': name,
+        'baseUrl': baseUrl,
+        'apiKey': apiKey,
+        'models': models,
+        'isOpenAiCompatible': isOpenAiCompatible,
+        'isCustom': isCustom,
+        'requiresProxy': requiresProxy,
+        'setupGuide': setupGuide,
+      };
+
+  factory ApiProvider.fromMap(Map<String, dynamic> map) => ApiProvider(
+        id: map['id'] as String,
+        name: map['name'] as String,
+        baseUrl: map['baseUrl'] as String,
+        apiKey: map['apiKey'] as String,
+        models: List<String>.from(map['models'] ?? []),
+        isOpenAiCompatible: map['isOpenAiCompatible'] ?? true,
+        isCustom: map['isCustom'] ?? false,
+        requiresProxy: map['requiresProxy'] ?? false,
+        setupGuide: map['setupGuide'] ?? '',
+      );
 }
 
 class ApiConfig {
-  // 默认服务商（硬编码）
-  static final Map<String, ApiProvider> defaultProviders = {
-    'deepseek': ApiProvider(
+  static const String _providersKey = 'api_providers';
+  static const String _currentProviderIdKey = 'current_provider_id';
+  static const String _currentModelKey = 'current_model';
+
+  // 预设模板（硬编码）- 基于你原有的provider信息改进
+  static final List<ApiProvider> defaultProviders = [
+    ApiProvider(
       id: 'deepseek',
       name: 'DeepSeek',
       baseUrl: 'https://api.deepseek.com',
-      availableModels: [
-        'deepseek-chat',
-        'deepseek-coder',
-        'deepseek-reasoner',
-      ],
-      defaultModel: 'deepseek-chat',
+      apiKey: '', // 用户必须自己填
+      models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+      isOpenAiCompatible: true,
       requiresProxy: false,
       setupGuide: '1. 访问 https://platform.deepseek.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方',
     ),
-    'ohmygpt': ApiProvider(
+    ApiProvider(
       id: 'ohmygpt',
       name: 'OhMyGPT',
       baseUrl: 'https://api.ohmygpt.com/v1',
-      availableModels: [
-        'claude-3-5-haiku-20241022',
-        'gpt-4o-mini',
-        'gpt-4-turbo',
-        'claude-3-opus',
-      ],
-      defaultModel: 'claude-3-5-haiku-20241022',
+      apiKey: '',
+      models: ['claude-3-5-haiku-20241022', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus'],
+      isOpenAiCompatible: true,
       requiresProxy: true,
       setupGuide: '1. 访问 https://www.ohmygpt.com/dashboard\n2. 确保账户有余额\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
     ),
-    'openai': ApiProvider(
+    ApiProvider(
       id: 'openai',
       name: 'OpenAI',
       baseUrl: 'https://api.openai.com/v1',
-      availableModels: [
-        'gpt-4o',
-        'gpt-4-turbo',
-        'gpt-3.5-turbo',
-      ],
-      defaultModel: 'gpt-3.5-turbo',
+      apiKey: '',
+      models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+      isOpenAiCompatible: true,
       requiresProxy: true,
       setupGuide: '1. 访问 https://platform.openai.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
     ),
-  };
-  
-  // 动态获取所有服务商（默认 + 自定义）
-  static Future<Map<String, ApiProvider>> getProviders() async {
+    ApiProvider(
+      id: 'nvidia',
+      name: 'NVIDIA API',
+      baseUrl: 'https://integrate.api.nvidia.com/v1',
+      apiKey: '',
+      models: ['meta/llama-3.1-405b-instruct', 'meta/llama-3.1-70b-instruct', 'z-ai/glm-4', 'minimaxai/minimax-m2.1'],
+      isOpenAiCompatible: true,
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://build.nvidia.com\n2. 获取 API Key\n3. 可能需要 VPN/代理',
+    ),
+    // 新增预设
+    ApiProvider(
+      id: 'groq',
+      name: 'Groq',
+      baseUrl: 'https://api.groq.com/openai/v1',
+      apiKey: '',
+      models: ['llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it', 'llama-3.1-70b-versatile'],
+      isOpenAiCompatible: true,
+      requiresProxy: false,
+      setupGuide: '1. 访问 https://console.groq.com\n2. 注册并获取API Key',
+    ),
+    ApiProvider(
+      id: 'anthropic',
+      name: 'Anthropic (Claude)',
+      baseUrl: 'https://api.anthropic.com/v1',
+      apiKey: '',
+      models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
+      isOpenAiCompatible: false,
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://console.anthropic.com\n2. 获取 API Key\n3. 需要特殊格式请求',
+    ),
+  ];
+
+  // 加载所有 provider（预设 + 自定义）
+  static Future<List<ApiProvider>> loadProviders() async {
     final prefs = await SharedPreferences.getInstance();
-    final Map<String, ApiProvider> allProviders = {...defaultProviders};
+    final jsonStr = prefs.getString(_providersKey);
     
-    // 加载自定义服务商
-    final customProvidersJson = prefs.getString('custom_providers');
-    if (customProvidersJson != null) {
-      try {
-        final List<dynamic> list = jsonDecode(customProvidersJson);
-        for (final item in list) {
-          final provider = ApiProvider.fromMap(item);
-          allProviders[provider.id] = provider;
-        }
-      } catch (e) {
-        print('加载自定义服务商失败: $e');
-      }
+    if (jsonStr == null || jsonStr.isEmpty) {
+      // 第一次：返回预设
+      return List.from(defaultProviders);
     }
     
-    // 添加 NVIDIA 服务商（作为默认的一部分）
-    if (!allProviders.containsKey('nvidia')) {
-      allProviders['nvidia'] = ApiProvider(
-        id: 'nvidia',
-        name: 'NVIDIA API',
-        baseUrl: 'https://integrate.api.nvidia.com/v1',
-        availableModels: [
-          'meta/llama-3.1-405b-instruct',
-          'meta/llama-3.1-70b-instruct',
-          'z-ai/glm-4',
-          'minimaxai/minimax-m2.1',
-        ],
-        defaultModel: 'meta/llama-3.1-70b-instruct',
-        requiresProxy: true,
-        setupGuide: '1. 访问 https://build.nvidia.com\n2. 获取 API Key\n3. 可能需要 VPN/代理',
+    try {
+      final List<dynamic> list = jsonDecode(jsonStr);
+      return list.map((e) => ApiProvider.fromMap(e)).toList();
+    } catch (e) {
+      print('加载服务商失败: $e');
+      return List.from(defaultProviders);
+    }
+  }
+
+  // 保存所有 provider
+  static Future<void> saveProviders(List<ApiProvider> providers) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = jsonEncode(providers.map((p) => p.toMap()).toList());
+    await prefs.setString(_providersKey, json);
+  }
+
+  // 获取当前 provider ID 和 model
+  static Future<String> getCurrentProviderId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_currentProviderIdKey) ?? 'deepseek';
+  }
+
+  static Future<String> getCurrentModel() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_currentModelKey) ?? 'deepseek-chat';
+  }
+
+  // 设置当前
+  static Future<void> setCurrent(String providerId, String model) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_currentProviderIdKey, providerId);
+    await prefs.setString(_currentModelKey, model);
+  }
+
+  // 获取当前完整 provider
+  static Future<ApiProvider?> getCurrentProvider() async {
+    final id = await getCurrentProviderId();
+    final all = await loadProviders();
+    try {
+      return all.firstWhere((p) => p.id == id);
+    } catch (e) {
+      return defaultProviders.first;
+    }
+  }
+
+  // 尝试从 /models 拉取模型列表（OpenAI 兼容的才有效）
+  static Future<List<String>> tryFetchModels(ApiProvider provider) async {
+    if (!provider.isOpenAiCompatible) return provider.models; // 非兼容的跳过
+    if (provider.apiKey.isEmpty) return provider.models; // 没有API Key不尝试
+
+    try {
+      final response = await http.get(
+        Uri.parse('${provider.baseUrl}/models'),
+        headers: {'Authorization': 'Bearer ${provider.apiKey}'},
       );
-    }
-    
-    return allProviders;
-  }
-  
-  // 保存自定义服务商
-  static Future<void> saveCustomProvider(ApiProvider provider) async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // 如果是自定义服务商，添加到列表
-    if (provider.isCustom) {
-      final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
-      final List<dynamic> list = jsonDecode(customProvidersJson);
-      list.add(provider.toMap());
-      await prefs.setString('custom_providers', jsonEncode(list));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> modelList = data['data'] ?? [];
+        return modelList.map((m) => m['id'].toString()).toList();
+      } else {
+        print('拉取模型失败: ${response.statusCode}');
+        return provider.models;
+      }
+    } catch (e) {
+      print('拉取模型异常: $e');
+      return provider.models;
     }
   }
-  
-  // 删除自定义服务商
-  static Future<void> deleteCustomProvider(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final customProvidersJson = prefs.getString('custom_providers') ?? '[]';
-    final List<dynamic> list = jsonDecode(customProvidersJson);
+
+  // 添加自定义provider
+  static Future<void> addCustomProvider({
+    required String name,
+    required String baseUrl,
+    required String apiKey,
+    bool isOpenAiCompatible = true,
+    bool requiresProxy = false,
+  }) async {
+    final all = await loadProviders();
     
-    // 过滤掉要删除的
-    final newList = list.where((item) => item['id'] != id).toList();
-    await prefs.setString('custom_providers', jsonEncode(newList));
+    // 生成唯一ID
+    final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+    
+    final newProvider = ApiProvider(
+      id: id,
+      name: name,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      models: [], // 初始为空，后续可以拉取
+      isOpenAiCompatible: isOpenAiCompatible,
+      isCustom: true,
+      requiresProxy: requiresProxy,
+      setupGuide: '自定义服务商',
+    );
+    
+    all.add(newProvider);
+    await saveProviders(all);
   }
-  
-  // 根据ID获取服务商
-  static Future<ApiProvider?> getProvider(String id) async {
-    final providers = await getProviders();
-    return providers[id];
+
+  // 删除provider
+  static Future<void> deleteProvider(String id) async {
+    final all = await loadProviders();
+    all.removeWhere((p) => p.id == id);
+    await saveProviders(all);
   }
-  
-  // 获取默认服务商ID
-  static String get defaultProviderId => 'deepseek';
-  
-  // 获取默认服务商
-  static Future<ApiProvider> get defaultProvider async {
-    return (await getProvider(defaultProviderId))!;
+
+  // 更新provider的API Key和模型
+  static Future<void> updateProvider({
+    required String id,
+    String? apiKey,
+    List<String>? models,
+  }) async {
+    final all = await loadProviders();
+    final index = all.indexWhere((p) => p.id == id);
+    
+    if (index != -1) {
+      final provider = all[index];
+      all[index] = ApiProvider(
+        id: provider.id,
+        name: provider.name,
+        baseUrl: provider.baseUrl,
+        apiKey: apiKey ?? provider.apiKey,
+        models: models ?? provider.models,
+        isOpenAiCompatible: provider.isOpenAiCompatible,
+        isCustom: provider.isCustom,
+        requiresProxy: provider.requiresProxy,
+        setupGuide: provider.setupGuide,
+      );
+      await saveProviders(all);
+    }
   }
 }
 
@@ -3927,40 +4217,40 @@ class ApiConfig {
 
 File: D:\D\my_new_app\lib\services\api_service.dart
 
-Size: 1697 bytes
+Size: 2603 bytes
 
-Modified: 01/14/2026 23:43:39
+Modified: 01/17/2026 14:38:43
 
 ========================================
 
 // lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'api_config.dart';
 
 class ApiService {
-  static const String defaultBaseUrl = 'https://api.deepseek.com/v1';
-  static const String defaultApiKey = 'YOUR_DEEPSEEK_API_KEY_HERE';
-  static const String defaultModel = 'deepseek-chat';
-
   Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
-    final prefs = await SharedPreferences.getInstance();
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) {
+      throw Exception('没有选择服务商');
+    }
 
-    // 优先用自定义配置，没有才用默认
-    final baseUrl = prefs.getString('custom_base_url') ?? defaultBaseUrl;
-    final apiKey = prefs.getString('custom_api_key') ?? defaultApiKey;
-    final modelName = model ?? (prefs.getString('custom_model') ?? defaultModel);
+    final modelName = model ?? await ApiConfig.getCurrentModel();
 
-    if (apiKey == defaultApiKey || apiKey.isEmpty) {
-      throw Exception('请先在设置中配置 API Key');
+    if (provider.apiKey.isEmpty) {
+      throw Exception('请先在设置中配置 ${provider.name} 的 API Key');
+    }
+
+    if (!provider.isOpenAiCompatible) {
+      throw Exception('当前服务商 ${provider.name} 不支持 OpenAI 格式，请切换其他服务商');
     }
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/chat/completions'),
+        Uri.parse('${provider.baseUrl}/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
+          'Authorization': 'Bearer ${provider.apiKey}',
         },
         body: jsonEncode({
           'model': modelName,
@@ -3978,6 +4268,45 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('网络请求失败: $e');
+    }
+  }
+
+  // 新增：获取当前服务商的可用模型
+  Future<List<String>> getAvailableModels() async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) return [];
+    return provider.models;
+  }
+
+  // 测试连接（兼容原有）
+  Future<bool> testConnection({
+    String? baseUrl,
+    String? apiKey,
+    String? model,
+  }) async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) return false;
+
+    final testBaseUrl = baseUrl ?? provider.baseUrl;
+    final testApiKey = apiKey ?? provider.apiKey;
+    
+    if (testApiKey.isEmpty) {
+      throw Exception('API Key 为空');
+    }
+
+    if (!provider.isOpenAiCompatible) {
+      throw Exception('当前服务商不支持 OpenAI 格式');
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$testBaseUrl/models'),
+        headers: {'Authorization': 'Bearer $testApiKey'},
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      throw Exception('连接失败: $e');
     }
   }
 }
@@ -4003,7 +4332,7 @@ File: D:\D\my_new_app\lib\services\storage_service.dart
 
 Size: 9071 bytes
 
-Modified: 01/17/2026 02:04:38
+Modified: 01/17/2026 02:52:18
 
 ========================================
 
