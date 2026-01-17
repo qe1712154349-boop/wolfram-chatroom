@@ -1,8 +1,9 @@
-// lib/pages/chat/chat_room_page.dart - 完整替换
+// 在文件顶部添加 import
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -35,10 +36,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String? _avatarPath;
   String? _userAvatarPath;
  
-  final String _currentStatus = '空白';  // 改为 final
+  final String _currentStatus = '空白';
   bool _showUserAvatar = true;
   String _systemPrompt = '';
   bool _narrationCentered = true;
+
+  // 修改：使用枚举值而不是枚举类型本身
+  AxisDirection _lastDirection = AxisDirection.down;
 
   @override
   void initState() {
@@ -53,22 +57,67 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       if (!mounted) return;
       
       final double currentScroll = _scrollController.position.pixels;
+      final double maxScroll = _scrollController.position.maxScrollExtent;
+      final double distanceFromBottom = maxScroll - currentScroll;
       
-      if (currentScroll > 300.0) {
-        if (!_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = true;
-          });
-          _scrollButtonTimer?.cancel();
-          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted && _showScrollToBottomButton) {
-              setState(() {
-                _showScrollToBottomButton = false;
-              });
-            }
-          });
+      // 判断滚动方向 - 使用更直接的方式
+      final bool isScrollingUp = _scrollController.position.userScrollDirection == ScrollDirection.reverse;
+      final bool isScrollingDown = _scrollController.position.userScrollDirection == ScrollDirection.forward;
+      
+      // 情况1：用户向下滚动（靠近底部）
+      if (isScrollingDown) {
+        // 只有在之前是向上滚动，现在转为向下滚动时才显示箭头
+        if (_lastDirection == AxisDirection.up && 
+            distanceFromBottom > 100.0) {
+          if (!_showScrollToBottomButton) {
+            setState(() {
+              _showScrollToBottomButton = true;
+            });
+            // 设置3秒后隐藏
+            _scrollButtonTimer?.cancel();
+            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted && _showScrollToBottomButton) {
+                setState(() {
+                  _showScrollToBottomButton = false;
+                });
+              }
+            });
+          } else {
+            // 如果箭头已经在显示，用户继续向下滚动，重置计时器
+            _scrollButtonTimer?.cancel();
+            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted && _showScrollToBottomButton) {
+                setState(() {
+                  _showScrollToBottomButton = false;
+                });
+              }
+            });
+          }
         }
-      } else {
+        
+        // 如果距离底部很近了（<50px），立即隐藏箭头
+        if (distanceFromBottom < 50.0) {
+          if (_showScrollToBottomButton) {
+            setState(() {
+              _showScrollToBottomButton = false;
+            });
+            _scrollButtonTimer?.cancel();
+          }
+        }
+        
+        // 更新方向为向下
+        _lastDirection = AxisDirection.down;
+      }
+      
+      // 情况2：用户向上滚动（远离底部）
+      else if (isScrollingUp) {
+        // 更新方向为向上
+        _lastDirection = AxisDirection.up;
+      }
+      
+      // 情况3：滚动到顶部或特殊情况
+      else if (distanceFromBottom < 50.0) {
+        // 距离底部很近时自动隐藏
         if (_showScrollToBottomButton) {
           setState(() {
             _showScrollToBottomButton = false;
@@ -109,50 +158,63 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void didChangeMetrics() {
     if (!mounted) return;
     
-if (_scrollController.hasClients && _messages.isNotEmpty) {
-  final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-  
-  if (keyboardVisible) {
-    _scrollToBottom(isKeyboard: true);
-  } else {
-    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);  // 改为 maxScrollExtent
-  }
-}
+    if (_scrollController.hasClients && _messages.isNotEmpty) {
+      final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+      
+      if (keyboardVisible) {
+        _scrollToBottom(animate: true, hideArrow: true);
+      }
+    }
     
     super.didChangeMetrics();
   }
 
-void _scrollWithSpring() {
-  if (!mounted || !_scrollController.hasClients) return;
-  
-  _scrollController.animateTo(
-    _scrollController.position.maxScrollExtent,  // 改为 maxScrollExtent
-    duration: const Duration(milliseconds: 380),
-    curve: Curves.elasticOut,
-  );
-}
-
-  void _scrollToBottom({bool animate = true, bool isKeyboard = false}) {
-  if (!mounted) return;
-  
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_scrollController.hasClients) {
-      if (animate) {
-        if (isKeyboard) {
-          _scrollWithSpring();
-        } else {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,  // 改为 maxScrollExtent
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-          );
+  void _scrollToBottom({
+    bool animate = true, 
+    bool hideArrow = false,
+  }) {
+    if (!mounted) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        final maxScrollExtent = _scrollController.position.maxScrollExtent;
+        final currentPixels = _scrollController.position.pixels;
+        final distanceFromBottom = maxScrollExtent - currentPixels;
+        
+        // 只有在离底部较远（>100px）时才滚动
+        if (distanceFromBottom > 100) {
+          if (animate) {
+            _scrollController.animateTo(
+              maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.fastOutSlowIn,
+            );
+          } else {
+            _scrollController.jumpTo(maxScrollExtent);
+          }
         }
-      } else {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);  // 改为 maxScrollExtent
+        
+        // 程序自动滚动时强制隐藏箭头
+        if (hideArrow && _showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = false;
+          });
+          _scrollButtonTimer?.cancel();
+        }
       }
-    }
-  });
-}
+    });
+  }
+
+  // 删除 _scrollWithSpring 函数，因为不再使用
+  // void _scrollWithSpring() {
+  //   if (!mounted || !_scrollController.hasClients) return;
+  //   
+  //   _scrollController.animateTo(
+  //     _scrollController.position.maxScrollExtent,
+  //     duration: const Duration(milliseconds: 380),
+  //     curve: Curves.elasticOut,
+  //   );
+  // }
 
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
@@ -194,7 +256,6 @@ void _scrollWithSpring() {
     _scrollToBottom(animate: false);
   }
 
-  // 修复：确保开场白能显示在聊天列表
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
     if (opening.isEmpty) return;
@@ -202,12 +263,11 @@ void _scrollWithSpring() {
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-    // 关键修改：明确设置displayContent
     final msg = Message(
       id: 'opening_${now.millisecondsSinceEpoch}',
       role: 'assistant',
       rawContent: opening,
-      displayContent: opening, // 明确设置displayContent
+      displayContent: opening,
       timestamp: timestamp,
       messageType: MessageType.ai_dialogue,
     );
@@ -216,7 +276,7 @@ void _scrollWithSpring() {
       setState(() {
         _messages.add(msg);
       });
-      await _saveHistory(); // 保存到历史记录，确保聊天列表能读取
+      await _saveHistory();
     }
   }
 
@@ -274,11 +334,10 @@ void _scrollWithSpring() {
       _isLoading = true;
     });
 
-    _scrollToBottom(isKeyboard: false);
+    _scrollToBottom(animate: true, hideArrow: true);
     await _saveHistory();
 
     try {
-      // 不再传入currentTime参数，因为已经在StorageService中删除
       final systemPrompt = await _storage.getCharacterSystemPrompt();
       _systemPrompt = systemPrompt;
 
@@ -295,8 +354,23 @@ void _scrollWithSpring() {
       );
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
-      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      
+      // 调试打印
+      if (kDebugMode) {
+        print('\n=== 发送给 DeepSeek 的完整上下文 ===');
+        print('时间: ${DateTime.now()}');
+        for (var i = 0; i < apiMessages.length; i++) {
+          final msg = apiMessages[i];
+          final short = msg['content']!.length > 80 
+              ? '${msg['content']!.substring(0, 80)}...' 
+              : msg['content'];
+          print('${i.toString().padLeft(2)} | ${msg['role']!.padRight(8)} | $short');
+        }
+        print('=============================\n');
+      }
 
+      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      
       if (mounted) {
         final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
         setState(() {
@@ -304,7 +378,7 @@ void _scrollWithSpring() {
         });
 
         await _saveHistory();
-        _scrollToBottom(isKeyboard: false);
+        _scrollToBottom(animate: true, hideArrow: true);
       }
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -313,14 +387,14 @@ void _scrollWithSpring() {
           _messages.add(Message(
             id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
             role: 'assistant',
-            rawContent: '出错啦… $e',  // 修复字符串插值
+            rawContent: '出错啦… $e',
             timestamp: errorTimestamp,
             messageType: MessageType.ai_dialogue,
           ));
         });
       }
       await _saveHistory();
-      _scrollToBottom(isKeyboard: false);
+      _scrollToBottom(animate: true, hideArrow: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -362,51 +436,38 @@ void _scrollWithSpring() {
     );
   }
 
-  List<Map<String, String>> _buildContextMessages({int maxCount = 8}) {
+  List<Map<String, String>> _buildContextMessages({int maxCount = 20}) {
     if (_messages.isEmpty) return [];
 
-    final contextCandidates = _messages.where((m) {
-      return m.messageType != MessageType.system_time;
-    }).toList();
+    final candidates = _messages.where((m) => m.messageType != MessageType.system_time).toList();
 
-    if (contextCandidates.isEmpty) return [];
+    if (candidates.isEmpty) return [];
 
-    final lastUserMessage = contextCandidates.lastWhere(
-      (m) => m.messageType == MessageType.user_dialogue || m.messageType == MessageType.user_narration,
-      orElse: () => contextCandidates.last,
-    );
+    final startIndex = (candidates.length - maxCount).clamp(0, candidates.length);
+    final recent = candidates.sublist(startIndex);
 
-    final background = contextCandidates
-        .where((m) => m != lastUserMessage)
-        .toList()
-        .reversed
-        .take(maxCount - 1)
-        .toList()
-        .reversed
-        .toList();
+    final apiList = <Map<String, String>>[];
 
-    final List<Map<String, String>> apiMessages = [];
+    for (final msg in recent) {
+      final content = msg.role == 'user'
+          ? (msg.displayContent?.trim() ?? msg.rawContent.trim())
+          : msg.rawContent.trim();
 
-    for (final msg in [...background, lastUserMessage]) {
-      final String content = msg.role == 'assistant' 
-          ? msg.rawContent
-          : msg.displayContent;
-      
-      apiMessages.add({
+      if (content.isEmpty) continue;
+
+      apiList.add({
         'role': msg.role,
-        'content': content.trim(),
+        'content': content,
       });
     }
 
-    return apiMessages;
+    return apiList;
   }
   
-  // 修复：添加自定义格式与XML解析的联动
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // 获取当前是否启用自定义格式
     final characterData = await _storage.loadCharacterData();
     final enableCustomFormat = characterData['enable_custom_format'] == 'true';
     
@@ -424,7 +485,6 @@ void _scrollWithSpring() {
       return messages;
     }
 
-    // 如果启用自定义格式，尝试解析XML
     if (enableCustomFormat) {
       String displayEnvironment = '';
       String displayDialogue = '';
@@ -438,7 +498,6 @@ void _scrollWithSpring() {
           endResponse,
         ).trim();
 
-        // 提取environment显示文本
         final envStart = responseInner.indexOf('<environment>');
         final envEnd = responseInner.indexOf('</environment>');
         if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
@@ -447,7 +506,6 @@ void _scrollWithSpring() {
               .trim();
         }
 
-        // 提取dialogue显示文本
         final diaStart = responseInner.indexOf('<dialogue>');
         final diaEnd = responseInner.indexOf('</dialogue>');
         if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
@@ -456,11 +514,9 @@ void _scrollWithSpring() {
               .trim();
         }
       } else {
-        // 没有XML标签，整个作为对话显示
         displayDialogue = rawContent;
       }
 
-      // 创建AI旁白消息（如果存在环境描述）
       if (displayEnvironment.isNotEmpty) {
         messages.add(Message(
           id: 'ai_nar_${now}',
@@ -472,7 +528,6 @@ void _scrollWithSpring() {
         ));
       }
 
-      // 创建AI对话消息（如果存在对话）
       if (displayDialogue.isNotEmpty) {
         messages.add(Message(
           id: 'ai_dia_${now}',
@@ -484,7 +539,6 @@ void _scrollWithSpring() {
         ));
       }
 
-      // 兜底：如果什么都没解析出来
       if (messages.isEmpty) {
         messages.add(Message(
           id: 'ai_${now}_raw',
@@ -496,7 +550,6 @@ void _scrollWithSpring() {
         ));
       }
     } else {
-      // 未启用自定义格式，整个作为普通对话
       messages.add(Message(
         id: 'ai_${now}_simple',
         role: 'assistant',
@@ -554,12 +607,12 @@ void _scrollWithSpring() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 改为动态主题
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: isDark 
-            ? Colors.grey[900] // 暗色模式下的聊天室顶部颜色
-            : AppTheme.chatRoomTopLight, // 亮色模式下的粉色
+            ? Colors.grey[900]
+            : AppTheme.chatRoomTopLight,
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -631,7 +684,6 @@ void _scrollWithSpring() {
       ),
       body: Column(
         children: [
-          // 聊天区域
           Expanded(
             child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
@@ -639,54 +691,54 @@ void _scrollWithSpring() {
                 children: [
                   ListView.builder(
                     controller: _scrollController,
-                     reverse: false,  // 改为 false
-                   padding: const EdgeInsets.only(top: 20, bottom: 80),  // top改为20,让第一条消息不贴顶
+                    reverse: false,
+                    padding: const EdgeInsets.only(top: 20, bottom: 80),
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                    if (_isLoading && index == _messages.length) {  // Loading在最后
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-          backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-          child: _avatarPath == null 
-              ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
-              : null,
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Text(
-            "正在输入...", 
-            style: TextStyle(
-              fontSize: 16, 
-              color: isDark ? Colors.white : Colors.black87, 
-              height: 1.4
-            )
-          ),
-        ),
-      ],
-    ),
-  );
-}
+                      if (_isLoading && index == _messages.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+                                child: _avatarPath == null 
+                                    ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Text(
+                                  "正在输入...", 
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    color: isDark ? Colors.white : Colors.black87, 
+                                    height: 1.4
+                                  )
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-if (index >= _messages.length) {
-  return const SizedBox.shrink();
-}
+                      if (index >= _messages.length) {
+                        return const SizedBox.shrink();
+                      }
 
-final msg = _messages[index];  // 直接使用 index，不再需要 reversedIndex
-return GestureDetector(
-  onLongPress: () => _showDeleteDialog(index),  // 改为 index
-  child: _buildMessageWidget(msg),
-);  
+                      final msg = _messages[index];
+                      return GestureDetector(
+                        onLongPress: () => _showDeleteDialog(index),
+                        child: _buildMessageWidget(msg),
+                      );  
                     },
                   ),
                   
@@ -712,9 +764,7 @@ return GestureDetector(
                             size: 20
                           ),
                           onPressed: () {
-                            _scrollToBottom(isKeyboard: false);
-                            setState(() => _showScrollToBottomButton = false);
-                            _scrollButtonTimer?.cancel();
+                            _scrollToBottom(animate: true, hideArrow: true);
                           },
                         ),
                       ),
@@ -724,7 +774,6 @@ return GestureDetector(
             ),
           ),
           
-          // 底部输入区域
           AnimatedContainer(
             duration: const Duration(milliseconds: 2),
             color: isDark ? AppTheme.messageInputBackgroundDark : AppTheme.messageInputBackgroundLight,
@@ -751,7 +800,7 @@ return GestureDetector(
                     const SizedBox(width: 4),
                     Expanded(
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 36),  // 从40改成36或34
+                        constraints: const BoxConstraints(minHeight: 36),
                         decoration: BoxDecoration(
                           color: isDark ? AppTheme.messageFieldBackgroundDark : AppTheme.messageFieldBackgroundLight,
                           borderRadius: BorderRadius.circular(36),
@@ -760,7 +809,7 @@ return GestureDetector(
                             width: 1
                           ),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),//输入框最里面嵌入宽vertical高度
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
@@ -775,8 +824,8 @@ return GestureDetector(
                           decoration: InputDecoration(
                             hintText: "输入消息...",
                             border: InputBorder.none,
-                            enabledBorder: InputBorder.none,    // 加这行：关闭非焦点灰线
-                            focusedBorder: InputBorder.none,    // 加这行：关闭焦点玫红线
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
                             hintStyle: TextStyle(
                               color: isDark ? Colors.grey[500] : const Color(0xFF8E8E93)
