@@ -1,3 +1,4 @@
+// lib/pages/chat/chat_list_page.dart - 完整替换
 // lib/pages/chat/chat_list_page.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -38,21 +39,23 @@ class _ChatListPageState extends State<ChatListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
         elevation: 0,
-        title: const Text(
+        title: Text(
           "聊天",
           style: TextStyle(
-            color: Color(0xFF4A4A4A),
+            color: isDark ? Colors.white : const Color(0xFF4A4A4A),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: const [
-          Icon(Icons.search, color: Color(0xFFFF5A7E)),
+        actions: [
+          Icon(Icons.search, color: Theme.of(context).primaryColor),
         ],
       ),
       body: ListView(
@@ -79,7 +82,7 @@ class _ChatListPageState extends State<ChatListPage> {
               },
               child: CircleAvatar(
                 radius: 28,
-                backgroundColor: Colors.pinkAccent,
+                backgroundColor: Theme.of(context).primaryColor,
                 backgroundImage: _avatarPath != null
                     ? FileImage(File(_avatarPath!))
                     : null,
@@ -106,7 +109,7 @@ class _ChatListPageState extends State<ChatListPage> {
                   
                   return Text(
                     lastMsg.length > 30 ? '${lastMsg.substring(0, 30)}...' : lastMsg,
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
                     overflow: TextOverflow.ellipsis,
                   );
                 }
@@ -124,10 +127,16 @@ class _ChatListPageState extends State<ChatListPage> {
                     children: [
                       Text(
                         lastTime,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey, 
+                          fontSize: 12
+                        ),
                       ),
                       const SizedBox(height: 4),
-                      const CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
+                      CircleAvatar(
+                        radius: 4, 
+                        backgroundColor: Theme.of(context).primaryColor
+                      ),
                     ],
                   );
                 }
@@ -135,7 +144,11 @@ class _ChatListPageState extends State<ChatListPage> {
               },
             ),
           ),
-          const Divider(height: 1, indent: 80),
+          Divider(
+            height: 1, 
+            indent: 80,
+            color: isDark ? Colors.grey[800] : Colors.grey[200],
+          ),
         ],
       ),
     );

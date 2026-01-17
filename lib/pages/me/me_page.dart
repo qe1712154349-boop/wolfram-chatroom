@@ -1,3 +1,4 @@
+// lib/pages/me/me_page.dart - 完整替换
 // lib/pages/me/me_page.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -94,6 +95,8 @@ class _MePageState extends State<MePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return ListView(
       children: [
         // 用户信息卡片
@@ -109,7 +112,7 @@ class _MePageState extends State<MePage> {
             });
           },
           child: Container(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
             child: Row(
               children: [
@@ -120,7 +123,7 @@ class _MePageState extends State<MePage> {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: Colors.pink,
+                        backgroundColor: Theme.of(context).primaryColor,
                         backgroundImage: _userAvatarPath != null
                             ? FileImage(File(_userAvatarPath!))
                             : null,
@@ -140,7 +143,6 @@ class _MePageState extends State<MePage> {
                             ),
                           ),
                         ),
-                      // 已移除：头像右下角的粉色圆圈 + 相机图标
                     ],
                   ),
                 ),
@@ -154,15 +156,15 @@ class _MePageState extends State<MePage> {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         "ID: likeme",
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey, fontSize: 14),
                       ),
                     ],
                   ),
                 ),
                 // 右侧箭头
-                const Icon(Icons.chevron_right, color: Colors.grey),
+                Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey),
               ],
             ),
           ),
@@ -170,41 +172,46 @@ class _MePageState extends State<MePage> {
         const SizedBox(height: 10),
       
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "服务", Colors.green),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.photo_outlined, "相册", Colors.blue),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber),
+        _buildListTile(Icons.wechat_outlined, "服务", Colors.green, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.photo_outlined, "相册", Colors.blue, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber, context),
         
         const SizedBox(height: 10),
       
         // 设置入口
-        ListTile(
-          leading: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
-          title: const Text("设置"),
-          trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsPage()),
-            );
-          },
+        Container(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          child: ListTile(
+            leading: Icon(Icons.settings_outlined, color: isDark ? Colors.grey[400] : Colors.blueGrey),
+            title: Text("设置", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+            trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, Color iconColor) {
+  Widget _buildListTile(IconData icon, String title, Color iconColor, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       child: ListTile(
         leading: Icon(icon, color: iconColor),
-        title: Text(title),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
         onTap: () {
           // 这里可以添加对应的功能
           ScaffoldMessenger.of(context).showSnackBar(

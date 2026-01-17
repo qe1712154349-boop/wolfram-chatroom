@@ -1,4 +1,4 @@
-// 修改后的 lib/pages/chat/chat_components.dart
+// lib/pages/chat/chat_components.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../../app/theme.dart'; // 导入主题
@@ -15,6 +15,8 @@ class ReceivedMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
@@ -27,9 +29,9 @@ class ReceivedMessage extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               border: Border.all(
-                color: AppTheme.aiBubbleBorder,
+                color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight,
                 width: 1,
               ),
             ),
@@ -43,12 +45,12 @@ class ReceivedMessage extends StatelessWidget {
                   ? Icon(
                       Icons.person,
                       size: 18,
-                      color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                      color: isDark ? const Color(0xFFF95685) : AppTheme.pinkAccent,
                     )
                   : null,
             ),
           ),
-          // AI气泡 - 纯色无阴影，带细边框
+          // AI气泡
           Flexible(
             child: Container(
               constraints: BoxConstraints(
@@ -60,7 +62,7 @@ class ReceivedMessage extends StatelessWidget {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.aiBubbleColor,
+                color: isDark ? const Color(0xFF1A1A1A) : AppTheme.aiBubbleColorLight,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(AppTheme.bubbleBorderRadius),
@@ -68,13 +70,18 @@ class ReceivedMessage extends StatelessWidget {
                   bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
                 border: Border.all(
-                  color: AppTheme.aiBubbleBorder,
+                  color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight,
                   width: 1,
                 ),
               ),
               child: Text(
                 text,
-                style: AppTheme.dialogueStyle,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white : AppTheme.primaryTextLight,
+                  height: 1.4,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
             ),
           ),
@@ -98,13 +105,15 @@ class SentMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // 用户气泡 - 纯色无阴影，带细边框
+          // 用户气泡
           Flexible(
             child: Container(
               constraints: BoxConstraints(
@@ -116,7 +125,7 @@ class SentMessage extends StatelessWidget {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.userBubbleColor,
+                color: isDark ? const Color(0xFFF95685) : AppTheme.userBubbleColorLight,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppTheme.bubbleBorderRadius),
                   topRight: Radius.circular(4),
@@ -124,14 +133,17 @@ class SentMessage extends StatelessWidget {
                   bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
                 border: Border.all(
-                  color: AppTheme.userBubbleBorder,
+                  color: isDark ? const Color(0xFFD6406E) : AppTheme.userBubbleBorderLight,
                   width: 1,
                 ),
               ),
               child: Text(
                 text,
-                style: AppTheme.dialogueStyle.copyWith(
-                  color: AppTheme.userTextColor, // 添加用户文字颜色
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white : AppTheme.userTextColorLight,
+                  height: 1.4,
+                  fontWeight: FontWeight.normal,
                 ),
               ),
             ),
@@ -144,9 +156,9 @@ class SentMessage extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                 border: Border.all(
-                  color: AppTheme.userBubbleBorder,
+                  color: isDark ? const Color(0xFF333333) : AppTheme.userBubbleBorderLight,
                   width: 1,
                 ),
               ),
@@ -160,7 +172,7 @@ class SentMessage extends StatelessWidget {
                     ? Icon(
                         Icons.person_outline,
                         size: 18,
-                        color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                        color: isDark ? const Color(0xFFF95685) : AppTheme.pinkAccent,
                       )
                     : null,
               ),
@@ -181,18 +193,25 @@ class SystemTimeMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F0F5),
+            color: isDark ? const Color(0xFF252525) : const Color(0xFFF0F0F5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             text,
-            style: AppTheme.systemTimeStyle,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.grey[400] : AppTheme.secondaryTextLight,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ),
@@ -200,7 +219,6 @@ class SystemTimeMessage extends StatelessWidget {
   }
 }
 
-// 旁白消息组件（最简版，先确认能显示文字）
 class NarrationMessage extends StatelessWidget {
   final String text;
   final bool isAI;
@@ -215,10 +233,12 @@ class NarrationMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
       child: Align(
-           alignment: isCentered 
+        alignment: isCentered 
             ? Alignment.center 
             : (isAI ? Alignment.centerLeft : Alignment.centerRight),
         child: Container(
@@ -226,30 +246,36 @@ class NarrationMessage extends StatelessWidget {
               ? null 
               : (isAI 
                   ? const EdgeInsets.only(left: 12)    // AI 左对齐时留左边距
-                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距  ← 关键：这里加 32px 右边距，让气泡不贴右边
+                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: isAI
-                ? Colors.pink[50]               // 极浅粉底
-                : Colors.grey[200],             // 浅灰底
+                ? (isDark ? const Color(0xFF2A1A1F) : Colors.pink[50])  // 暗色模式下的粉色背景
+                : (isDark ? const Color(0xFF252525) : Colors.grey[200]), // 暗色模式下的灰色背景
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isAI ? Colors.pink[200]! : Colors.grey[400]!,
+              color: isAI 
+                  ? (isDark ? const Color(0xFFD6406E) : Colors.pink[200]!) 
+                  : (isDark ? Colors.grey[700]! : Colors.grey[400]!),
               width: 1,
             ),
           ),
           child: Text(
-              text.trim(),
-              style: AppTheme.narrationStyle.copyWith(
-                color: isAI ? Colors.pink[800] : AppTheme.narrationText,
-                fontSize: 13,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.left,  // 固定左对齐，无论气泡居中还是左对齐
+            text.trim(),
+            style: TextStyle(
+              fontSize: 13,
+              color: isAI 
+                  ? (isDark ? Colors.pink[200] : Colors.pink[800])
+                  : (isDark ? Colors.grey[300] : AppTheme.narrationTextLight),
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+              fontWeight: FontWeight.w400,
             ),
+            textAlign: TextAlign.left,
+          ),
         ),
       ),
     );

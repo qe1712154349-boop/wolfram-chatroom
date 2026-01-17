@@ -25,6 +25,17 @@ class StorageService {
     return prefs.getBool('developer_mode') ?? false;
   }
 
+    // ── 新增：夜间模式相关 ──
+  Future<void> saveThemeMode(String mode) async {
+    final prefs = await _prefs;
+    await prefs.setString('theme_mode', mode); // 'light', 'dark', 'system'
+  }
+
+  Future<String> getThemeMode() async {
+    final prefs = await _prefs;
+    return prefs.getString('theme_mode') ?? 'system'; // 默认跟随系统
+  }
+
   // ── 聊天记录相关 ──（必须保留）
   Future<void> saveChatHistory(List<Message> history) async {
     final prefs = await _prefs;

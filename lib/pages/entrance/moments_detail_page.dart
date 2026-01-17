@@ -1,3 +1,4 @@
+// lib/pages/entrance/moments_detail_page.dart - 完整替换
 import 'package:flutter/material.dart';
 
 class MomentsDetailPage extends StatelessWidget {
@@ -5,8 +6,10 @@ class MomentsDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
       body: ListView(
         children: [
           Stack(
@@ -23,8 +26,14 @@ class MomentsDetailPage extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
-                      IconButton(icon: const Icon(Icons.camera_alt, color: Colors.white), onPressed: () {}),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white), 
+                        onPressed: () => Navigator.pop(context)
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.camera_alt, color: Colors.white), 
+                        onPressed: () {}
+                      ),
                     ],
                   ),
                 ),
@@ -34,7 +43,13 @@ class MomentsDetailPage extends StatelessWidget {
                 right: 20,
                 child: Row(
                   children: [
-                    const Text("尘不言", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, shadows: [Shadow(blurRadius: 10, color: Colors.black45)])),
+                    const Text("尘不言", 
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontSize: 20, 
+                          fontWeight: FontWeight.bold, 
+                          shadows: [Shadow(blurRadius: 10, color: Colors.black45)]
+                        )),
                     const SizedBox(width: 15),
                     Container(
                       width: 80,
@@ -42,7 +57,10 @@ class MomentsDetailPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white, width: 3),
                         borderRadius: BorderRadius.circular(8),
-                        image: const DecorationImage(image: NetworkImage('https://via.placeholder.com/150'), fit: BoxFit.cover),
+                        image: const DecorationImage(
+                          image: NetworkImage('https://via.placeholder.com/150'), 
+                          fit: BoxFit.cover
+                        ),
                       ),
                     ),
                   ],
@@ -51,24 +69,12 @@ class MomentsDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+
           _buildMomentItem(
+            context: context,
             avatar: 'https://via.placeholder.com/150',
-            name: '尘不言',
-            content: '这聊的太爽了',
-            images: ['https://via.placeholder.com/300x400'],
-            time: '3天前',
-          ),
-          _buildMomentItem(
-            avatar: 'https://via.placeholder.com/150',
-            name: '尘不言',
-            content: '这聊的太爽了',
-            images: List.generate(4, (_) => 'https://via.placeholder.com/200'),
-            time: '4天前',
-          ),
-          _buildMomentItem(
-            avatar: 'https://via.placeholder.com/150',
-            name: '尘不言',
-            content: '我++',
+            name: '',
+            content: '',
             images: [],
             time: '4天前',
           ),
@@ -78,14 +84,17 @@ class MomentsDetailPage extends StatelessWidget {
   }
 
   Widget _buildMomentItem({
+    required BuildContext context,
     required String avatar,
     required String name,
     required String content,
     required List<String> images,
     required String time,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -97,9 +106,18 @@ class MomentsDetailPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(color: Color(0xFFFF5A7E), fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(name, 
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor, 
+                      fontSize: 16, 
+                      fontWeight: FontWeight.bold
+                    )),
                 const SizedBox(height: 8),
-                Text(content, style: const TextStyle(fontSize: 15)),
+                Text(content, 
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isDark ? Colors.white : Colors.black
+                    )),
                 if (images.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   GridView.builder(
@@ -116,7 +134,10 @@ class MomentsDetailPage extends StatelessWidget {
                       return Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
-                          image: DecorationImage(image: NetworkImage(images[index]), fit: BoxFit.cover),
+                          image: DecorationImage(
+                            image: NetworkImage(images[index]), 
+                            fit: BoxFit.cover
+                          ),
                         ),
                       );
                     },
@@ -126,8 +147,15 @@ class MomentsDetailPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(time, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                    IconButton(icon: const Icon(Icons.more_horiz, color: Colors.grey), onPressed: () {}),
+                    Text(time, 
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey, 
+                          fontSize: 13
+                        )),
+                    IconButton(
+                      icon: Icon(Icons.more_horiz, color: isDark ? Colors.grey[400] : Colors.grey), 
+                      onPressed: () {}
+                    ),
                   ],
                 ),
               ],

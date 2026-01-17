@@ -1,4 +1,4 @@
-// lib/pages/me/settings_page.dart
+// lib/pages/me/settings_page.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +17,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storage = StorageService();
   bool _developerMode = false;
   bool? _narrationCentered;  // 改为 nullable，初始 null 表示未加载
+  String? _themeSetting;     // 新增：三状态主题设置 'light', 'dark', 'system'
   
   // API 配置相关变量
   bool _isCustomMode = true; // 默认自定义
@@ -34,6 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadDeveloperMode();
     _loadNarrationCentered();
     _loadApiConfig();
+    _loadThemeSetting();  // 修改：改为 _loadThemeSetting
   }
 
   Future<void> _loadDeveloperMode() async {
@@ -50,6 +52,15 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       setState(() {
         _narrationCentered = centered;
+      });
+    }
+  }
+
+  Future<void> _loadThemeSetting() async {
+    final themeMode = await _storage.getThemeMode();
+    if (mounted) {
+      setState(() {
+        _themeSetting = themeMode;
       });
     }
   }
@@ -115,7 +126,10 @@ class _SettingsPageState extends State<SettingsPage> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('配置已保存')),
+        SnackBar(
+          content: const Text('配置已保存'),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
       );
     }
   }
@@ -202,13 +216,128 @@ class _SettingsPageState extends State<SettingsPage> {
     await _storage.saveNarrationCentered(value);
   }
 
+  // 新增：构建主题选择器
+  Widget _buildThemeSelector() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '主题设置',
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // 选项1：强制亮色
+          RadioListTile<String>(
+            title: Text(
+              '亮色模式',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              '始终使用亮色主题',
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            value: 'light',
+            groupValue: _themeSetting,
+            onChanged: (value) async {
+              setState(() => _themeSetting = value);
+              await _storage.saveThemeMode('light');
+              _showRestartDialog();
+            },
+            activeColor: const Color(0xFFFF5A7E),
+          ),
+          
+          // 选项2：强制暗色
+          RadioListTile<String>(
+            title: Text(
+              '暗色模式',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              '始终使用暗色主题',
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            value: 'dark',
+            groupValue: _themeSetting,
+            onChanged: (value) async {
+              setState(() => _themeSetting = value);
+              await _storage.saveThemeMode('dark');
+              _showRestartDialog();
+            },
+            activeColor: const Color(0xFFFF5A7E),
+          ),
+          
+          // 选项3：跟随系统
+          RadioListTile<String>(
+            title: Text(
+              '跟随系统',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              '根据系统设置自动切换',
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            value: 'system',
+            groupValue: _themeSetting,
+            onChanged: (value) async {
+              setState(() => _themeSetting = value);
+              await _storage.saveThemeMode('system');
+              _showRestartDialog();
+            },
+            activeColor: const Color(0xFFFF5A7E),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 重启提示对话框
+  void _showRestartDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        title: Text(
+          '主题已更改',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        content: Text(
+          '需要重启应用才能使主题更改生效。\n请关闭应用后重新打开。',
+          style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '知道了',
+              style: TextStyle(color: const Color(0xFFFF5A7E)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
+      backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF2F2F2),
       appBar: AppBar(
         title: const Text("设置"),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -219,9 +348,13 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'API 配置',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
@@ -246,14 +379,33 @@ class _SettingsPageState extends State<SettingsPage> {
                         return DropdownButtonFormField<String>(
                           value: currentId,
                           isExpanded: true,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                              ),
+                            ),
                             labelText: 'API 来源',
+                            labelStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            ),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                              ),
+                            ),
                           ),
                           items: [
                             ...providers.map((p) => DropdownMenuItem(
                                   value: p.id,
-                                  child: Text(p.name),
+                                  child: Text(
+                                    p.name,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : Colors.black,
+                                    ),
+                                  ),
                                 )),
                             const DropdownMenuItem(
                               value: 'custom',
@@ -301,10 +453,35 @@ class _SettingsPageState extends State<SettingsPage> {
                 // 2. Base URL（自定义可编辑，预设锁定）
                 TextField(
                   controller: _baseUrlController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  decoration: InputDecoration(
                     labelText: 'Base URL',
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: const Color(0xFFFF5A7E),
+                      ),
+                    ),
                     hintText: 'https://api.example.com/v1',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                   ),
                   enabled: _isCustomMode, // 预设模式下禁用（锁定）
                   readOnly: !_isCustomMode,
@@ -315,9 +492,31 @@ class _SettingsPageState extends State<SettingsPage> {
                 TextField(
                   controller: _apiKeyController,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  decoration: InputDecoration(
                     labelText: 'API Key',
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: const Color(0xFFFF5A7E),
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -326,15 +525,43 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (_availableModels.isNotEmpty)
                   DropdownButtonFormField<String>(
                     value: _selectedModel.isNotEmpty ? _selectedModel : null,
-                    hint: const Text('选择模型'),
+                    hint: Text(
+                      '选择模型',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                    dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
                       labelText: '模型',
+                      labelStyle: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
                     ),
                     items: _availableModels.map((m) => DropdownMenuItem(
                           value: m,
-                          child: Text(m),
+                          child: Text(
+                            m,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
                         )).toList(),
                     onChanged: (value) {
                       if (value != null) {
@@ -345,17 +572,47 @@ class _SettingsPageState extends State<SettingsPage> {
                 else if (_isCustomMode)
                   TextField(
                     controller: _modelController,
-                    decoration: const InputDecoration(
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
                       labelText: '模型名（手动输入）',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: const Color(0xFFFF5A7E),
+                        ),
+                      ),
                       helperText: '如 deepseek-chat',
+                      helperStyle: TextStyle(
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                     ),
                     onChanged: (val) {
                       setState(() => _selectedModel = val);
                     },
                   )
                 else
-                  const Text('请选择 API 来源后自动加载模型'),
+                  Text(
+                    '请选择 API 来源后自动加载模型',
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
 
                 const SizedBox(height: 16),
 
@@ -410,36 +667,86 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          // ==================== 界面设置 ====================
-          const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          // ==================== 主题设置 ====================
+          _buildThemeSelector(),
+          const SizedBox(height: 16),
 
-          SwitchListTile(
-            title: const Text("开发者模式"),
-            subtitle: const Text("开启后可查看详细错误信息"),
-            value: _developerMode,
-            onChanged: (value) async {
-              setState(() => _developerMode = value);
-              await _storage.saveDeveloperMode(value);
-            },
-            activeThumbColor: const Color(0xFFFF5A7E),
+          // ==================== 界面设置 ====================
+          Text(
+            "界面设置", 
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            )
+          ),
+          const SizedBox(height: 8),
+
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SwitchListTile(
+              title: Text(
+                "开发者模式",
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              subtitle: Text(
+                "开启后可查看详细错误信息",
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[700],
+                ),
+              ),
+              value: _developerMode,
+              onChanged: (value) async {
+                setState(() => _developerMode = value);
+                await _storage.saveDeveloperMode(value);
+              },
+              activeThumbColor: const Color(0xFFFF5A7E),
+            ),
           ),
 
           if (_narrationCentered == null)
-            const ListTile(
-              title: Text("旁白居中显示"),
-              subtitle: Text("加载中..."),
-              trailing: CircularProgressIndicator(),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const ListTile(
+                title: Text("旁白居中显示"),
+                subtitle: Text("加载中..."),
+                trailing: CircularProgressIndicator(),
+              ),
             )
           else
-            SwitchListTile(
-              title: const Text("旁白居中显示"),
-              subtitle: const Text("开启为居中对齐，关闭为左对齐（小说风格）"),
-              value: _narrationCentered!,
-              onChanged: (value) async {
-                setState(() => _narrationCentered = value);
-                await _saveNarrationCentered(value);
-              },
-              activeThumbColor: const Color(0xFFFF5A7E),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SwitchListTile(
+                title: Text(
+                  "旁白居中显示",
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                subtitle: Text(
+                  "开启为居中对齐，关闭为左对齐（小说风格）",
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[700],
+                  ),
+                ),
+                value: _narrationCentered!,
+                onChanged: (value) async {
+                  setState(() => _narrationCentered = value);
+                  await _saveNarrationCentered(value);
+                },
+                activeThumbColor: const Color(0xFFFF5A7E),
+              ),
             ),
         ],
       ),

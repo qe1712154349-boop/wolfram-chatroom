@@ -1,8 +1,7 @@
-// lib/pages/chat/chat_room_page.dart
+// lib/pages/chat/chat_room_page.dart - 完整替换
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
@@ -36,7 +35,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String? _avatarPath;
   String? _userAvatarPath;
  
-  String _currentStatus = '空白';
+  final String _currentStatus = '空白';  // 改为 final
   bool _showUserAvatar = true;
   String _systemPrompt = '';
   bool _narrationCentered = true;
@@ -53,7 +52,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.addListener(() {
       if (!mounted) return;
       
-      final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
       
       if (currentScroll > 300.0) {
@@ -124,7 +122,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.didChangeMetrics();
   }
 
-  void _scrollWithSpring({double velocity = 0.0}) {
+  void _scrollWithSpring() {  // 移除 velocity 参数
     if (!mounted || !_scrollController.hasClients) return;
     
     _scrollController.animateTo(
@@ -315,7 +313,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           _messages.add(Message(
             id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
             role: 'assistant',
-            rawContent: '出错啦… $e',
+            rawContent: '出错啦… $e',  // 修复字符串插值
             timestamp: errorTimestamp,
             messageType: MessageType.ai_dialogue,
           ));
@@ -553,11 +551,15 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppTheme.appBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 改为动态主题
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        backgroundColor: AppTheme.chatRoomTop,
+        backgroundColor: isDark 
+            ? Colors.grey[900] // 暗色模式下的聊天室顶部颜色
+            : AppTheme.chatRoomTopLight, // 亮色模式下的粉色
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -569,12 +571,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: const Color(0xFFFFD2DD),
+                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
                 backgroundImage: _avatarPath != null
                     ? FileImage(File(_avatarPath!))
                     : null,
                 child: _avatarPath == null
-                    ? const Icon(Icons.person, size: 18, color: Colors.white)
+                    ? Icon(
+                        Icons.person, 
+                        size: 18, 
+                        color: isDark ? Colors.white : Colors.white
+                      )
                     : null,
               ),
               const SizedBox(width: 10),
@@ -583,15 +589,18 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 children: [
                   Text(
                     _characterName,
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     '状态：$_currentStatus',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey, 
+                      fontSize: 12
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -642,18 +651,27 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: const Color(0xFFFFD2DD),
+                                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
                                 backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                child: _avatarPath == null ? const Icon(Icons.person, size: 20, color: Colors.white) : null,
+                                child: _avatarPath == null 
+                                    ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                    : null,
                               ),
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFD2DD),
+                                  color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
                                   borderRadius: BorderRadius.circular(18),
                                 ),
-                                child: const Text("正在输入...", style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.4)),
+                                child: Text(
+                                  "正在输入...", 
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    color: isDark ? Colors.white : Colors.black87, 
+                                    height: 1.4
+                                  )
+                                ),
                               ),
                             ],
                           ),
@@ -684,11 +702,18 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
+                          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight, 
+                            width: 1
+                          ),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                          icon: Icon(
+                            Icons.arrow_downward, 
+                            color: isDark ? const Color(0xFFF95685) : const Color(0xFFFF5A7E), 
+                            size: 20
+                          ),
                           onPressed: () {
                             _scrollToBottom(isKeyboard: false);
                             setState(() => _showScrollToBottomButton = false);
@@ -705,7 +730,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           // 底部输入区域
           AnimatedContainer(
             duration: const Duration(milliseconds: 2),
-            color: AppTheme.messageInputBackground,
+            color: isDark ? AppTheme.messageInputBackgroundDark : AppTheme.messageInputBackgroundLight,
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
@@ -717,8 +742,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, size: 22),
-                      color: Colors.grey[700],
+                      icon: Icon(
+                        Icons.add_circle_outline, 
+                        size: 22,
+                        color: isDark ? Colors.grey[400] : Colors.grey[700]
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () {},
@@ -728,9 +756,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                       child: Container(
                         constraints: const BoxConstraints(minHeight: 40),
                         decoration: BoxDecoration(
-                          color: AppTheme.messageFieldBackground,
+                          color: isDark ? AppTheme.messageFieldBackgroundDark : AppTheme.messageFieldBackgroundLight,
                           borderRadius: BorderRadius.circular(36),
-                          border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
+                          border: Border.all(
+                            color: isDark ? AppTheme.messageFieldBorderDark : AppTheme.messageFieldBorderLight, 
+                            width: 1
+                          ),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                         child: TextField(
@@ -740,12 +771,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                           minLines: 1,
                           textInputAction: TextInputAction.send,
                           keyboardType: TextInputType.multiline,
-                          style: const TextStyle(fontSize: 15),
-                          decoration: const InputDecoration(
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: isDark ? Colors.white : Colors.black
+                          ),
+                          decoration: InputDecoration(
                             hintText: "输入消息...",
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
-                            hintStyle: TextStyle(color: Color(0xFF8E8E93)),
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey[500] : const Color(0xFF8E8E93)
+                            ),
                           ),
                           onSubmitted: (value) {
                             final text = _controller.text.trim();
@@ -788,15 +824,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   void _showAISetting(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -806,17 +844,31 @@ class _ChatRoomPageState extends State<ChatRoomPage>
               child: Container(
                 width: 36,
                 height: 5,
-                decoration: BoxDecoration(color: const Color(0xFFC7C7CC), borderRadius: BorderRadius.circular(2.5)),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[700] : const Color(0xFFC7C7CC), 
+                  borderRadius: BorderRadius.circular(2.5)
+                ),
               ),
             ),
             const SizedBox(height: 20),
-            Text("$_characterName 人物设定", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              "$_characterName 人物设定", 
+              style: TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black
+              )
+            ),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   _systemPrompt,
-                  style: const TextStyle(fontSize: 15, height: 1.6, color: Color(0xFF3C3C43)),
+                  style: TextStyle(
+                    fontSize: 15, 
+                    height: 1.6, 
+                    color: isDark ? Colors.grey[300] : const Color(0xFF3C3C43)
+                  ),
                 ),
               ),
             ),

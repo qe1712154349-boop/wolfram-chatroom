@@ -1,3 +1,4 @@
+// lib/pages/main_screen.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
@@ -25,7 +26,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -34,7 +35,9 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFFFF5A7E),
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Theme.of(context).unselectedWidgetColor,
+        backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '心事'),
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: '聊天'),

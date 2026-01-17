@@ -3,16 +3,68 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 109 bytes
+Size: 1498 bytes
 
-Modified: 01/02/2026 17:42:57
+Modified: 01/17/2026 17:58:00
 
 ========================================
 
 import 'package:flutter/material.dart';
-import 'app/app.dart';
+import 'app/theme.dart';  // 关键：这里导入 AppTheme
+import 'pages/main_screen.dart';
+import 'pages/chat/chat_character_edit_page.dart';
+import 'pages/me/profile_settings_page.dart';
+import 'services/storage_service.dart';
 
-void main() => runApp(const MyBunnyApp());
+void main() {
+  runApp(const MyBunnyApp());
+}
+
+class MyBunnyApp extends StatefulWidget {
+  const MyBunnyApp({super.key});
+
+  @override
+  State<MyBunnyApp> createState() => _MyBunnyAppState();
+}
+
+class _MyBunnyAppState extends State<MyBunnyApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final storage = StorageService();
+    final savedMode = await storage.getThemeMode();
+    setState(() {
+      if (savedMode == 'dark') {
+        _themeMode = ThemeMode.dark;
+      } else if (savedMode == 'light') {
+        _themeMode = ThemeMode.light;
+      } else {
+        _themeMode = ThemeMode.system;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: _themeMode,
+      home: const MainScreen(),
+      routes: {
+        '/character-edit': (context) => const ChatCharacterEditPage(),
+        '/profile-settings': (context) => const ProfileSettingsPage(),
+      },
+    );
+  }
+}
 
 
 
@@ -57,24 +109,23 @@ class MyBunnyApp extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\app\theme.dart
 
-Size: 2753 bytes
+Size: 4536 bytes
 
-Modified: 01/17/2026 02:52:18
+Modified: 01/17/2026 18:07:58
 
 ========================================
 
-// 修改后的 lib/app/theme.dart
+// lib/app/theme.dart
 import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData get lightTheme => ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFFDF7F7), // 全部页面背景 #FDF7F7
+        scaffoldBackgroundColor: const Color(0xFFFDF7F7),
         primaryColor: const Color(0xFFFF5A7E),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           selectedItemColor: Color(0xFFFF5A7E),
           type: BottomNavigationBarType.fixed,
         ),
-        // 添加字体配置
         textTheme: const TextTheme(
           bodyMedium: TextStyle(
             fontFamily: 'System',
@@ -85,33 +136,77 @@ class AppTheme {
         ),
       );
 
-  // 新的纯色方案
-  static const Color appBackground = Color(0xFFFDF7F7); // 全部页面背景
+  // ── 新增：夜间模式主题 ──
+static ThemeData get darkTheme => ThemeData(
+  brightness: Brightness.dark,
+  scaffoldBackgroundColor: const Color(0xFF060405), // 主背景
+  primaryColor: const Color(0xFFF95685),           // 强调色（玫红）
+  primaryColorDark: const Color(0xFFD6406E),       // 更暗的强调色（可选备用）
+  cardColor: const Color(0xFF1A1A1A),              // 卡片、ListTile 背景
+  dialogBackgroundColor: const Color(0xFF1E1E1E),
+  canvasColor: const Color(0xFF121212),            // 很多地方的默认背景
+  dividerColor: Colors.grey[800],
+  appBarTheme: AppBarTheme(
+    backgroundColor: const Color(0xFF0A0A0A),
+    foregroundColor: Colors.white,
+    elevation: 0,
+  ),
+  bottomNavigationBarTheme: BottomNavigationBarThemeData(
+    backgroundColor: const Color(0xFF0A0A0A),
+    selectedItemColor: const Color(0xFFF95685),
+    unselectedItemColor: Colors.grey[400],
+    type: BottomNavigationBarType.fixed,
+  ),
+  textTheme: TextTheme(
+    bodyLarge: TextStyle(color: Colors.grey[100]),
+    bodyMedium: TextStyle(color: Colors.grey[200], fontSize: 16, height: 1.4),
+    bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
+    titleMedium: TextStyle(color: Colors.white),
+    labelLarge: TextStyle(color: Colors.white),
+  ),
+  iconTheme: IconThemeData(color: Colors.grey[300]),
+  inputDecorationTheme: InputDecorationTheme(
+    fillColor: const Color(0xFF252525),
+    filled: true,
+    border: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.grey[700]!),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.grey[700]!),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: const Color(0xFFF95685)),
+    ),
+  ),
+);
+
+  // 保留你原来的常量（light 模式用）
+  static const Color appBackground = Color(0xFFFDF7F7);
   static const Color pinkAccent = Color(0xFFFF5A7E);
-  static const Color aiBubbleColor = Color(0xFFFFFFFF); // AI气泡背景
-  static const Color aiBubbleBorder = Color(0xFFF1DCDE); // AI气泡边框
-  static const Color userBubbleColor = Color(0xFFFFEAEF); // 用户气泡背景
-  static const Color userBubbleBorder = Color(0xFFEDD8DD); // 用户气泡边框
-  static const Color chatRoomTop = Color(0xFFFCECEF); // 聊天室顶部颜色
-  static const Color messageInputBackground = Color(0xFFFBDCE1); // 底部发消息大矩形
-  static const Color messageFieldBackground = Color(0xFFFFFFFF); // 发消息框内背景
-  static const Color messageFieldBorder = Color(0xFFB1A9AB); // 发消息框边框
+  static const Color aiBubbleColor = Color(0xFFFFFFFF);
+  static const Color aiBubbleBorder = Color(0xFFF1DCDE);
+  static const Color userBubbleColor = Color(0xFFFFEAEF);
+  static const Color userBubbleBorder = Color(0xFFEDD8DD);
+  static const Color chatRoomTop = Color(0xFFFCECEF);
+  static const Color messageInputBackground = Color(0xFFFBDCE1);
+  static const Color messageFieldBackground = Color(0xFFFFFFFF);
+  static const Color messageFieldBorder = Color(0xFFB1A9AB);
   
   // 文字颜色
   static const Color primaryText = Color(0xFF1D1D1F);
   static const Color secondaryText = Color(0xFF8E8E93);
   static const Color narrationText = Color(0xFF6D6D6F);
-  static const Color userTextColor = Color(0xFFBB2D71); // 添加：右边用户气泡文字色
+  static const Color userTextColor = Color(0xFFBB2D71);
   
   // 气泡圆角
   static const double bubbleBorderRadius = 18.0;
   
   // 旁白样式
   static const TextStyle narrationStyle = TextStyle(
-    fontSize: 13,             // 从14改为13
+    fontSize: 13,
     color: narrationText,
     fontStyle: FontStyle.italic,
-    height: 1.35,             // 从1.4改为1.35
+    height: 1.35,
     fontWeight: FontWeight.w400,
   );
   
@@ -130,6 +225,13 @@ class AppTheme {
     fontWeight: FontWeight.w500,
     letterSpacing: 0.3,
   );
+  
+  // 新增：暗色模式专用颜色
+  static const Color darkBackground = Color(0xFF060405);
+  static const Color darkUserBubble = Color(0xFFF95685);
+  static const Color darkAiBubble = Color(0xFF060405);
+  static const Color darkBubbleBorder = Color(0xFFD6CFD2);
+  static const double bubbleBorderWidth = 3.0;
   
   // 辅助方法：创建带透明度的颜色
   static Color withOpacity(Color color, double opacity) {
@@ -3478,9 +3580,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 17280 bytes
+Size: 18290 bytes
 
-Modified: 01/17/2026 15:41:27
+Modified: 01/17/2026 17:58:20
 
 ========================================
 
@@ -3503,6 +3605,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storage = StorageService();
   bool _developerMode = false;
   bool? _narrationCentered;  // 改为 nullable，初始 null 表示未加载
+  bool _isDarkModeForced = false; // 新增：夜间模式开关状态
   
   // API 配置相关变量
   bool _isCustomMode = true; // 默认自定义
@@ -3520,6 +3623,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadDeveloperMode();
     _loadNarrationCentered();
     _loadApiConfig();
+    _loadThemeMode();
   }
 
   Future<void> _loadDeveloperMode() async {
@@ -3536,6 +3640,15 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       setState(() {
         _narrationCentered = centered;
+      });
+    }
+  }
+
+  Future<void> _loadThemeMode() async {
+    final themeMode = await _storage.getThemeMode();
+    if (mounted) {
+      setState(() {
+        _isDarkModeForced = themeMode == 'dark';
       });
     }
   }
@@ -3906,6 +4019,25 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (value) async {
               setState(() => _developerMode = value);
               await _storage.saveDeveloperMode(value);
+            },
+            activeThumbColor: const Color(0xFFFF5A7E),
+          ),
+
+          // 新增：夜间模式开关
+          SwitchListTile(
+            title: const Text("夜间模式"),
+            subtitle: const Text("开启后强制使用暗色主题，关闭则跟随系统"),
+            value: _isDarkModeForced,
+            onChanged: (bool value) async {
+              setState(() {
+                _isDarkModeForced = value;
+              });
+              if (value) {
+                await _storage.saveThemeMode('dark');
+              } else {
+                await _storage.saveThemeMode('system');
+              }
+              // 需要重启App才能生效
             },
             activeThumbColor: const Color(0xFFFF5A7E),
           ),
@@ -4330,9 +4462,9 @@ Modified: 01/02/2026 16:37:48
 
 File: D:\D\my_new_app\lib\services\storage_service.dart
 
-Size: 9071 bytes
+Size: 9447 bytes
 
-Modified: 01/17/2026 02:52:18
+Modified: 01/17/2026 17:48:35
 
 ========================================
 
@@ -4361,6 +4493,17 @@ class StorageService {
   Future<bool> getDeveloperMode() async {
     final prefs = await _prefs;
     return prefs.getBool('developer_mode') ?? false;
+  }
+
+    // ── 新增：夜间模式相关 ──
+  Future<void> saveThemeMode(String mode) async {
+    final prefs = await _prefs;
+    await prefs.setString('theme_mode', mode); // 'light', 'dark', 'system'
+  }
+
+  Future<String> getThemeMode() async {
+    final prefs = await _prefs;
+    return prefs.getString('theme_mode') ?? 'system'; // 默认跟随系统
   }
 
   // ── 聊天记录相关 ──（必须保留）
