@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
+import '../../app/theme.dart';  // 导入 AppTheme 以使用暗色常量
 
 class ChatRoomSettingsPage extends StatefulWidget {
   final String characterName;
@@ -23,12 +24,15 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
     final bool? confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("清空聊天记录"),
-        content: const Text("确定要清空所有聊天记录吗？此操作不可恢复。"),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF1E1E1E) 
+            : Colors.white,
+        title: Text("清空聊天记录", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black)),
+        content: Text("确定要清空所有聊天记录吗？此操作不可恢复。", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.black87)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("取消"),
+            child: Text("取消", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -48,18 +52,23 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8FA),
+      backgroundColor: isDark ? AppTheme.darkBackground : const Color(0xFFFFF8FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF8FA),
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFF8FA),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           "${widget.characterName} 设置",
-          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: ListView(
@@ -70,11 +79,11 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
             padding: const EdgeInsets.all(20),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(26),
+                  color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
                   spreadRadius: 1,
                   blurRadius: 5,
                 ),
@@ -84,12 +93,12 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: Colors.pinkAccent,
+                  backgroundColor: isDark ? const Color(0xFF2A1A1A) : Colors.pinkAccent,
                   backgroundImage: widget.avatarPath != null
                       ? FileImage(File(widget.avatarPath!))
                       : null,
                   child: widget.avatarPath == null
-                      ? const Icon(Icons.person, size: 36, color: Colors.white)
+                      ? Icon(Icons.person, size: 36, color: isDark ? Colors.white : Colors.white)
                       : null,
                 ),
                 const SizedBox(width: 16),
@@ -99,21 +108,22 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
                     children: [
                       Text(
                         widget.characterName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         "AI角色设置",
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.pinkAccent),
+                  icon: Icon(Icons.edit, color: isDark ? const Color(0xFFF95685) : Colors.pinkAccent),
                   onPressed: () {
                     // 这里可以跳转到角色编辑页面
                     // Navigator.push(...)
@@ -157,14 +167,16 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-             color: Colors.grey.withAlpha(26), // 0.1 opacity ≈ 26 alpha (255 * 0.1 ≈ 26)
+            color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
             spreadRadius: 1,
             blurRadius: 3,
           ),
@@ -182,13 +194,16 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.white : Colors.black,
+          ),
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: isDark ? Colors.grey[400] : Colors.grey),
         onTap: onTap,
       ),
     );

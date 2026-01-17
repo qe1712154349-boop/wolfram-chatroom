@@ -145,6 +145,8 @@ class AppTheme {
   
   // 气泡圆角
   static const double bubbleBorderRadius = 18.0;
+
+  static get darkBackground => null;
   
   // 旁白样式
   static TextStyle narrationStyle(BuildContext context) => TextStyle(
