@@ -1,6 +1,6 @@
-// lib/main.dart - 完整替换
+// lib/main.dart - 完整修复版本
 import 'package:flutter/material.dart';
-import 'app/theme.dart';  // 关键：这里导入 AppTheme
+import 'app/theme.dart';  // 使用修复后的 AppTheme
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
@@ -29,23 +29,26 @@ class _MyBunnyAppState extends State<MyBunnyApp> {
   Future<void> _loadThemeMode() async {
     final storage = StorageService();
     final savedMode = await storage.getThemeMode();
-    setState(() {
-      if (savedMode == 'dark') {
-        _themeMode = ThemeMode.dark;
-      } else if (savedMode == 'light') {
-        _themeMode = ThemeMode.light;
-      } else {
-        _themeMode = ThemeMode.system;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        if (savedMode == 'dark') {
+          _themeMode = ThemeMode.dark;
+        } else if (savedMode == 'light') {
+          _themeMode = ThemeMode.light;
+        } else {
+          _themeMode = ThemeMode.system;
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // 使用修复后的主题（已添加 useMaterial3: true）
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme, // 确保暗色主题已设置
+      darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
       home: const MainScreen(),
       routes: {

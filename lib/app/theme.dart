@@ -1,8 +1,10 @@
-// lib/app/theme.dart - 完整替换
+// lib/app/theme.dart - 完整修复版本
 import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData get lightTheme => ThemeData(
+        // 修复1：添加 useMaterial3: true
+        useMaterial3: true,
         brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFFDF7F7),
         primaryColor: const Color(0xFFFF5A7E),
@@ -56,9 +58,11 @@ class AppTheme {
       );
 
   static ThemeData get darkTheme => ThemeData(
+        // 修复2：添加 useMaterial3: true
+        useMaterial3: true,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF060405), // 主背景
-        primaryColor: const Color(0xFFF95685),           // 强调色（玫红）
+        scaffoldBackgroundColor: const Color(0xFF060405),
+        primaryColor: const Color(0xFFF95685),       // 强调色（玫红）
         cardColor: const Color(0xFF1A1A1A),              // 卡片、ListTile 背景
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF0A0A0A),
