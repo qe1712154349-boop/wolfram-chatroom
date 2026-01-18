@@ -278,29 +278,43 @@ Widget _buildAvatarSection() {
   );
 }
 
- // 开关组件 - 带底部分割线
+// 开关组件 - 使用版本A的UI设计，保持版本B的暗色模式支持
 Widget _buildCustomFormatSwitch() {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   
   return Container(
-    padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
     decoration: BoxDecoration(
       border: Border(
         bottom: BorderSide(
-           color: isDark ? Colors.grey.shade700 : Colors.grey.shade300, // 使用 .shade 避免空值
+          color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
           width: 1,
         ),
       ),
     ),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          '启用自定义格式',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: isDark ? Colors.white : Colors.grey[800], // 动态文本颜色
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '启用自定义格式',  // 使用版本A的标题
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isDark ? Colors.white : Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '使用自定义的格式化指令覆盖默认格式',  // 版本A的描述文字
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  fontSize: 13,
+                ),
+              ),
+            ],
           ),
         ),
         Switch(
@@ -318,97 +332,65 @@ Widget _buildCustomFormatSwitch() {
   );
 }
 
-  // 🎯 关键修改：两个独立的输入框
+  // 🎯 关键修改：使用版本A的UI设计，保持版本B的双控制器逻辑
   Widget _buildCustomFormatSection() {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      if (!_enableCustomFormat) ...[
-        // 关闭状态：普通提示词输入框
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey[800] : Colors.grey[200]!.withOpacity(0.5), // 动态背景
-            borderRadius: BorderRadius.circular(25),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 使用版本A的输入框设计，但保持版本B的双控制器逻辑
+        TextField(
+          controller: _enableCustomFormat 
+              ? _xmlFormatController  // 开启时使用XML控制器
+              : _plainPromptController, // 关闭时使用普通提示词控制器
+          maxLines: 4,
+          minLines: 3,
+          enabled: true,  // 始终保持启用，内容根据开关切换
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: isDark 
+                ? Colors.grey[800] 
+                : (_enableCustomFormat ? Colors.white : Colors.grey[100]),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.all(16),
+            hintText: _enableCustomFormat 
+                ? '输入自定义格式指令...'  // 版本A的提示文字
+                : '输入普通对话格式指令...',
+            hintStyle: TextStyle(
+              color: isDark ? Colors.grey[500] : Colors.grey[400],
+            ),
           ),
-          child: TextField(
-            controller: _plainPromptController,
-            maxLines: 4,
-            minLines: 3,
-            enabled: true,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: isDark ? Colors.grey[800] : Colors.grey[200]!.withOpacity(0.5),
-              
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              
-              contentPadding: const EdgeInsets.all(16),
-              hintText: '粘贴普通提示词...',
-              hintStyle: TextStyle(
-                color: isDark ? Colors.grey[500] : Colors.grey,
-              ),
-            ),
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.grey[700],
-            ),
+          style: TextStyle(
+            color: isDark 
+                ? Colors.white 
+                : (_enableCustomFormat ? Colors.black87 : Colors.grey[600]),
           ),
         ),
-      ] else ...[
-        // 开启状态：XML格式指令输入框
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey[800] : Colors.white.withOpacity(0.7), // 动态背景
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: TextField(
-            controller: _xmlFormatController,
-            maxLines: 4,
-            minLines: 3,
-            enabled: true,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: isDark ? Colors.grey[800] : Colors.white.withOpacity(0.7),
-              
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              
-              contentPadding: const EdgeInsets.all(16),
-              hintText: '粘贴XML格式指令...',
-              hintStyle: TextStyle(
-                color: isDark ? Colors.grey[500] : Colors.grey,
-              ),
-            ),
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+        const SizedBox(height: 8),
+        Text(
+          _enableCustomFormat
+              ? '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"'  // 版本A的示例文字
+              : '示例: "你是一位{{角色}}，请以{{对话}}的语气回复"',
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 12,
           ),
         ),
       ],
-    ],
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -509,8 +491,6 @@ Text(
 ),
             const SizedBox(height: 24),
 
-            // 在build方法的Column中找到这段：
-
             // 开场白
             _buildTextField(
               label: '开场白（对话开始时使用）',
@@ -518,17 +498,17 @@ Text(
               maxLines: 3,
               hintText: '请输入开场白（对话开始时使用）',
             ),
-            const SizedBox(height: 24), // 保持24px间距
+            const SizedBox(height: 32), // 保持开场白底部到自定义格式中间的空白间距
 
-            // 自定义格式开关
+            // 自定义格式开关 - 使用版本A的UI设计
             _buildCustomFormatSwitch(),
-            const SizedBox(height: 23.5), // 改为23.5px空白
+            const SizedBox(height: 16), // 使用版本A的间距
 
-            // 🎯 关键修改：显示不同的输入框
+            // 🎯 关键修改：显示不同的输入框 - 使用版本A的UI设计
             _buildCustomFormatSection(),
             const SizedBox(height: 24),
 
-            // 保存按钮...
+            // 保存按钮
             SizedBox(
               width: double.infinity,
               height: 56,
