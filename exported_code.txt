@@ -74,22 +74,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> {
 
 ========================================
 
-File: D:\D\my_new_app\lib\app\app.dart
-
-Size: 143 bytes
-
-Modified: 01/18/2026 15:43:26
-
-========================================
-
-// lib/app/app.dart
-// 这个文件暂时废弃，已迁移到 main.dart 的 Stateful 版本
-// 如果需要导出什么，可以以后再加
-
-
-
-========================================
-
 File: D:\D\my_new_app\lib\app\theme.dart
 
 Size: 9257 bytes
@@ -864,7 +848,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
 Size: 20297 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/18/2026 17:49:09
 
 ========================================
 
@@ -3623,7 +3607,7 @@ File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
 
 Size: 9306 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/18/2026 17:12:30
 
 ========================================
 
@@ -3954,7 +3938,7 @@ File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
 Size: 29429 bytes
 
-Modified: 01/18/2026 15:43:37
+Modified: 01/18/2026 17:02:28
 
 ========================================
 
