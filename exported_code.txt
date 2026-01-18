@@ -3,14 +3,15 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 1498 bytes
+Size: 1648 bytes
 
-Modified: 01/17/2026 17:58:00
+Modified: 01/18/2026 16:29:28
 
 ========================================
 
+// lib/main.dart - 完整修复版本
 import 'package:flutter/material.dart';
-import 'app/theme.dart';  // 关键：这里导入 AppTheme
+import 'app/theme.dart';  // 使用修复后的 AppTheme
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
@@ -39,21 +40,24 @@ class _MyBunnyAppState extends State<MyBunnyApp> {
   Future<void> _loadThemeMode() async {
     final storage = StorageService();
     final savedMode = await storage.getThemeMode();
-    setState(() {
-      if (savedMode == 'dark') {
-        _themeMode = ThemeMode.dark;
-      } else if (savedMode == 'light') {
-        _themeMode = ThemeMode.light;
-      } else {
-        _themeMode = ThemeMode.system;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        if (savedMode == 'dark') {
+          _themeMode = ThemeMode.dark;
+        } else if (savedMode == 'light') {
+          _themeMode = ThemeMode.light;
+        } else {
+          _themeMode = ThemeMode.system;
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // 使用修复后的主题（已添加 useMaterial3: true）
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
@@ -72,36 +76,15 @@ class _MyBunnyAppState extends State<MyBunnyApp> {
 
 File: D:\D\my_new_app\lib\app\app.dart
 
-Size: 772 bytes
+Size: 143 bytes
 
-Modified: 01/17/2026 02:52:18
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
 // lib/app/app.dart
-import 'package:flutter/material.dart';
-import 'theme.dart';
-import '../pages/main_screen.dart';
-import '../pages/chat/chat_character_edit_page.dart'; // 导入角色编辑页面
-import '../pages/me/profile_settings_page.dart'; // 导入用户资料设置页面
-
-class MyBunnyApp extends StatelessWidget {
-  const MyBunnyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const MainScreen(),
-      // 添加路由配置
-      routes: {
-        '/character-edit': (context) => const ChatCharacterEditPage(),
-        '/profile-settings': (context) => const ProfileSettingsPage(),
-      },
-    );
-  }
-}
+// 这个文件暂时废弃，已迁移到 main.dart 的 Stateful 版本
+// 如果需要导出什么，可以以后再加
 
 
 
@@ -109,133 +92,256 @@ class MyBunnyApp extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\app\theme.dart
 
-Size: 4536 bytes
+Size: 9257 bytes
 
-Modified: 01/17/2026 18:07:58
+Modified: 01/18/2026 16:39:06
 
 ========================================
 
-// lib/app/theme.dart
+// lib/app/theme.dart - 完整修复版本
 import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData get lightTheme => ThemeData(
+        // 修复1：添加 useMaterial3: true
+        useMaterial3: true,
+        brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFFDF7F7),
         primaryColor: const Color(0xFFFF5A7E),
+        cardColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFFDF7F7),
+          elevation: 0,
+          foregroundColor: Color(0xFF1D1D1F),
+        ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
           selectedItemColor: Color(0xFFFF5A7E),
+          unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
         ),
         textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Color(0xFF1D1D1F)),
           bodyMedium: TextStyle(
             fontFamily: 'System',
             fontSize: 16,
             fontWeight: FontWeight.normal,
             height: 1.4,
+            color: Color(0xFF1D1D1F),
           ),
+          bodySmall: TextStyle(color: Color(0xFF6D6D6F)),
+          titleMedium: TextStyle(color: Color(0xFF1D1D1F)),
+          labelLarge: TextStyle(color: Color(0xFF1D1D1F)),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF1D1D1F)),
+        dividerColor: Colors.grey[300],
+        inputDecorationTheme: InputDecorationTheme(
+          fillColor: Colors.white,
+          filled: true,
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey[400]!),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey[400]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
+          ),
+        ),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFFFF5A7E),
+          background: Color(0xFFFDF7F7),
+          surface: Colors.white,
+          onBackground: Color(0xFF1D1D1F),
+          onSurface: Color(0xFF1D1D1F),
         ),
       );
 
-  // ── 新增：夜间模式主题 ──
-static ThemeData get darkTheme => ThemeData(
-  brightness: Brightness.dark,
-  scaffoldBackgroundColor: const Color(0xFF060405), // 主背景
-  primaryColor: const Color(0xFFF95685),           // 强调色（玫红）
-  primaryColorDark: const Color(0xFFD6406E),       // 更暗的强调色（可选备用）
-  cardColor: const Color(0xFF1A1A1A),              // 卡片、ListTile 背景
-  dialogBackgroundColor: const Color(0xFF1E1E1E),
-  canvasColor: const Color(0xFF121212),            // 很多地方的默认背景
-  dividerColor: Colors.grey[800],
-  appBarTheme: AppBarTheme(
-    backgroundColor: const Color(0xFF0A0A0A),
-    foregroundColor: Colors.white,
-    elevation: 0,
-  ),
-  bottomNavigationBarTheme: BottomNavigationBarThemeData(
-    backgroundColor: const Color(0xFF0A0A0A),
-    selectedItemColor: const Color(0xFFF95685),
-    unselectedItemColor: Colors.grey[400],
-    type: BottomNavigationBarType.fixed,
-  ),
-  textTheme: TextTheme(
-    bodyLarge: TextStyle(color: Colors.grey[100]),
-    bodyMedium: TextStyle(color: Colors.grey[200], fontSize: 16, height: 1.4),
-    bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
-    titleMedium: TextStyle(color: Colors.white),
-    labelLarge: TextStyle(color: Colors.white),
-  ),
-  iconTheme: IconThemeData(color: Colors.grey[300]),
-  inputDecorationTheme: InputDecorationTheme(
-    fillColor: const Color(0xFF252525),
-    filled: true,
-    border: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.grey[700]!),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.grey[700]!),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: const Color(0xFFF95685)),
-    ),
-  ),
-);
+  static ThemeData get darkTheme => ThemeData(
+        // 修复2：添加 useMaterial3: true
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF060405),
+        primaryColor: const Color(0xFFF95685),       // 强调色（玫红）
+        cardColor: const Color(0xFF1A1A1A),              // 卡片、ListTile 背景
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0A0A0A),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFF0A0A0A),
+          selectedItemColor: Color(0xFFF95685),
+          unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed,
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: Colors.grey[100]),
+          bodyMedium: TextStyle(color: Colors.grey[200], fontSize: 16, height: 1.4),
+          bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
+          titleMedium: TextStyle(color: Colors.white),
+          labelLarge: TextStyle(color: Colors.white),
+        ),
+        iconTheme: IconThemeData(color: Colors.grey[300]),
+        dividerColor: Colors.grey[800],
+        inputDecorationTheme: InputDecorationTheme(
+          fillColor: const Color(0xFF252525),
+          filled: true,
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey[700]!),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey[700]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: const Color(0xFFF95685)),
+          ),
+        ),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFF95685),
+          background: Color(0xFF060405),
+          surface: Color(0xFF1A1A1A),
+          onBackground: Colors.white,
+          onSurface: Colors.white,
+        ),
+      );
 
-  // 保留你原来的常量（light 模式用）
-  static const Color appBackground = Color(0xFFFDF7F7);
+  // 保留你原来的常量，但添加暗色版本
+  static const Color appBackgroundLight = Color(0xFFFDF7F7);
+  static const Color appBackgroundDark = Color(0xFF060405);
+  
   static const Color pinkAccent = Color(0xFFFF5A7E);
-  static const Color aiBubbleColor = Color(0xFFFFFFFF);
-  static const Color aiBubbleBorder = Color(0xFFF1DCDE);
-  static const Color userBubbleColor = Color(0xFFFFEAEF);
-  static const Color userBubbleBorder = Color(0xFFEDD8DD);
-  static const Color chatRoomTop = Color(0xFFFCECEF);
-  static const Color messageInputBackground = Color(0xFFFBDCE1);
-  static const Color messageFieldBackground = Color(0xFFFFFFFF);
-  static const Color messageFieldBorder = Color(0xFFB1A9AB);
+  static const Color pinkAccentDark = Color(0xFFF95685);
+  
+  // 亮色模式气泡颜色
+  static const Color aiBubbleColorLight = Color(0xFFFFFFFF);
+  static const Color aiBubbleBorderLight = Color(0xFFF1DCDE);
+  static const Color userBubbleColorLight = Color(0xFFFFEAEF);
+  static const Color userBubbleBorderLight = Color(0xFFEDD8DD);
+  
+  // 暗色模式气泡颜色
+  static const Color aiBubbleColorDark = Color(0xFF1A1A1A);
+  static const Color aiBubbleBorderDark = Color(0xFF333333);
+  static const Color userBubbleColorDark = Color(0xFFF95685);
+  static const Color userBubbleBorderDark = Color(0xFFD6406E);
+  
+  static const Color chatRoomTopLight = Color(0xFFFCECEF);
+  static const Color chatRoomTopDark = Color(0xFF0A0A0A);
+  
+  static const Color messageInputBackgroundLight = Color(0xFFFBDCE1);
+  static const Color messageInputBackgroundDark = Color(0xFF121212);
+  
+  static const Color messageFieldBackgroundLight = Color(0xFFFFFFFF);
+  static const Color messageFieldBackgroundDark = Color(0xFF252525);
+  
+  static const Color messageFieldBorderLight = Color(0xFFB1A9AB);
+  static const Color messageFieldBorderDark = Color(0xFF444444);
   
   // 文字颜色
-  static const Color primaryText = Color(0xFF1D1D1F);
-  static const Color secondaryText = Color(0xFF8E8E93);
-  static const Color narrationText = Color(0xFF6D6D6F);
-  static const Color userTextColor = Color(0xFFBB2D71);
+  static const Color primaryTextLight = Color(0xFF1D1D1F);
+  static const Color primaryTextDark = Color(0xFFFFFFFF);
+  static const Color secondaryTextLight = Color(0xFF8E8E93);
+  static const Color secondaryTextDark = Color(0xFF9E9E9E);
+  static const Color narrationTextLight = Color(0xFF6D6D6F);
+  static const Color narrationTextDark = Color(0xFFAAAAAA);
+  static const Color userTextColorLight = Color(0xFFBB2D71);
+  static const Color userTextColorDark = Color(0xFFFFFFFF);
   
   // 气泡圆角
   static const double bubbleBorderRadius = 18.0;
+
+  static get darkBackground => null;
   
   // 旁白样式
-  static const TextStyle narrationStyle = TextStyle(
+  static TextStyle narrationStyle(BuildContext context) => TextStyle(
     fontSize: 13,
-    color: narrationText,
+    color: Theme.of(context).brightness == Brightness.dark 
+        ? narrationTextDark 
+        : narrationTextLight,
     fontStyle: FontStyle.italic,
     height: 1.35,
     fontWeight: FontWeight.w400,
   );
   
   // 对话样式
-  static const TextStyle dialogueStyle = TextStyle(
+  static TextStyle dialogueStyle(BuildContext context) => TextStyle(
     fontSize: 16,
-    color: primaryText,
+    color: Theme.of(context).brightness == Brightness.dark 
+        ? primaryTextDark 
+        : primaryTextLight,
     height: 1.4,
     fontWeight: FontWeight.normal,
   );
   
   // 系统时间样式
-  static const TextStyle systemTimeStyle = TextStyle(
+  static TextStyle systemTimeStyle(BuildContext context) => TextStyle(
     fontSize: 12,
-    color: secondaryText,
+    color: Theme.of(context).brightness == Brightness.dark 
+        ? secondaryTextDark 
+        : secondaryTextLight,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.3,
   );
   
-  // 新增：暗色模式专用颜色
-  static const Color darkBackground = Color(0xFF060405);
-  static const Color darkUserBubble = Color(0xFFF95685);
-  static const Color darkAiBubble = Color(0xFF060405);
-  static const Color darkBubbleBorder = Color(0xFFD6CFD2);
-  static const double bubbleBorderWidth = 3.0;
+  // 根据主题获取颜色
+  static Color getAppBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? appBackgroundDark 
+        : appBackgroundLight;
+  }
   
-  // 辅助方法：创建带透明度的颜色
-  static Color withOpacity(Color color, double opacity) {
-    return color.withValues(alpha: (opacity * 255).toDouble());
+  static Color getAiBubbleColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? aiBubbleColorDark 
+        : aiBubbleColorLight;
+  }
+  
+  static Color getAiBubbleBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? aiBubbleBorderDark 
+        : aiBubbleBorderLight;
+  }
+  
+  static Color getUserBubbleColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? userBubbleColorDark 
+        : userBubbleColorLight;
+  }
+  
+  static Color getUserBubbleBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? userBubbleBorderDark 
+        : userBubbleBorderLight;
+  }
+  
+  static Color getChatRoomTop(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? chatRoomTopDark 
+        : chatRoomTopLight;
+  }
+  
+  static Color getMessageInputBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? messageInputBackgroundDark 
+        : messageInputBackgroundLight;
+  }
+  
+  static Color getMessageFieldBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? messageFieldBackgroundDark 
+        : messageFieldBackgroundLight;
+  }
+  
+  static Color getMessageFieldBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? messageFieldBorderDark 
+        : messageFieldBorderLight;
+  }
+  
+  static Color getUserTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? userTextColorDark 
+        : userTextColorLight;
   }
 }
 
@@ -426,7 +532,7 @@ File: D:\D\my_new_app\lib\models\message.dart
 
 Size: 3623 bytes
 
-Modified: 01/17/2026 02:39:05
+Modified: 01/18/2026 15:44:53
 
 ========================================
 
@@ -557,12 +663,13 @@ Modified: 01/02/2026 16:38:14
 
 File: D:\D\my_new_app\lib\pages\main_screen.dart
 
-Size: 1489 bytes
+Size: 1715 bytes
 
-Modified: 01/04/2026 03:40:37
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
+// lib/pages/main_screen.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
@@ -590,7 +697,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -599,7 +706,9 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFFFF5A7E),
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Theme.of(context).unselectedWidgetColor,
+        backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '心事'),
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: '聊天'),
@@ -617,12 +726,13 @@ class _MainScreenState extends State<MainScreen> {
 
 File: D:\D\my_new_app\lib\pages\vow_page.dart
 
-Size: 3669 bytes
+Size: 4475 bytes
 
-Modified: 01/04/2026 03:40:37
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
+// lib/pages/vow_page.dart - 完整替换
 import 'package:flutter/material.dart';
 import '../components/mood_day.dart';
 import '../components/order_card.dart';
@@ -633,20 +743,30 @@ class VowPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      color: AppTheme.appBackground, // 使用统一的背景色 #FDF7F7
+      color: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
           const SizedBox(height: 60),
-          _buildTopHeader(),
+          _buildTopHeader(context),
           const SizedBox(height: 25),
-          const Text("MOOD CALENDAR",
-              style: TextStyle(letterSpacing: 1.5, color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text("MOOD CALENDAR",
+              style: TextStyle(
+                letterSpacing: 1.5, 
+                color: isDark ? Colors.grey[400] : Colors.grey, 
+                fontSize: 12, 
+                fontWeight: FontWeight.bold
+              )),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white, 
+              borderRadius: BorderRadius.circular(20)
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: const [
@@ -659,7 +779,13 @@ class VowPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 30),
-          const Text("ORDERS", style: TextStyle(letterSpacing: 1.5, color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text("ORDERS", 
+              style: TextStyle(
+                letterSpacing: 1.5, 
+                color: isDark ? Colors.grey[400] : Colors.grey, 
+                fontSize: 12, 
+                fontWeight: FontWeight.bold
+              )),
           const SizedBox(height: 15),
           const OrderCard(title: "Wear the collar for 1 hour", subtitle: "Or else: No dessert", isLocked: true),
           const OrderCard(title: "Drink 2L of water", subtitle: "Stay hydrated", isLocked: false),
@@ -671,22 +797,34 @@ class VowPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTopHeader() {
+  Widget _buildTopHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: const [
+      children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("The Vow", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
-            Text("☁ Collar Time: 12 days", style: TextStyle(color: Color(0xFFFF5A7E))),
+            Text("The Vow", 
+                style: TextStyle(
+                  fontSize: 28, 
+                  fontWeight: FontWeight.bold, 
+                  color: isDark ? Colors.white : const Color(0xFF4A4A4A)
+                )),
+            Text("☁ Collar Time: 12 days", 
+                style: TextStyle(color: Theme.of(context).primaryColor)),
           ],
         ),
         SizedBox(
           width: 120,
           child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Text("MASTER'S STATUS\nWorking late.", style: TextStyle(fontSize: 10, color: Colors.grey)),
+            padding: const EdgeInsets.all(12),
+            child: Text("MASTER'S STATUS\nWorking late.", 
+                style: TextStyle(
+                  fontSize: 10, 
+                  color: isDark ? Colors.grey[400] : Colors.grey
+                )),
           ),
         ),
       ],
@@ -724,9 +862,9 @@ class VowPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
-Size: 18869 bytes
+Size: 20297 bytes
 
-Modified: 01/17/2026 01:58:19
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
@@ -885,17 +1023,18 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     }
   }
 
-  Widget _buildAvatarSection() {
-    return Center(
-      child: Column(
-        children: [
+Widget _buildAvatarSection() {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+ return Center(
+    child: Column(
+      children: [
           GestureDetector(
             onTap: _isSaving ? null : _pickImageFromGallery,
             child: Stack(
               children: [
                 CircleAvatar(
                   radius: 60,
-                  backgroundColor: const Color(0xFFFFD1DC),
+                  backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFFFD1DC), // 动态背景
                   backgroundImage: _avatarPath != null 
                       ? FileImage(File(_avatarPath!)) 
                       : null,
@@ -922,12 +1061,12 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _avatarPath == null ? '点击头像选择图片' : '点击头像更换图片',
-            style: TextStyle(
-              color: Colors.grey[600], 
-              fontSize: 14,
+           const SizedBox(height: 12),
+        Text(
+          _avatarPath == null ? '点击头像选择图片' : '点击头像更换图片',
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600], // 动态文本颜色
+            fontSize: 14,
             ),
           ),
         ],
@@ -935,221 +1074,254 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    int maxLines = 1,
-    bool required = false,
-    bool enabled = true,
-    String? hintText,
-  }) {
+ Widget _buildTextField({
+  required String label,
+  required TextEditingController controller,
+  int maxLines = 1,
+  bool required = false,
+  bool enabled = true,
+  String? hintText,
+}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: isDark ? Colors.white : Colors.black87, // 动态标签颜色
+            ),
+          ),
+          if (required) 
+            const Text(
+              ' *', 
+              style: TextStyle(
+                color: Colors.red, 
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        controller: controller,
+        maxLines: maxLines,
+        minLines: maxLines == 1 ? 1 : 3,
+        enabled: enabled,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: isDark 
+            ? (enabled ? Colors.grey[800] : Colors.grey[900]) 
+            : (enabled ? Colors.white : Colors.grey[100]),
+          
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          
+          contentPadding: const EdgeInsets.all(16),
+          hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
+          hintStyle: TextStyle(
+            color: isDark ? Colors.grey[500] : Colors.grey[400],
+          ),
+        ),
+        style: TextStyle(
+          color: isDark 
+            ? (enabled ? Colors.white : Colors.grey[400]) 
+            : (enabled ? Colors.black87 : Colors.grey[600]),
+        ),
+      ),
+    ],
+  );
+}
+
+// 开关组件 - 使用版本A的UI设计，保持版本B的暗色模式支持
+Widget _buildCustomFormatSwitch() {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
+  return Container(
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
+          width: 1,
+        ),
+      ),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '启用自定义格式',  // 使用版本A的标题
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isDark ? Colors.white : Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '使用自定义的格式化指令覆盖默认格式',  // 版本A的描述文字
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: _enableCustomFormat,
+          onChanged: (value) {
+            setState(() {
+              _enableCustomFormat = value;
+            });
+          },
+          activeColor: const Color(0xFFFF5A7E),
+          activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+        ),
+      ],
+    ),
+  );
+}
+
+  // 🎯 关键修改：使用版本A的UI设计，保持版本B的双控制器逻辑
+  Widget _buildCustomFormatSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold, 
-                fontSize: 15,
-              ),
-            ),
-            if (required) 
-              const Text(
-                ' *', 
-                style: TextStyle(
-                  color: Colors.red, 
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        // 使用版本A的输入框设计，但保持版本B的双控制器逻辑
         TextField(
-          controller: controller,
-          maxLines: maxLines,
-          minLines: maxLines == 1 ? 1 : 3,
-          enabled: enabled,
+          controller: _enableCustomFormat 
+              ? _xmlFormatController  // 开启时使用XML控制器
+              : _plainPromptController, // 关闭时使用普通提示词控制器
+          maxLines: 4,
+          minLines: 3,
+          enabled: true,  // 始终保持启用，内容根据开关切换
           decoration: InputDecoration(
             filled: true,
-            fillColor: enabled ? Colors.white : Colors.grey[100],
+            fillColor: isDark 
+                ? Colors.grey[800] 
+                : (_enableCustomFormat ? Colors.white : Colors.grey[100]),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
             contentPadding: const EdgeInsets.all(16),
-            hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
+            hintText: _enableCustomFormat 
+                ? '输入自定义格式指令...'  // 版本A的提示文字
+                : '输入普通对话格式指令...',
             hintStyle: TextStyle(
-              color: enabled ? Colors.grey[500] : Colors.grey[400],
+              color: isDark ? Colors.grey[500] : Colors.grey[400],
             ),
           ),
           style: TextStyle(
-            color: enabled ? Colors.black87 : Colors.grey[600],
+            color: isDark 
+                ? Colors.white 
+                : (_enableCustomFormat ? Colors.black87 : Colors.grey[600]),
           ),
         ),
-      ],
-    );
-  }
-
-  // 开关组件
-  Widget _buildCustomFormatSwitch() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            '自定义格式',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+        const SizedBox(height: 8),
+        Text(
+          _enableCustomFormat
+              ? '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"'  // 版本A的示例文字
+              : '示例: "你是一位{{角色}}，请以{{对话}}的语气回复"',
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 12,
           ),
-          Switch(
-            value: _enableCustomFormat,
-            onChanged: (value) {
-              setState(() {
-                _enableCustomFormat = value;
-              });
-            },
-            activeColor: const Color(0xFFFF5A7E),
-            activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🎯 关键修改：两个独立的输入框
-  Widget _buildCustomFormatSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!_enableCustomFormat) ...[
-          // 关闭状态：普通提示词输入框（灰色）
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[200]!.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              controller: _plainPromptController,
-              maxLines: 4,
-              minLines: 3,
-              enabled: true,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.grey[200]!.withOpacity(0.5),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.all(16),
-                hintText: '粘贴普通提示词...',
-                hintStyle: const TextStyle(
-                  color: Colors.grey,
-                ),
-              ),
-              style: TextStyle(
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-        ] else ...[
-          // 开启状态：XML格式指令输入框（白色）
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              controller: _xmlFormatController,
-              maxLines: 4,
-              minLines: 3,
-              enabled: true,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.7),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.all(16),
-                hintText: '粘贴XML格式指令...',
-                hintStyle: const TextStyle(
-                  color: Colors.grey,
-                ),
-              ),
-              style: const TextStyle(
-                color: Colors.black87,
-              ),
-            ),
-          ),
-        ],
+        ),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFFFF8FA),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFFF8FA),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black87),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            '编辑 AI 人设',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+   if (_isLoading) {
+  return Scaffold(
+    backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA), // 动态背景
+    appBar: AppBar(
+      backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        '编辑 AI 人设',
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.bold,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
-        ),
-      );
-    }
+      ),
+    ),
+    body: const Center(
+      child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
+    ),
+  );
+}
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF8FA),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          '编辑 AI 人设',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          if (!_isLoading)
-            IconButton(
-              icon: Icon(
-                Icons.refresh,
-                color: Colors.grey[700],
-              ),
-              onPressed: _loadCharacterData,
-              tooltip: '刷新数据',
-            ),
-        ],
+  backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+  appBar: AppBar(
+    backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+    elevation: 0,
+    leading: IconButton(
+      icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+      onPressed: () => Navigator.pop(context),
+    ),
+    title: Text(
+      '编辑 AI 人设',
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black87,
+        fontWeight: FontWeight.bold,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    ),
+    actions: [
+      if (!_isLoading)
+        IconButton(
+          icon: Icon(
+            Icons.refresh,
+            color: isDark ? Colors.grey[400] : Colors.grey[700],
+          ),
+          onPressed: _loadCharacterData,
+          tooltip: '刷新数据',
+        ),
+    ],
+  ),
+  body: SingleChildScrollView(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
             // 头像
             _buildAvatarSection(),
             const SizedBox(height: 32),
@@ -1179,30 +1351,30 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
               maxLines: 8,
             ),
             const SizedBox(height: 8),
-            Text(
-              '这些设定会影响AI的性格和行为，不会直接显示给用户',
-              style: TextStyle(
-                color: Colors.grey[600], 
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
+Text(
+  '这些设定会影响AI的性格和行为，不会直接显示给用户',
+  style: TextStyle(
+    color: isDark ? Colors.grey[400] : Colors.grey[600], // 动态颜色
+    fontSize: 12,
+    fontStyle: FontStyle.italic,
+  ),
+),
             const SizedBox(height: 24),
 
             // 开场白
             _buildTextField(
-              label: '开场白',
+              label: '开场白（对话开始时使用）',
               controller: _openingController,
               maxLines: 3,
               hintText: '请输入开场白（对话开始时使用）',
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32), // 保持开场白底部到自定义格式中间的空白间距
 
-            // 自定义格式开关
+            // 自定义格式开关 - 使用版本A的UI设计
             _buildCustomFormatSwitch(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 16), // 使用版本A的间距
 
-            // 🎯 关键修改：显示不同的输入框
+            // 🎯 关键修改：显示不同的输入框 - 使用版本A的UI设计
             _buildCustomFormatSection(),
             const SizedBox(height: 24),
 
@@ -1242,52 +1414,52 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
             ),
             const SizedBox(height: 32),
 
-            // 提示信息
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF0F5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFFD1DC), 
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline, 
-                        color: Colors.pink[300], 
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '提示',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD81B60),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '• 昵称和简介会显示在聊天列表\n'
-                    '• 附加设定是AI的核心人格设定\n'
-                    '• 自定义格式指令优先级最高\n'
-                    '• 修改后需要重新进入聊天室生效',
-                    style: TextStyle(
-                      color: Colors.grey[700], 
-                      fontSize: 13, 
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
+  // 提示信息
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFFF0F5), // 动态背景
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(
+      color: isDark ? Colors.grey.shade800 : const Color(0xFFFFD1DC), // 使用 .shade800
+      width: 1,
+    ),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Icon(
+            Icons.info_outline, 
+            color: isDark ? Colors.pink[200] : Colors.pink[300], // 动态图标颜色
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '提示',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.pink[200] : const Color(0xFFD81B60), // 动态文本颜色
             ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Text(
+        '• 昵称和简介会显示在聊天列表\n'
+        '• 附加设定是AI的核心人格设定\n'
+        '• 自定义格式指令优先级最高\n'
+        '• 修改后需要重新进入聊天室生效',
+        style: TextStyle(
+          color: isDark ? Colors.grey[300] : Colors.grey[700], // 动态文本颜色
+          fontSize: 13, 
+          height: 1.6,
+        ),
+      ),
+    ],
+  ),
+),
             const SizedBox(height: 40),
           ],
         ),
@@ -1313,13 +1485,13 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
 
-Size: 8384 bytes
+Size: 9624 bytes
 
-Modified: 01/15/2026 19:48:31
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
-// 修改后的 lib/pages/chat/chat_components.dart
+// lib/pages/chat/chat_components.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../../app/theme.dart'; // 导入主题
@@ -1336,6 +1508,8 @@ class ReceivedMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
@@ -1348,9 +1522,9 @@ class ReceivedMessage extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               border: Border.all(
-                color: AppTheme.aiBubbleBorder,
+                color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight,
                 width: 1,
               ),
             ),
@@ -1364,12 +1538,12 @@ class ReceivedMessage extends StatelessWidget {
                   ? Icon(
                       Icons.person,
                       size: 18,
-                      color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                      color: isDark ? const Color(0xFFF95685) : AppTheme.pinkAccent,
                     )
                   : null,
             ),
           ),
-          // AI气泡 - 纯色无阴影，带细边框
+          // AI气泡
           Flexible(
             child: Container(
               constraints: BoxConstraints(
@@ -1381,7 +1555,7 @@ class ReceivedMessage extends StatelessWidget {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.aiBubbleColor,
+                color: isDark ? const Color(0xFF1A1A1A) : AppTheme.aiBubbleColorLight,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(AppTheme.bubbleBorderRadius),
@@ -1389,13 +1563,18 @@ class ReceivedMessage extends StatelessWidget {
                   bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
                 border: Border.all(
-                  color: AppTheme.aiBubbleBorder,
+                  color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight,
                   width: 1,
                 ),
               ),
               child: Text(
                 text,
-                style: AppTheme.dialogueStyle,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white : AppTheme.primaryTextLight,
+                  height: 1.4,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
             ),
           ),
@@ -1419,13 +1598,15 @@ class SentMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // 用户气泡 - 纯色无阴影，带细边框
+          // 用户气泡
           Flexible(
             child: Container(
               constraints: BoxConstraints(
@@ -1437,7 +1618,7 @@ class SentMessage extends StatelessWidget {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.userBubbleColor,
+                color: isDark ? const Color(0xFFF95685) : AppTheme.userBubbleColorLight,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppTheme.bubbleBorderRadius),
                   topRight: Radius.circular(4),
@@ -1445,14 +1626,17 @@ class SentMessage extends StatelessWidget {
                   bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
                 ),
                 border: Border.all(
-                  color: AppTheme.userBubbleBorder,
+                  color: isDark ? const Color(0xFFD6406E) : AppTheme.userBubbleBorderLight,
                   width: 1,
                 ),
               ),
               child: Text(
                 text,
-                style: AppTheme.dialogueStyle.copyWith(
-                  color: AppTheme.userTextColor, // 添加用户文字颜色
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white : AppTheme.userTextColorLight,
+                  height: 1.4,
+                  fontWeight: FontWeight.normal,
                 ),
               ),
             ),
@@ -1465,9 +1649,9 @@ class SentMessage extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                 border: Border.all(
-                  color: AppTheme.userBubbleBorder,
+                  color: isDark ? const Color(0xFF333333) : AppTheme.userBubbleBorderLight,
                   width: 1,
                 ),
               ),
@@ -1481,7 +1665,7 @@ class SentMessage extends StatelessWidget {
                     ? Icon(
                         Icons.person_outline,
                         size: 18,
-                        color: AppTheme.withOpacity(AppTheme.pinkAccent, 0.7),
+                        color: isDark ? const Color(0xFFF95685) : AppTheme.pinkAccent,
                       )
                     : null,
               ),
@@ -1502,18 +1686,25 @@ class SystemTimeMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F0F5),
+            color: isDark ? const Color(0xFF252525) : const Color(0xFFF0F0F5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             text,
-            style: AppTheme.systemTimeStyle,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.grey[400] : AppTheme.secondaryTextLight,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ),
@@ -1521,7 +1712,6 @@ class SystemTimeMessage extends StatelessWidget {
   }
 }
 
-// 旁白消息组件（最简版，先确认能显示文字）
 class NarrationMessage extends StatelessWidget {
   final String text;
   final bool isAI;
@@ -1536,10 +1726,12 @@ class NarrationMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
       child: Align(
-           alignment: isCentered 
+        alignment: isCentered 
             ? Alignment.center 
             : (isAI ? Alignment.centerLeft : Alignment.centerRight),
         child: Container(
@@ -1547,30 +1739,36 @@ class NarrationMessage extends StatelessWidget {
               ? null 
               : (isAI 
                   ? const EdgeInsets.only(left: 12)    // AI 左对齐时留左边距
-                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距  ← 关键：这里加 32px 右边距，让气泡不贴右边
+                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: isAI
-                ? Colors.pink[50]               // 极浅粉底
-                : Colors.grey[200],             // 浅灰底
+                ? (isDark ? const Color(0xFF2A1A1F) : Colors.pink[50])  // 暗色模式下的粉色背景
+                : (isDark ? const Color(0xFF252525) : Colors.grey[200]), // 暗色模式下的灰色背景
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isAI ? Colors.pink[200]! : Colors.grey[400]!,
+              color: isAI 
+                  ? (isDark ? const Color(0xFFD6406E) : Colors.pink[200]!) 
+                  : (isDark ? Colors.grey[700]! : Colors.grey[400]!),
               width: 1,
             ),
           ),
           child: Text(
-              text.trim(),
-              style: AppTheme.narrationStyle.copyWith(
-                color: isAI ? Colors.pink[800] : AppTheme.narrationText,
-                fontSize: 13,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.left,  // 固定左对齐，无论气泡居中还是左对齐
+            text.trim(),
+            style: TextStyle(
+              fontSize: 13,
+              color: isAI 
+                  ? (isDark ? Colors.pink[200] : Colors.pink[800])
+                  : (isDark ? Colors.grey[300] : AppTheme.narrationTextLight),
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+              fontWeight: FontWeight.w400,
             ),
+            textAlign: TextAlign.left,
+          ),
         ),
       ),
     );
@@ -1583,12 +1781,13 @@ class NarrationMessage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
-Size: 4965 bytes
+Size: 5499 bytes
 
-Modified: 01/16/2026 16:48:00
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
+// lib/pages/chat/chat_list_page.dart - 完整替换
 // lib/pages/chat/chat_list_page.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -1629,21 +1828,23 @@ class _ChatListPageState extends State<ChatListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppTheme.appBackground, // 使用统一的背景色
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
         elevation: 0,
-        title: const Text(
+        title: Text(
           "聊天",
           style: TextStyle(
-            color: Color(0xFF4A4A4A),
+            color: isDark ? Colors.white : const Color(0xFF4A4A4A),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: const [
-          Icon(Icons.search, color: Color(0xFFFF5A7E)),
+        actions: [
+          Icon(Icons.search, color: Theme.of(context).primaryColor),
         ],
       ),
       body: ListView(
@@ -1670,7 +1871,7 @@ class _ChatListPageState extends State<ChatListPage> {
               },
               child: CircleAvatar(
                 radius: 28,
-                backgroundColor: Colors.pinkAccent,
+                backgroundColor: Theme.of(context).primaryColor,
                 backgroundImage: _avatarPath != null
                     ? FileImage(File(_avatarPath!))
                     : null,
@@ -1697,7 +1898,7 @@ class _ChatListPageState extends State<ChatListPage> {
                   
                   return Text(
                     lastMsg.length > 30 ? '${lastMsg.substring(0, 30)}...' : lastMsg,
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
                     overflow: TextOverflow.ellipsis,
                   );
                 }
@@ -1715,10 +1916,16 @@ class _ChatListPageState extends State<ChatListPage> {
                     children: [
                       Text(
                         lastTime,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey, 
+                          fontSize: 12
+                        ),
                       ),
                       const SizedBox(height: 4),
-                      const CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF5A7E)),
+                      CircleAvatar(
+                        radius: 4, 
+                        backgroundColor: Theme.of(context).primaryColor
+                      ),
                     ],
                   );
                 }
@@ -1726,7 +1933,11 @@ class _ChatListPageState extends State<ChatListPage> {
               },
             ),
           ),
-          const Divider(height: 1, indent: 80),
+          Divider(
+            height: 1, 
+            indent: 80,
+            color: isDark ? Colors.grey[800] : Colors.grey[200],
+          ),
         ],
       ),
     );
@@ -1739,18 +1950,18 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 28232 bytes
+Size: 32186 bytes
 
-Modified: 01/17/2026 01:27:50
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
-// lib/pages/chat/chat_room_page.dart
+// 在文件顶部添加 import
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -1783,10 +1994,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String? _avatarPath;
   String? _userAvatarPath;
  
-  String _currentStatus = '空白';
+  final String _currentStatus = '空白';
   bool _showUserAvatar = true;
   String _systemPrompt = '';
   bool _narrationCentered = true;
+
+  // 修改：使用枚举值而不是枚举类型本身
+  AxisDirection _lastDirection = AxisDirection.down;
 
   @override
   void initState() {
@@ -1800,24 +2014,68 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.addListener(() {
       if (!mounted) return;
       
-      final double maxScroll = _scrollController.position.maxScrollExtent;
       final double currentScroll = _scrollController.position.pixels;
+      final double maxScroll = _scrollController.position.maxScrollExtent;
+      final double distanceFromBottom = maxScroll - currentScroll;
       
-      if (currentScroll > 300.0) {
-        if (!_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = true;
-          });
-          _scrollButtonTimer?.cancel();
-          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted && _showScrollToBottomButton) {
-              setState(() {
-                _showScrollToBottomButton = false;
-              });
-            }
-          });
+      // 判断滚动方向 - 使用更直接的方式
+      final bool isScrollingUp = _scrollController.position.userScrollDirection == ScrollDirection.reverse;
+      final bool isScrollingDown = _scrollController.position.userScrollDirection == ScrollDirection.forward;
+      
+      // 情况1：用户向下滚动（靠近底部）
+      if (isScrollingDown) {
+        // 只有在之前是向上滚动，现在转为向下滚动时才显示箭头
+        if (_lastDirection == AxisDirection.up && 
+            distanceFromBottom > 100.0) {
+          if (!_showScrollToBottomButton) {
+            setState(() {
+              _showScrollToBottomButton = true;
+            });
+            // 设置3秒后隐藏
+            _scrollButtonTimer?.cancel();
+            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted && _showScrollToBottomButton) {
+                setState(() {
+                  _showScrollToBottomButton = false;
+                });
+              }
+            });
+          } else {
+            // 如果箭头已经在显示，用户继续向下滚动，重置计时器
+            _scrollButtonTimer?.cancel();
+            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted && _showScrollToBottomButton) {
+                setState(() {
+                  _showScrollToBottomButton = false;
+                });
+              }
+            });
+          }
         }
-      } else {
+        
+        // 如果距离底部很近了（<50px），立即隐藏箭头
+        if (distanceFromBottom < 50.0) {
+          if (_showScrollToBottomButton) {
+            setState(() {
+              _showScrollToBottomButton = false;
+            });
+            _scrollButtonTimer?.cancel();
+          }
+        }
+        
+        // 更新方向为向下
+        _lastDirection = AxisDirection.down;
+      }
+      
+      // 情况2：用户向上滚动（远离底部）
+      else if (isScrollingUp) {
+        // 更新方向为向上
+        _lastDirection = AxisDirection.up;
+      }
+      
+      // 情况3：滚动到顶部或特殊情况
+      else if (distanceFromBottom < 50.0) {
+        // 距离底部很近时自动隐藏
         if (_showScrollToBottomButton) {
           setState(() {
             _showScrollToBottomButton = false;
@@ -1862,46 +2120,59 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
       
       if (keyboardVisible) {
-        _scrollToBottom(isKeyboard: true);
-      } else {
-        _scrollController.jumpTo(0.0);
+        _scrollToBottom(animate: true, hideArrow: true);
       }
     }
     
     super.didChangeMetrics();
   }
 
-  void _scrollWithSpring({double velocity = 0.0}) {
-    if (!mounted || !_scrollController.hasClients) return;
-    
-    _scrollController.animateTo(
-      0.0,
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.elasticOut,
-    );
-  }
-
-  void _scrollToBottom({bool animate = true, bool isKeyboard = false}) {
+  void _scrollToBottom({
+    bool animate = true, 
+    bool hideArrow = false,
+  }) {
     if (!mounted) return;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        if (animate) {
-          if (isKeyboard) {
-            _scrollWithSpring();
-          } else {
+        final maxScrollExtent = _scrollController.position.maxScrollExtent;
+        final currentPixels = _scrollController.position.pixels;
+        final distanceFromBottom = maxScrollExtent - currentPixels;
+        
+        // 只有在离底部较远（>100px）时才滚动
+        if (distanceFromBottom > 100) {
+          if (animate) {
             _scrollController.animateTo(
-              0.0,
+              maxScrollExtent,
               duration: const Duration(milliseconds: 200),
               curve: Curves.fastOutSlowIn,
             );
+          } else {
+            _scrollController.jumpTo(maxScrollExtent);
           }
-        } else {
-          _scrollController.jumpTo(0.0);
+        }
+        
+        // 程序自动滚动时强制隐藏箭头
+        if (hideArrow && _showScrollToBottomButton) {
+          setState(() {
+            _showScrollToBottomButton = false;
+          });
+          _scrollButtonTimer?.cancel();
         }
       }
     });
   }
+
+  // 删除 _scrollWithSpring 函数，因为不再使用
+  // void _scrollWithSpring() {
+  //   if (!mounted || !_scrollController.hasClients) return;
+  //   
+  //   _scrollController.animateTo(
+  //     _scrollController.position.maxScrollExtent,
+  //     duration: const Duration(milliseconds: 380),
+  //     curve: Curves.elasticOut,
+  //   );
+  // }
 
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
@@ -1943,7 +2214,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollToBottom(animate: false);
   }
 
-  // 修复：确保开场白能显示在聊天列表
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
     if (opening.isEmpty) return;
@@ -1951,12 +2221,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
     
-    // 关键修改：明确设置displayContent
     final msg = Message(
       id: 'opening_${now.millisecondsSinceEpoch}',
       role: 'assistant',
       rawContent: opening,
-      displayContent: opening, // 明确设置displayContent
+      displayContent: opening,
       timestamp: timestamp,
       messageType: MessageType.ai_dialogue,
     );
@@ -1965,7 +2234,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       setState(() {
         _messages.add(msg);
       });
-      await _saveHistory(); // 保存到历史记录，确保聊天列表能读取
+      await _saveHistory();
     }
   }
 
@@ -2023,11 +2292,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       _isLoading = true;
     });
 
-    _scrollToBottom(isKeyboard: false);
+    _scrollToBottom(animate: true, hideArrow: true);
     await _saveHistory();
 
     try {
-      // 不再传入currentTime参数，因为已经在StorageService中删除
       final systemPrompt = await _storage.getCharacterSystemPrompt();
       _systemPrompt = systemPrompt;
 
@@ -2044,8 +2312,23 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       );
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
-      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      
+      // 调试打印
+      if (kDebugMode) {
+        print('\n=== 发送给 DeepSeek 的完整上下文 ===');
+        print('时间: ${DateTime.now()}');
+        for (var i = 0; i < apiMessages.length; i++) {
+          final msg = apiMessages[i];
+          final short = msg['content']!.length > 80 
+              ? '${msg['content']!.substring(0, 80)}...' 
+              : msg['content'];
+          print('${i.toString().padLeft(2)} | ${msg['role']!.padRight(8)} | $short');
+        }
+        print('=============================\n');
+      }
 
+      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
+      
       if (mounted) {
         final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
         setState(() {
@@ -2053,7 +2336,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         });
 
         await _saveHistory();
-        _scrollToBottom(isKeyboard: false);
+        _scrollToBottom(animate: true, hideArrow: true);
       }
     } catch (e) {
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -2069,7 +2352,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         });
       }
       await _saveHistory();
-      _scrollToBottom(isKeyboard: false);
+      _scrollToBottom(animate: true, hideArrow: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -2111,51 +2394,38 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     );
   }
 
-  List<Map<String, String>> _buildContextMessages({int maxCount = 8}) {
+  List<Map<String, String>> _buildContextMessages({int maxCount = 20}) {
     if (_messages.isEmpty) return [];
 
-    final contextCandidates = _messages.where((m) {
-      return m.messageType != MessageType.system_time;
-    }).toList();
+    final candidates = _messages.where((m) => m.messageType != MessageType.system_time).toList();
 
-    if (contextCandidates.isEmpty) return [];
+    if (candidates.isEmpty) return [];
 
-    final lastUserMessage = contextCandidates.lastWhere(
-      (m) => m.messageType == MessageType.user_dialogue || m.messageType == MessageType.user_narration,
-      orElse: () => contextCandidates.last,
-    );
+    final startIndex = (candidates.length - maxCount).clamp(0, candidates.length);
+    final recent = candidates.sublist(startIndex);
 
-    final background = contextCandidates
-        .where((m) => m != lastUserMessage)
-        .toList()
-        .reversed
-        .take(maxCount - 1)
-        .toList()
-        .reversed
-        .toList();
+    final apiList = <Map<String, String>>[];
 
-    final List<Map<String, String>> apiMessages = [];
+    for (final msg in recent) {
+      final content = msg.role == 'user'
+          ? (msg.displayContent?.trim() ?? msg.rawContent.trim())
+          : msg.rawContent.trim();
 
-    for (final msg in [...background, lastUserMessage]) {
-      final String content = msg.role == 'assistant' 
-          ? msg.rawContent
-          : msg.displayContent;
-      
-      apiMessages.add({
+      if (content.isEmpty) continue;
+
+      apiList.add({
         'role': msg.role,
-        'content': content.trim(),
+        'content': content,
       });
     }
 
-    return apiMessages;
+    return apiList;
   }
   
-  // 修复：添加自定义格式与XML解析的联动
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // 获取当前是否启用自定义格式
     final characterData = await _storage.loadCharacterData();
     final enableCustomFormat = characterData['enable_custom_format'] == 'true';
     
@@ -2173,7 +2443,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       return messages;
     }
 
-    // 如果启用自定义格式，尝试解析XML
     if (enableCustomFormat) {
       String displayEnvironment = '';
       String displayDialogue = '';
@@ -2187,7 +2456,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           endResponse,
         ).trim();
 
-        // 提取environment显示文本
         final envStart = responseInner.indexOf('<environment>');
         final envEnd = responseInner.indexOf('</environment>');
         if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
@@ -2196,7 +2464,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
               .trim();
         }
 
-        // 提取dialogue显示文本
         final diaStart = responseInner.indexOf('<dialogue>');
         final diaEnd = responseInner.indexOf('</dialogue>');
         if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
@@ -2205,11 +2472,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
               .trim();
         }
       } else {
-        // 没有XML标签，整个作为对话显示
         displayDialogue = rawContent;
       }
 
-      // 创建AI旁白消息（如果存在环境描述）
       if (displayEnvironment.isNotEmpty) {
         messages.add(Message(
           id: 'ai_nar_${now}',
@@ -2221,7 +2486,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         ));
       }
 
-      // 创建AI对话消息（如果存在对话）
       if (displayDialogue.isNotEmpty) {
         messages.add(Message(
           id: 'ai_dia_${now}',
@@ -2233,7 +2497,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         ));
       }
 
-      // 兜底：如果什么都没解析出来
       if (messages.isEmpty) {
         messages.add(Message(
           id: 'ai_${now}_raw',
@@ -2245,7 +2508,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         ));
       }
     } else {
-      // 未启用自定义格式，整个作为普通对话
       messages.add(Message(
         id: 'ai_${now}_simple',
         role: 'assistant',
@@ -2300,11 +2562,15 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppTheme.appBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        backgroundColor: AppTheme.chatRoomTop,
+        backgroundColor: isDark 
+            ? Colors.grey[900]
+            : AppTheme.chatRoomTopLight,
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -2316,12 +2582,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: const Color(0xFFFFD2DD),
+                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
                 backgroundImage: _avatarPath != null
                     ? FileImage(File(_avatarPath!))
                     : null,
                 child: _avatarPath == null
-                    ? const Icon(Icons.person, size: 18, color: Colors.white)
+                    ? Icon(
+                        Icons.person, 
+                        size: 18, 
+                        color: isDark ? Colors.white : Colors.white
+                      )
                     : null,
               ),
               const SizedBox(width: 10),
@@ -2330,15 +2600,18 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 children: [
                   Text(
                     _characterName,
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     '状态：$_currentStatus',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey, 
+                      fontSize: 12
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -2369,7 +2642,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       ),
       body: Column(
         children: [
-          // 聊天区域
           Expanded(
             child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
@@ -2377,11 +2649,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 children: [
                   ListView.builder(
                     controller: _scrollController,
-                    reverse: true,
+                    reverse: false,
                     padding: const EdgeInsets.only(top: 20, bottom: 80),
                     itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (_isLoading && index == 0) {
+                      if (_isLoading && index == _messages.length) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
                           child: Row(
@@ -2389,36 +2661,42 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: const Color(0xFFFFD2DD),
+                                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
                                 backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                child: _avatarPath == null ? const Icon(Icons.person, size: 20, color: Colors.white) : null,
+                                child: _avatarPath == null 
+                                    ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                    : null,
                               ),
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFD2DD),
+                                  color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
                                   borderRadius: BorderRadius.circular(18),
                                 ),
-                                child: const Text("正在输入...", style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.4)),
+                                child: Text(
+                                  "正在输入...", 
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    color: isDark ? Colors.white : Colors.black87, 
+                                    height: 1.4
+                                  )
+                                ),
                               ),
                             ],
                           ),
                         );
                       }
 
-                      final messageIndex = _isLoading ? index - 1 : index;
-                      final reversedIndex = _messages.length - 1 - messageIndex;
-                      
-                      if (reversedIndex < 0 || reversedIndex >= _messages.length) {
+                      if (index >= _messages.length) {
                         return const SizedBox.shrink();
                       }
-                      
-                      final msg = _messages[reversedIndex];
+
+                      final msg = _messages[index];
                       return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(reversedIndex),
+                        onLongPress: () => _showDeleteDialog(index),
                         child: _buildMessageWidget(msg),
-                      );
+                      );  
                     },
                   ),
                   
@@ -2431,15 +2709,20 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: AppTheme.aiBubbleBorder, width: 1),
+                          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight, 
+                            width: 1
+                          ),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_downward, color: Color(0xFFFF5A7E), size: 20),
+                          icon: Icon(
+                            Icons.arrow_downward, 
+                            color: isDark ? const Color(0xFFF95685) : const Color(0xFFFF5A7E), 
+                            size: 20
+                          ),
                           onPressed: () {
-                            _scrollToBottom(isKeyboard: false);
-                            setState(() => _showScrollToBottomButton = false);
-                            _scrollButtonTimer?.cancel();
+                            _scrollToBottom(animate: true, hideArrow: true);
                           },
                         ),
                       ),
@@ -2449,10 +2732,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             ),
           ),
           
-          // 底部输入区域
           AnimatedContainer(
             duration: const Duration(milliseconds: 2),
-            color: AppTheme.messageInputBackground,
+            color: isDark ? AppTheme.messageInputBackgroundDark : AppTheme.messageInputBackgroundLight,
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
@@ -2464,8 +2746,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, size: 22),
-                      color: Colors.grey[700],
+                      icon: Icon(
+                        Icons.add_circle_outline, 
+                        size: 22,
+                        color: isDark ? Colors.grey[400] : Colors.grey[700]
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () {},
@@ -2473,13 +2758,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                     const SizedBox(width: 4),
                     Expanded(
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 40),
+                        constraints: const BoxConstraints(minHeight: 36),
                         decoration: BoxDecoration(
-                          color: AppTheme.messageFieldBackground,
+                          color: isDark ? AppTheme.messageFieldBackgroundDark : AppTheme.messageFieldBackgroundLight,
                           borderRadius: BorderRadius.circular(36),
-                          border: Border.all(color: AppTheme.messageFieldBorder, width: 1),
+                          border: Border.all(
+                            color: isDark ? AppTheme.messageFieldBorderDark : AppTheme.messageFieldBorderLight, 
+                            width: 1
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
@@ -2487,12 +2775,19 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                           minLines: 1,
                           textInputAction: TextInputAction.send,
                           keyboardType: TextInputType.multiline,
-                          style: const TextStyle(fontSize: 15),
-                          decoration: const InputDecoration(
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: isDark ? Colors.white : Colors.black
+                          ),
+                          decoration: InputDecoration(
                             hintText: "输入消息...",
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
-                            hintStyle: TextStyle(color: Color(0xFF8E8E93)),
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey[500] : const Color(0xFF8E8E93)
+                            ),
                           ),
                           onSubmitted: (value) {
                             final text = _controller.text.trim();
@@ -2535,15 +2830,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   void _showAISetting(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -2553,17 +2850,31 @@ class _ChatRoomPageState extends State<ChatRoomPage>
               child: Container(
                 width: 36,
                 height: 5,
-                decoration: BoxDecoration(color: const Color(0xFFC7C7CC), borderRadius: BorderRadius.circular(2.5)),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[700] : const Color(0xFFC7C7CC), 
+                  borderRadius: BorderRadius.circular(2.5)
+                ),
               ),
             ),
             const SizedBox(height: 20),
-            Text("$_characterName 人物设定", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              "$_characterName 人物设定", 
+              style: TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black
+              )
+            ),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   _systemPrompt,
-                  style: const TextStyle(fontSize: 15, height: 1.6, color: Color(0xFF3C3C43)),
+                  style: TextStyle(
+                    fontSize: 15, 
+                    height: 1.6, 
+                    color: isDark ? Colors.grey[300] : const Color(0xFF3C3C43)
+                  ),
                 ),
               ),
             ),
@@ -2591,15 +2902,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_settings_page.dart
 
-Size: 6288 bytes
+Size: 7537 bytes
 
-Modified: 01/03/2026 17:32:34
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
+import '../../app/theme.dart';  // 导入 AppTheme 以使用暗色常量
 
 class ChatRoomSettingsPage extends StatefulWidget {
   final String characterName;
@@ -2622,12 +2934,15 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
     final bool? confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("清空聊天记录"),
-        content: const Text("确定要清空所有聊天记录吗？此操作不可恢复。"),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF1E1E1E) 
+            : Colors.white,
+        title: Text("清空聊天记录", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black)),
+        content: Text("确定要清空所有聊天记录吗？此操作不可恢复。", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.black87)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("取消"),
+            child: Text("取消", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -2647,18 +2962,23 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8FA),
+      backgroundColor: isDark ? AppTheme.darkBackground : const Color(0xFFFFF8FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF8FA),
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFF8FA),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           "${widget.characterName} 设置",
-          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: ListView(
@@ -2669,11 +2989,11 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
             padding: const EdgeInsets.all(20),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(26),
+                  color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
                   spreadRadius: 1,
                   blurRadius: 5,
                 ),
@@ -2683,12 +3003,12 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: Colors.pinkAccent,
+                  backgroundColor: isDark ? const Color(0xFF2A1A1A) : Colors.pinkAccent,
                   backgroundImage: widget.avatarPath != null
                       ? FileImage(File(widget.avatarPath!))
                       : null,
                   child: widget.avatarPath == null
-                      ? const Icon(Icons.person, size: 36, color: Colors.white)
+                      ? Icon(Icons.person, size: 36, color: isDark ? Colors.white : Colors.white)
                       : null,
                 ),
                 const SizedBox(width: 16),
@@ -2698,21 +3018,22 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
                     children: [
                       Text(
                         widget.characterName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         "AI角色设置",
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.pinkAccent),
+                  icon: Icon(Icons.edit, color: isDark ? const Color(0xFFF95685) : Colors.pinkAccent),
                   onPressed: () {
                     // 这里可以跳转到角色编辑页面
                     // Navigator.push(...)
@@ -2756,14 +3077,16 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-             color: Colors.grey.withAlpha(26), // 0.1 opacity ≈ 26 alpha (255 * 0.1 ≈ 26)
+            color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
             spreadRadius: 1,
             blurRadius: 3,
           ),
@@ -2781,13 +3104,16 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.white : Colors.black,
+          ),
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: isDark ? Colors.grey[400] : Colors.grey),
         onTap: onTap,
       ),
     );
@@ -2800,12 +3126,13 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\entrance\entrance_main_page.dart
 
-Size: 1826 bytes
+Size: 2347 bytes
 
-Modified: 01/02/2026 17:42:58
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
+// lib/pages/entrance/entrance_main_page.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'moments_detail_page.dart';
 
@@ -2814,29 +3141,36 @@ class EntranceMainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           Container(
             height: MediaQuery.of(context).padding.top + 100,
-            color: const Color(0xFFFFE4E9),
+            color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFFE4E9),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    const Icon(Icons.search, color: Colors.white70, size: 28),
+                    Icon(Icons.search, color: isDark ? Colors.grey[400] : Colors.white70, size: 28),
                     const Spacer(),
                     InkWell(
                       onTap: () {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const MomentsDetailPage()));
                       },
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Text("朋友圈", style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold)),
-                          SizedBox(width: 8),
-                          Icon(Icons.chevron_right, color: Colors.black54),
+                          Text("朋友圈", 
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black87, 
+                                fontSize: 18, 
+                                fontWeight: FontWeight.bold
+                              )),
+                          const SizedBox(width: 8),
+                          Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.black54),
                         ],
                       ),
                     ),
@@ -2845,12 +3179,15 @@ class EntranceMainPage extends StatelessWidget {
               ),
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
                 "这里是入口页面\n后续功能可以在这里添加",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 18, 
+                  color: isDark ? Colors.grey[400] : Colors.grey
+                ),
               ),
             ),
           ),
@@ -2866,12 +3203,13 @@ class EntranceMainPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\entrance\moments_detail_page.dart
 
-Size: 5410 bytes
+Size: 6156 bytes
 
-Modified: 01/02/2026 21:36:27
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
+// lib/pages/entrance/moments_detail_page.dart - 完整替换
 import 'package:flutter/material.dart';
 
 class MomentsDetailPage extends StatelessWidget {
@@ -2879,8 +3217,10 @@ class MomentsDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
       body: ListView(
         children: [
           Stack(
@@ -2897,8 +3237,14 @@ class MomentsDetailPage extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
-                      IconButton(icon: const Icon(Icons.camera_alt, color: Colors.white), onPressed: () {}),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white), 
+                        onPressed: () => Navigator.pop(context)
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.camera_alt, color: Colors.white), 
+                        onPressed: () {}
+                      ),
                     ],
                   ),
                 ),
@@ -2908,7 +3254,13 @@ class MomentsDetailPage extends StatelessWidget {
                 right: 20,
                 child: Row(
                   children: [
-                    const Text("尘不言", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, shadows: [Shadow(blurRadius: 10, color: Colors.black45)])),
+                    const Text("尘不言", 
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontSize: 20, 
+                          fontWeight: FontWeight.bold, 
+                          shadows: [Shadow(blurRadius: 10, color: Colors.black45)]
+                        )),
                     const SizedBox(width: 15),
                     Container(
                       width: 80,
@@ -2916,7 +3268,10 @@ class MomentsDetailPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white, width: 3),
                         borderRadius: BorderRadius.circular(8),
-                        image: const DecorationImage(image: NetworkImage('https://via.placeholder.com/150'), fit: BoxFit.cover),
+                        image: const DecorationImage(
+                          image: NetworkImage('https://via.placeholder.com/150'), 
+                          fit: BoxFit.cover
+                        ),
                       ),
                     ),
                   ],
@@ -2925,24 +3280,12 @@ class MomentsDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+
           _buildMomentItem(
+            context: context,
             avatar: 'https://via.placeholder.com/150',
-            name: '尘不言',
-            content: '这聊的太爽了',
-            images: ['https://via.placeholder.com/300x400'],
-            time: '3天前',
-          ),
-          _buildMomentItem(
-            avatar: 'https://via.placeholder.com/150',
-            name: '尘不言',
-            content: '这聊的太爽了',
-            images: List.generate(4, (_) => 'https://via.placeholder.com/200'),
-            time: '4天前',
-          ),
-          _buildMomentItem(
-            avatar: 'https://via.placeholder.com/150',
-            name: '尘不言',
-            content: '我++',
+            name: '',
+            content: '',
             images: [],
             time: '4天前',
           ),
@@ -2952,14 +3295,17 @@ class MomentsDetailPage extends StatelessWidget {
   }
 
   Widget _buildMomentItem({
+    required BuildContext context,
     required String avatar,
     required String name,
     required String content,
     required List<String> images,
     required String time,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -2971,9 +3317,18 @@ class MomentsDetailPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(color: Color(0xFFFF5A7E), fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(name, 
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor, 
+                      fontSize: 16, 
+                      fontWeight: FontWeight.bold
+                    )),
                 const SizedBox(height: 8),
-                Text(content, style: const TextStyle(fontSize: 15)),
+                Text(content, 
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isDark ? Colors.white : Colors.black
+                    )),
                 if (images.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   GridView.builder(
@@ -2990,7 +3345,10 @@ class MomentsDetailPage extends StatelessWidget {
                       return Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
-                          image: DecorationImage(image: NetworkImage(images[index]), fit: BoxFit.cover),
+                          image: DecorationImage(
+                            image: NetworkImage(images[index]), 
+                            fit: BoxFit.cover
+                          ),
                         ),
                       );
                     },
@@ -3000,8 +3358,15 @@ class MomentsDetailPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(time, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                    IconButton(icon: const Icon(Icons.more_horiz, color: Colors.grey), onPressed: () {}),
+                    Text(time, 
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey, 
+                          fontSize: 13
+                        )),
+                    IconButton(
+                      icon: Icon(Icons.more_horiz, color: isDark ? Colors.grey[400] : Colors.grey), 
+                      onPressed: () {}
+                    ),
                   ],
                 ),
               ],
@@ -3019,12 +3384,13 @@ class MomentsDetailPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\me\me_page.dart
 
-Size: 7042 bytes
+Size: 7855 bytes
 
-Modified: 01/16/2026 17:13:37
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
+// lib/pages/me/me_page.dart - 完整替换
 // lib/pages/me/me_page.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -3121,6 +3487,8 @@ class _MePageState extends State<MePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return ListView(
       children: [
         // 用户信息卡片
@@ -3136,7 +3504,7 @@ class _MePageState extends State<MePage> {
             });
           },
           child: Container(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
             child: Row(
               children: [
@@ -3147,7 +3515,7 @@ class _MePageState extends State<MePage> {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: Colors.pink,
+                        backgroundColor: Theme.of(context).primaryColor,
                         backgroundImage: _userAvatarPath != null
                             ? FileImage(File(_userAvatarPath!))
                             : null,
@@ -3167,7 +3535,6 @@ class _MePageState extends State<MePage> {
                             ),
                           ),
                         ),
-                      // 已移除：头像右下角的粉色圆圈 + 相机图标
                     ],
                   ),
                 ),
@@ -3181,15 +3548,15 @@ class _MePageState extends State<MePage> {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         "ID: likeme",
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey, fontSize: 14),
                       ),
                     ],
                   ),
                 ),
                 // 右侧箭头
-                const Icon(Icons.chevron_right, color: Colors.grey),
+                Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey),
               ],
             ),
           ),
@@ -3197,41 +3564,46 @@ class _MePageState extends State<MePage> {
         const SizedBox(height: 10),
       
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "服务", Colors.green),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.photo_outlined, "相册", Colors.blue),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent),
-        const Divider(height: 1, indent: 60),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber),
+        _buildListTile(Icons.wechat_outlined, "服务", Colors.green, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.photo_outlined, "相册", Colors.blue, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent, context),
+        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber, context),
         
         const SizedBox(height: 10),
       
         // 设置入口
-        ListTile(
-          leading: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
-          title: const Text("设置"),
-          trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsPage()),
-            );
-          },
+        Container(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          child: ListTile(
+            leading: Icon(Icons.settings_outlined, color: isDark ? Colors.grey[400] : Colors.blueGrey),
+            title: Text("设置", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+            trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, Color iconColor) {
+  Widget _buildListTile(IconData icon, String title, Color iconColor, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       child: ListTile(
         leading: Icon(icon, color: iconColor),
-        title: Text(title),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
         onTap: () {
           // 这里可以添加对应的功能
           ScaffoldMessenger.of(context).showSnackBar(
@@ -3251,7 +3623,7 @@ File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
 
 Size: 9306 bytes
 
-Modified: 01/16/2026 17:19:49
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
@@ -3580,13 +3952,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 18290 bytes
+Size: 29429 bytes
 
-Modified: 01/17/2026 17:58:20
+Modified: 01/18/2026 15:43:37
 
 ========================================
 
-// lib/pages/me/settings_page.dart
+// lib/pages/me/settings_page.dart - 完整替换
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -3605,7 +3977,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storage = StorageService();
   bool _developerMode = false;
   bool? _narrationCentered;  // 改为 nullable，初始 null 表示未加载
-  bool _isDarkModeForced = false; // 新增：夜间模式开关状态
+  String? _themeSetting;     // 新增：三状态主题设置 'light', 'dark', 'system'
   
   // API 配置相关变量
   bool _isCustomMode = true; // 默认自定义
@@ -3623,7 +3995,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadDeveloperMode();
     _loadNarrationCentered();
     _loadApiConfig();
-    _loadThemeMode();
+    _loadThemeSetting();  // 修改：改为 _loadThemeSetting
   }
 
   Future<void> _loadDeveloperMode() async {
@@ -3644,11 +4016,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _loadThemeMode() async {
+  Future<void> _loadThemeSetting() async {
     final themeMode = await _storage.getThemeMode();
     if (mounted) {
       setState(() {
-        _isDarkModeForced = themeMode == 'dark';
+        _themeSetting = themeMode;
       });
     }
   }
@@ -3714,7 +4086,10 @@ class _SettingsPageState extends State<SettingsPage> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('配置已保存')),
+        SnackBar(
+          content: const Text('配置已保存'),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
       );
     }
   }
@@ -3801,13 +4176,128 @@ class _SettingsPageState extends State<SettingsPage> {
     await _storage.saveNarrationCentered(value);
   }
 
+  // 新增：构建主题选择器
+  Widget _buildThemeSelector() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '主题设置',
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // 选项1：强制亮色
+          RadioListTile<String>(
+            title: Text(
+              '亮色模式',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              '始终使用亮色主题',
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            value: 'light',
+            groupValue: _themeSetting,
+            onChanged: (value) async {
+              setState(() => _themeSetting = value);
+              await _storage.saveThemeMode('light');
+              _showRestartDialog();
+            },
+            activeColor: const Color(0xFFFF5A7E),
+          ),
+          
+          // 选项2：强制暗色
+          RadioListTile<String>(
+            title: Text(
+              '暗色模式',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              '始终使用暗色主题',
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            value: 'dark',
+            groupValue: _themeSetting,
+            onChanged: (value) async {
+              setState(() => _themeSetting = value);
+              await _storage.saveThemeMode('dark');
+              _showRestartDialog();
+            },
+            activeColor: const Color(0xFFFF5A7E),
+          ),
+          
+          // 选项3：跟随系统
+          RadioListTile<String>(
+            title: Text(
+              '跟随系统',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              '根据系统设置自动切换',
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            value: 'system',
+            groupValue: _themeSetting,
+            onChanged: (value) async {
+              setState(() => _themeSetting = value);
+              await _storage.saveThemeMode('system');
+              _showRestartDialog();
+            },
+            activeColor: const Color(0xFFFF5A7E),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 重启提示对话框
+  void _showRestartDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        title: Text(
+          '主题已更改',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        content: Text(
+          '需要重启应用才能使主题更改生效。\n请关闭应用后重新打开。',
+          style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '知道了',
+              style: TextStyle(color: const Color(0xFFFF5A7E)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
+      backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF2F2F2),
       appBar: AppBar(
         title: const Text("设置"),
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -3818,9 +4308,13 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'API 配置',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
@@ -3845,14 +4339,33 @@ class _SettingsPageState extends State<SettingsPage> {
                         return DropdownButtonFormField<String>(
                           value: currentId,
                           isExpanded: true,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                              ),
+                            ),
                             labelText: 'API 来源',
+                            labelStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            ),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                              ),
+                            ),
                           ),
                           items: [
                             ...providers.map((p) => DropdownMenuItem(
                                   value: p.id,
-                                  child: Text(p.name),
+                                  child: Text(
+                                    p.name,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : Colors.black,
+                                    ),
+                                  ),
                                 )),
                             const DropdownMenuItem(
                               value: 'custom',
@@ -3900,10 +4413,35 @@ class _SettingsPageState extends State<SettingsPage> {
                 // 2. Base URL（自定义可编辑，预设锁定）
                 TextField(
                   controller: _baseUrlController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  decoration: InputDecoration(
                     labelText: 'Base URL',
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: const Color(0xFFFF5A7E),
+                      ),
+                    ),
                     hintText: 'https://api.example.com/v1',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                   ),
                   enabled: _isCustomMode, // 预设模式下禁用（锁定）
                   readOnly: !_isCustomMode,
@@ -3914,9 +4452,31 @@ class _SettingsPageState extends State<SettingsPage> {
                 TextField(
                   controller: _apiKeyController,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  decoration: InputDecoration(
                     labelText: 'API Key',
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: const Color(0xFFFF5A7E),
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -3925,15 +4485,43 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (_availableModels.isNotEmpty)
                   DropdownButtonFormField<String>(
                     value: _selectedModel.isNotEmpty ? _selectedModel : null,
-                    hint: const Text('选择模型'),
+                    hint: Text(
+                      '选择模型',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                    dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
                       labelText: '模型',
+                      labelStyle: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
                     ),
                     items: _availableModels.map((m) => DropdownMenuItem(
                           value: m,
-                          child: Text(m),
+                          child: Text(
+                            m,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
                         )).toList(),
                     onChanged: (value) {
                       if (value != null) {
@@ -3944,17 +4532,47 @@ class _SettingsPageState extends State<SettingsPage> {
                 else if (_isCustomMode)
                   TextField(
                     controller: _modelController,
-                    decoration: const InputDecoration(
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
                       labelText: '模型名（手动输入）',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: const Color(0xFFFF5A7E),
+                        ),
+                      ),
                       helperText: '如 deepseek-chat',
+                      helperStyle: TextStyle(
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                     ),
                     onChanged: (val) {
                       setState(() => _selectedModel = val);
                     },
                   )
                 else
-                  const Text('请选择 API 来源后自动加载模型'),
+                  Text(
+                    '请选择 API 来源后自动加载模型',
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
 
                 const SizedBox(height: 16),
 
@@ -4009,55 +4627,86 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
+          // ==================== 主题设置 ====================
+          _buildThemeSelector(),
+          const SizedBox(height: 16),
+
           // ==================== 界面设置 ====================
-          const Text("界面设置", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-
-          SwitchListTile(
-            title: const Text("开发者模式"),
-            subtitle: const Text("开启后可查看详细错误信息"),
-            value: _developerMode,
-            onChanged: (value) async {
-              setState(() => _developerMode = value);
-              await _storage.saveDeveloperMode(value);
-            },
-            activeThumbColor: const Color(0xFFFF5A7E),
+          Text(
+            "界面设置", 
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+            )
           ),
+          const SizedBox(height: 8),
 
-          // 新增：夜间模式开关
-          SwitchListTile(
-            title: const Text("夜间模式"),
-            subtitle: const Text("开启后强制使用暗色主题，关闭则跟随系统"),
-            value: _isDarkModeForced,
-            onChanged: (bool value) async {
-              setState(() {
-                _isDarkModeForced = value;
-              });
-              if (value) {
-                await _storage.saveThemeMode('dark');
-              } else {
-                await _storage.saveThemeMode('system');
-              }
-              // 需要重启App才能生效
-            },
-            activeThumbColor: const Color(0xFFFF5A7E),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SwitchListTile(
+              title: Text(
+                "开发者模式",
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              subtitle: Text(
+                "开启后可查看详细错误信息",
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[700],
+                ),
+              ),
+              value: _developerMode,
+              onChanged: (value) async {
+                setState(() => _developerMode = value);
+                await _storage.saveDeveloperMode(value);
+              },
+              activeThumbColor: const Color(0xFFFF5A7E),
+            ),
           ),
 
           if (_narrationCentered == null)
-            const ListTile(
-              title: Text("旁白居中显示"),
-              subtitle: Text("加载中..."),
-              trailing: CircularProgressIndicator(),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const ListTile(
+                title: Text("旁白居中显示"),
+                subtitle: Text("加载中..."),
+                trailing: CircularProgressIndicator(),
+              ),
             )
           else
-            SwitchListTile(
-              title: const Text("旁白居中显示"),
-              subtitle: const Text("开启为居中对齐，关闭为左对齐（小说风格）"),
-              value: _narrationCentered!,
-              onChanged: (value) async {
-                setState(() => _narrationCentered = value);
-                await _saveNarrationCentered(value);
-              },
-              activeThumbColor: const Color(0xFFFF5A7E),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SwitchListTile(
+                title: Text(
+                  "旁白居中显示",
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                subtitle: Text(
+                  "开启为居中对齐，关闭为左对齐（小说风格）",
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[700],
+                  ),
+                ),
+                value: _narrationCentered!,
+                onChanged: (value) async {
+                  setState(() => _narrationCentered = value);
+                  await _saveNarrationCentered(value);
+                },
+                activeThumbColor: const Color(0xFFFF5A7E),
+              ),
             ),
         ],
       ),
@@ -4073,7 +4722,7 @@ File: D:\D\my_new_app\lib\services\api_config.dart
 
 Size: 9428 bytes
 
-Modified: 01/17/2026 14:38:43
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
@@ -4351,7 +5000,7 @@ File: D:\D\my_new_app\lib\services\api_service.dart
 
 Size: 2603 bytes
 
-Modified: 01/17/2026 14:38:43
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
@@ -4464,7 +5113,7 @@ File: D:\D\my_new_app\lib\services\storage_service.dart
 
 Size: 9447 bytes
 
-Modified: 01/17/2026 17:48:35
+Modified: 01/18/2026 15:43:26
 
 ========================================
 
