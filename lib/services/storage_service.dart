@@ -283,4 +283,29 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
   }
+
+// 在StorageService类中添加以下方法：
+
+// ── 新增：UI主题相关 ──
+Future<void> saveUITheme(String theme) async {
+  final prefs = await _prefs;
+  await prefs.setString('ui_theme', theme);
+}
+
+Future<String> getUITheme() async {
+  final prefs = await _prefs;
+  return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
+}
+
+// 获取边框样式（兼容旧版本）
+Future<String> getBorderStyle() async {
+  final prefs = await _prefs;
+  return prefs.getString('border_style') ?? '无边框';
+}
+
+Future<void> saveBorderStyle(String style) async {
+  final prefs = await _prefs;
+  await prefs.setString('border_style', style);
+}
+
 }

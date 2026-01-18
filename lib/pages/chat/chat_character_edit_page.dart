@@ -1,8 +1,9 @@
-// lib/pages/chat/chat_character_edit_page.dart
+// lib/pages/chat/chat_character_edit_page.dart - 完整修改版本（集成主题）
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/storage_service.dart';
+import '../../app/ui_theme_manager.dart'; // 🎨 新增导入
 
 class ChatCharacterEditPage extends StatefulWidget {
   const ChatCharacterEditPage({super.key});
@@ -35,11 +36,25 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
   final TextEditingController _xmlFormatController =
       TextEditingController(); // 开启时的XML格式指令
 
+  // 🎨 新增：UI主题相关
+  UITheme _uiTheme = UITheme.system;
+
 @override
 void initState() {
   super.initState();
   _loadCharacterData();
+  _loadUITheme(); // 🎨 新增：加载UI主题
 }
+
+  // 🎨 新增：加载UI主题
+  Future<void> _loadUITheme() async {
+    final themeString = await _storage.getUITheme();
+    if (mounted) {
+      setState(() {
+        _uiTheme = UIThemeManager.fromString(themeString);
+      });
+    }
+  }
 
   Future<void> _loadCharacterData() async {
     setState(() => _isLoading = true);
@@ -214,6 +229,76 @@ void initState() {
     );
   }
 
+  // 🎨 修改：根据主题构建边框的辅助方法
+  InputBorder _getBorderForTheme() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (_uiTheme == UITheme.strawberryCandy) {
+      return UIThemeManager.buildTextFieldBorderStrawberryCandy(context);
+    } else if (_uiTheme == UITheme.pickleMilk) {
+      return UIThemeManager.buildTextFieldBorderPickleMilk(context);
+    } else {
+      // 系统：默认使用草莓糖心（无边框）
+      return UIThemeManager.buildTextFieldBorderStrawberryCandy(context);
+    }
+  }
+
+  // 🎨 修改：根据主题构建焦点边框的辅助方法
+  InputBorder _getFocusedBorderForTheme() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (_uiTheme == UITheme.strawberryCandy) {
+      return UIThemeManager.buildTextFieldFocusedBorderStrawberryCandy(context);
+    } else if (_uiTheme == UITheme.pickleMilk) {
+      return UIThemeManager.buildTextFieldFocusedBorderPickleMilk(context);
+    } else {
+      // 系统：默认使用草莓糖心
+      return UIThemeManager.buildTextFieldFocusedBorderStrawberryCandy(context);
+    }
+  }
+
+// 🎨 修改：根据主题获取填充颜色
+Color? _getFillColor(bool isDark, bool enabled) {
+  // 处理空值情况
+  Color? darkEnabledColor = Colors.grey[800];
+  Color? darkDisabledColor = Colors.grey[900];
+  Color lightEnabledColor = Colors.white;
+  Color? lightDisabledColor = Colors.grey[100];
+  
+  if (isDark) {
+    return enabled ? (darkEnabledColor ?? Colors.grey[800]) : (darkDisabledColor ?? Colors.grey[900]);
+  } else {
+    return enabled ? lightEnabledColor : lightDisabledColor;
+  }
+}
+
+  // 🎨 修改：根据主题获取背景颜色
+  Color _getBackgroundColor(bool isDark) {
+    if (_uiTheme == UITheme.strawberryCandy) {
+      return isDark ? Colors.grey[900]! : const Color(0xFFFFF8FA);
+    } else {
+      return isDark ? const Color(0xFF121212) : const Color(0xFFFDF7F7);
+    }
+  }
+
+  // 🎨 修改：根据主题获取卡片颜色
+  Color _getCardColor(bool isDark) {
+    if (_uiTheme == UITheme.strawberryCandy) {
+      return isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFFF0F5);
+    } else {
+      return isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFF8FF);
+    }
+  }
+
+  // 🎨 修改：根据主题获取边框颜色
+  Color _getCardBorderColor(bool isDark) {
+    if (_uiTheme == UITheme.strawberryCandy) {
+      return isDark ? Colors.grey[800]! : const Color(0xFFFFD1DC);
+    } else {
+      return isDark ? Colors.grey[700]! : const Color(0xFFE8D8DD);
+    }
+  }
+
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -257,32 +342,11 @@ void initState() {
             enabled: enabled,
             decoration: InputDecoration(
               filled: true,
-              fillColor: isDark
-                  ? (enabled ? Colors.grey[800] : Colors.grey[900])
-                  : (enabled ? Colors.white : Colors.grey[100]),
-              // 🎯 修复：恢复边框
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                  width: 1,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                  width: 1,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                 // 修改这里：将蓝色改为浅粉色
-                   color: isDark ? Color(0xFFFFB6C1)! : Color(0xFFFFB6C1), // 浅粉色
-                  width: 2,
-                ),
-              ),
+              fillColor: _getFillColor(isDark, enabled),
+              // 🎨 根据主题动态设置边框
+              border: _getBorderForTheme(),
+              enabledBorder: _getBorderForTheme(),
+              focusedBorder: _getFocusedBorderForTheme(),
               contentPadding: const EdgeInsets.all(16),
               hintText: hintText ?? '请输入${label.replaceAll('*', '').trim()}',
               hintStyle: TextStyle(
@@ -346,11 +410,14 @@ void initState() {
                 _enableCustomFormat = value;
               });
             },
-            // 🎯 使用统一的新API
+            // 🎨 根据主题设置Switch颜色
             thumbColor: const MaterialStatePropertyAll(Colors.white),
             trackColor: MaterialStateProperty.resolveWith((states) {
+              final primaryColor = _uiTheme == UITheme.strawberryCandy
+                  ? const Color(0xFFFF5A7E)
+                  : const Color(0xFFFF5A7E);
               if (states.contains(MaterialState.selected)) {
-                return const Color(0xFFFF5A7E).withOpacity(0.5);
+                return primaryColor.withOpacity(0.5);
               }
               return Colors.grey.withOpacity(0.3);
             }),
@@ -382,10 +449,10 @@ Widget _buildCustomFormatSection() {
             fillColor: isDark
                 ? Colors.grey[800]
                 : (_enableCustomFormat ? Colors.white : Colors.grey[100]),
-            // 🎨 简化的方法：所有边框都根据开关状态设置
-            border: _buildBorder(isDark),
-            enabledBorder: _buildBorder(isDark),
-            focusedBorder: _buildBorder(isDark),
+            // 🎨 根据主题和开关状态设置边框
+            border: _enableCustomFormat ? InputBorder.none : _getBorderForTheme(),
+            enabledBorder: _enableCustomFormat ? InputBorder.none : _getBorderForTheme(),
+            focusedBorder: _enableCustomFormat ? InputBorder.none : _getFocusedBorderForTheme(),
             contentPadding: const EdgeInsets.all(16),
             hintText: _enableCustomFormat
                 ? '输入自定义格式指令...'
@@ -414,30 +481,19 @@ Widget _buildCustomFormatSection() {
     ),
   );
 }
-
-// 🎨 辅助方法：构建边框
-InputBorder _buildBorder(bool isDark) {
-  if (_enableCustomFormat) {
-    return InputBorder.none; // 开关开启时无边框
-  } else {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-        width: 1,
-      ),
-    );
-  }
-}
  
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // 🎨 根据主题获取背景颜色
+    final backgroundColor = _getBackgroundColor(isDark);
+    
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+        backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+          backgroundColor: backgroundColor,
           elevation: 0,
           leading: IconButton(
             icon: Icon(Icons.arrow_back,
@@ -459,9 +515,9 @@ InputBorder _buildBorder(bool isDark) {
     }
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFFFF8FA),
+        backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back,
@@ -546,20 +602,13 @@ InputBorder _buildBorder(bool isDark) {
                   _buildCustomFormatSection(),
                   const SizedBox(height: 24),
 
+                  // 🎨 根据主题设置按钮样式
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : _saveCharacterData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF5A7E),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 2,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
+                      style: UIThemeManager.getButtonStyle(context, _uiTheme),
                       child: _isSaving
                           ? const SizedBox(
                               width: 24,
@@ -584,14 +633,10 @@ InputBorder _buildBorder(bool isDark) {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1A1A1A)
-                          : const Color(0xFFFFF0F5),
+                      color: _getCardColor(isDark),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isDark
-                            ? Colors.grey.shade800
-                            : const Color(0xFFFFD1DC),
+                        color: _getCardBorderColor(isDark),
                         width: 1,
                       ),
                     ),
