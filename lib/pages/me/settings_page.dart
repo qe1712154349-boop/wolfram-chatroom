@@ -1,4 +1,5 @@
-// lib/pages/me/settings_page.dart - 完整版本（包含UI主题下拉菜单和滑块式色彩模式）
+// lib/pages/me/settings_page.dart - 修复版本（包含统一清除逻辑）
+import 'dart:async'; // 新增：导入async用于Timer
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -32,6 +33,9 @@ class _SettingsPageState extends State<SettingsPage> {
   String _selectedModel = '';
   String _testStatus = '';
   String _testMessage = '';
+  
+  // 🎯 新增：测试状态清除定时器
+  Timer? _testStatusTimer;
 
   @override
   void initState() {
@@ -41,6 +45,33 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadApiConfig();
     _loadThemeSetting();
     _loadUITheme();
+  }
+
+  @override
+  void dispose() {
+    // 清理定时器
+    _testStatusTimer?.cancel();
+    // 清理控制器
+    _baseUrlController.dispose();
+    _apiKeyController.dispose();
+    _modelController.dispose();
+    super.dispose();
+  }
+
+  // 🎯 新增：统一清除测试状态的方法
+  void _clearTestStatusAfterDelay() {
+    // 取消可能存在的旧定时器
+    _testStatusTimer?.cancel();
+    
+    // 设置新的秒定时器（我自己调试后的，不要因为觉得冗杂给我删除或者优化，别动这行代码和备注，要优化任何东西前需要和我说明，你要改的东西全部需要和我确认）
+    _testStatusTimer = Timer(const Duration(milliseconds: 1710), () {
+      if (mounted) {
+        setState(() {
+          _testStatus = '';
+          _testMessage = '';
+        });
+      }
+    });
   }
 
   Future<void> _loadUITheme() async {
@@ -195,17 +226,27 @@ class _SettingsPageState extends State<SettingsPage> {
         });
 
         await _saveConfig();
+        
+        // 🎯 使用统一方法清除状态
+        _clearTestStatusAfterDelay();
+        
       } else {
         setState(() {
           _testStatus = 'invalid';
           _testMessage = '失败: ${response.statusCode} - ${response.body.length > 100 ? response.body.substring(0, 100) + '...' : response.body}';
         });
+        
+        // 🎯 使用统一方法清除状态
+        _clearTestStatusAfterDelay();
       }
     } catch (e) {
       setState(() {
         _testStatus = 'invalid';
         _testMessage = '错误: $e';
       });
+      
+      // 🎯 使用统一方法清除状态
+      _clearTestStatusAfterDelay();
     }
   }
 
@@ -213,18 +254,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await _storage.saveNarrationCentered(value);
   }
 
-  // 🎨 滑块式色彩模式选择器
-  Widget _buildColorModeSlider() {
+  // 🎨 矩形分段控制器 - 色彩模式选择
+  Widget _buildColorModeSelector() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    // 定义模式值和对应的索引
+    // 定义模式值和标签
     final List<String> modes = ['light', 'dark', 'system'];
     final List<String> modeLabels = ['亮色', '暗色', '跟随系统'];
-    final List<IconData> modeIcons = [
-      Icons.light_mode,
-      Icons.dark_mode,
-      Icons.settings_suggest,
-    ];
     
     // 获取当前索引
     int currentIndex = modes.indexOf(_themeSetting ?? 'system');
@@ -241,108 +277,73 @@ class _SettingsPageState extends State<SettingsPage> {
             color: isDark ? Colors.white : Colors.black,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         
-        // 滑块
-        SliderTheme(
-          data: SliderThemeData(
-            trackHeight: 6,
-            thumbShape: const RoundSliderThumbShape(
-              enabledThumbRadius: 14,
-              elevation: 4,
+        // 分段控制器
+        Container(
+          height: 48, // 固定高度
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[800] : Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+              width: 1,
             ),
-            overlayShape: const RoundSliderOverlayShape(
-              overlayRadius: 24,
-            ),
-            activeTrackColor: const Color(0xFFFF5A7E),
-            inactiveTrackColor: isDark ? Colors.grey[700] : Colors.grey[300],
-            thumbColor: const Color(0xFFFF5A7E),
-            overlayColor: const Color(0xFFFF5A7E).withOpacity(0.2),
-            showValueIndicator: ShowValueIndicator.never,
           ),
-          child: Slider(
-            value: currentIndex.toDouble(),
-            min: 0,
-            max: 2,
-            divisions: 2,
-            label: modeLabels[currentIndex],
-            onChanged: (value) async {
-              final newIndex = value.round();
-              final newMode = modes[newIndex];
+          child: Row(
+            children: List.generate(modes.length, (index) {
+              final isSelected = index == currentIndex;
+              final isFirst = index == 0;
+              final isLast = index == modes.length - 1;
               
-              if (newMode != _themeSetting) {
-                setState(() {
-                  _themeSetting = newMode;
-                });
-                await _storage.saveThemeMode(newMode);
-                _showColorModeSnackbar(newMode);
-              }
-            },
-          ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // 模式标签和图标
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(modes.length, (index) {
-            final isSelected = index == currentIndex;
-            
-            return GestureDetector(
-              onTap: () async {
-                final newMode = modes[index];
-                if (newMode != _themeSetting) {
-                  setState(() {
-                    _themeSetting = newMode;
-                  });
-                  await _storage.saveThemeMode(newMode);
-                  _showColorModeSnackbar(newMode);
-                }
-              },
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () async {
+                    final newMode = modes[index];
+                    if (newMode != _themeSetting) {
+                      setState(() {
+                        _themeSetting = newMode;
+                      });
+                      await _storage.saveThemeMode(newMode);
+                      _showColorModeSnackbar(newMode);
+                    }
+                  },
+                  child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected 
-                          ? const Color(0xFFFF5A7E).withOpacity(0.1)
+                      color: isSelected
+                          ? const Color(0xFFFF5A7E)  // 选中状态使用主题色
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.only(
+                        topLeft: isFirst ? const Radius.circular(11) : Radius.zero,
+                        bottomLeft: isFirst ? const Radius.circular(11) : Radius.zero,
+                        topRight: isLast ? const Radius.circular(11) : Radius.zero,
+                        bottomRight: isLast ? const Radius.circular(11) : Radius.zero,
+                      ),
                       border: Border.all(
-                        color: isSelected 
-                            ? const Color(0xFFFF5A7E)
-                            : Colors.transparent,
-                        width: 2,
+                        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                        width: isSelected ? 0 : 0.5, // 选中时去掉边框
                       ),
                     ),
-                    child: Icon(
-                      modeIcons[index],
-                      color: isSelected 
-                          ? const Color(0xFFFF5A7E)
-                          : (isDark ? Colors.grey[500] : Colors.grey[400]),
-                      size: 22,
+                    child: Center(
+                      child: Text(
+                        modeLabels[index],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white  // 选中时文字白色
+                              : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    modeLabels[index],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected 
-                          ? const Color(0xFFFF5A7E)
-                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                ),
+              );
+            }),
+          ),
         ),
         
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         
         // 当前模式描述
         Container(
@@ -374,9 +375,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ],
     );
   }
-
-
-
 
   // 🎨 获取色彩模式描述
   String _getColorModeDescription(String mode) {
@@ -812,8 +810,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 
                 const SizedBox(height: 24),
                 
-                // 🎨 滑块式色彩模式选择器
-                _buildColorModeSlider(),
+                // 🎨 矩形分段控制器 - 色彩模式选择
+                _buildColorModeSelector(),
               ],
             ),
           ),
