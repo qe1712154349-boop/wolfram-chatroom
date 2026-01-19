@@ -25,7 +25,7 @@ class StorageService {
     return prefs.getBool('developer_mode') ?? false;
   }
 
-    // ── 新增：夜间模式相关 ──
+  // ── 新增：夜间模式相关 ──
   Future<void> saveThemeMode(String mode) async {
     final prefs = await _prefs;
     await prefs.setString('theme_mode', mode); // 'light', 'dark', 'system'
@@ -284,28 +284,84 @@ class StorageService {
     return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
   }
 
-// 在StorageService类中添加以下方法：
+  // ── 新增：UI主题相关 ──
+  Future<void> saveUITheme(String theme) async {
+    final prefs = await _prefs;
+    await prefs.setString('ui_theme', theme);
+  }
 
-// ── 新增：UI主题相关 ──
-Future<void> saveUITheme(String theme) async {
-  final prefs = await _prefs;
-  await prefs.setString('ui_theme', theme);
-}
+  Future<String> getUITheme() async {
+    final prefs = await _prefs;
+    return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
+  }
 
-Future<String> getUITheme() async {
-  final prefs = await _prefs;
-  return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
-}
+  // 获取边框样式（兼容旧版本）
+  Future<String> getBorderStyle() async {
+    final prefs = await _prefs;
+    return prefs.getString('border_style') ?? '无边框';
+  }
 
-// 获取边框样式（兼容旧版本）
-Future<String> getBorderStyle() async {
-  final prefs = await _prefs;
-  return prefs.getString('border_style') ?? '无边框';
-}
+  Future<void> saveBorderStyle(String style) async {
+    final prefs = await _prefs;
+    await prefs.setString('border_style', style);
+  }
 
-Future<void> saveBorderStyle(String style) async {
-  final prefs = await _prefs;
-  await prefs.setString('border_style', style);
-}
+  // ── 新增：App 状态快照（防进程杀） ──
+  Future<void> saveAppState({
+    List<Message>? messages,  // 聊天历史
+    double? scrollOffset,     // 滚动位置
+    String? inputText,        // 输入框内容
+    String? currentRoute,     // 当前页面
+  }) async {
+    final prefs = await _prefs;
+    
+    // 1. 保存聊天历史（如果传入）
+    if (messages != null && messages.isNotEmpty) {
+      await saveChatHistory(messages);
+    }
+    
+    // 2. 保存滚动位置
+    if (scrollOffset != null) {
+      await prefs.setDouble('chat_scroll_offset', scrollOffset);
+    }
+    
+    // 3. 保存输入框内容
+    if (inputText != null) {
+      await prefs.setString('chat_input_text', inputText);
+    }
+    
+    // 4. 保存当前路由（快速恢复页面）
+    if (currentRoute != null) {
+      await prefs.setString('last_route', currentRoute);
+    }
+    
+    // 5. 时间戳（判断是否过期）
+    await prefs.setInt('last_state_time', DateTime.now().millisecondsSinceEpoch);
+  }
 
+  Future<Map<String, dynamic>> loadAppState() async {
+    final prefs = await _prefs;
+    final lastTime = prefs.getInt('last_state_time') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    // 状态过期阈值：30分钟
+    if (now - lastTime > 30 * 60 * 1000) {
+      return {}; // 过期，返回空
+    }
+    
+    return {
+      'scrollOffset': prefs.getDouble('chat_scroll_offset') ?? 0.0,
+      'inputText': prefs.getString('chat_input_text') ?? '',
+      'lastRoute': prefs.getString('last_route') ?? '/chat',
+      'chatHistory': await loadChatHistory(), // 已有方法
+    };
+  }
+
+  Future<void> clearAppState() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_scroll_offset');
+    await prefs.remove('chat_input_text');
+    await prefs.remove('last_route');
+    await prefs.remove('last_state_time');
+  }
 }

@@ -3,22 +3,83 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 2138 bytes
+Size: 5193 bytes
 
-Modified: 01/19/2026 14:09:59
+Modified: 01/19/2026 22:44:35
 
 ========================================
 
-// lib/main.dart - 支持即时主题切换
+// lib/main.dart - 终极后台保活版
+import 'dart:isolate';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter/services.dart';
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. 初始化前台服务（进程不死核心）
+  await _initForegroundTask();
+
+  // 2. 强制竖屏（可选，聊天 App 推荐）
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(const MyBunnyApp());
+}
+
+// 前台服务初始化（100% 防杀后台）
+Future<void> _initForegroundTask() async {
+  await FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'chat_keepalive',
+      channelName: '沃夫朗聊天',
+      channelDescription: '保持聊天室活跃，随时响应消息',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+      iconData: const NotificationIconData(
+        resType: ResourceType.mipmap,
+        resPrefix: ResourcePrefix.ic,
+        name: 'launcher',
+      ),
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: true,
+      playSound: false,
+    ),
+    foregroundTaskOptions: const ForegroundTaskOptions(
+      interval: 5000,  // 5s 心跳
+      isOnceEvent: false,
+      autoRunOnBoot: true,
+      allowWakeLock: true,
+      allowWifiLock: false,
+    ),
+  );
+
+  // 设置服务回调（心跳保活）
+  FlutterForegroundTask.setTaskHandler(MyForegroundTaskHandler());
+}
+
+// 后台心跳任务（每5s执行，防止进程被杀）
+class MyForegroundTaskHandler extends TaskHandler {
+  @override
+  void onStart(DateTime timestamp, SendPort? sendPort) {}
+
+  @override
+  void onEvent(DateTime timestamp, SendPort? sendPort) {
+    // 心跳：轻量操作，保持进程活跃
+    sendPort?.send('heartbeat');
+  }
+
+  @override
+  void onDestroy(DateTime timestamp, SendPort? sendPort) {}
 }
 
 class MyBunnyApp extends StatefulWidget {
@@ -28,17 +89,48 @@ class MyBunnyApp extends StatefulWidget {
   State<MyBunnyApp> createState() => _MyBunnyAppState();
 }
 
-class _MyBunnyAppState extends State<MyBunnyApp> {
+class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
   final StorageService _storage = StorageService();
-
-  // 🎨 新增：全局Key用于刷新整个应用
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadThemeMode();
+
+    // 启动前台服务（进入 App 立即保活）
+    _startForegroundService();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // 切回前台：确保服务运行 + 恢复状态
+        _startForegroundService();
+        _storage.saveAppState();  // 强制保存
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        // 切后台：立即保存状态
+        _storage.saveAppState();
+        break;
+      case AppLifecycleState.detached:
+        FlutterForegroundTask.stopService();
+        break;
+      default:
+        break;
+    }
   }
 
   Future<void> _loadThemeMode() async {
@@ -46,7 +138,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> {
     _updateThemeMode(savedMode);
   }
 
-  // 🎨 新增：更新主题模式
   void _updateThemeMode(String savedMode) {
     setState(() {
       if (savedMode == 'dark') {
@@ -59,29 +150,35 @@ class _MyBunnyAppState extends State<MyBunnyApp> {
     });
   }
 
-  // 🎨 新增：外部调用来更新主题（从设置页面调用）
-  void changeTheme(String mode) {
-    _updateThemeMode(mode);
-  }
+  void changeTheme(String mode) => _updateThemeMode(mode);
 
-  // 🎨 新增：获取当前主题设置
-  Future<String> getCurrentTheme() async {
-    return await _storage.getThemeMode();
+  Future<String> getCurrentTheme() async => await _storage.getThemeMode();
+
+  Future<void> _startForegroundService() async {
+    if (!await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.startService(
+        notificationTitle: '沃夫朗聊天室',
+        notificationText: '随时在线，等待你的消息...',
+        callback: FlutterForegroundTask.setTaskHandler,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _themeMode,
-      navigatorKey: _navigatorKey, // 🎨 新增：设置导航键
-      home: const MainScreen(),
-      routes: {
-        '/character-edit': (context) => const ChatCharacterEditPage(),
-        '/profile-settings': (context) => const ProfileSettingsPage(),
-      },
+    return WithForegroundTask(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: _themeMode,
+        navigatorKey: _navigatorKey,
+        home: const MainScreen(),
+        routes: {
+          '/character-edit': (context) => const ChatCharacterEditPage(),
+          '/profile-settings': (context) => const ProfileSettingsPage(),
+        },
+      ),
     );
   }
 }
@@ -94,7 +191,7 @@ File: D:\D\my_new_app\lib\app\theme.dart
 
 Size: 9257 bytes
 
-Modified: 01/18/2026 18:57:39
+Modified: 01/19/2026 17:44:05
 
 ========================================
 
@@ -353,7 +450,7 @@ File: D:\D\my_new_app\lib\app\ui_theme_manager.dart
 
 Size: 8651 bytes
 
-Modified: 01/19/2026 01:54:51
+Modified: 01/19/2026 17:44:05
 
 ========================================
 
@@ -1122,7 +1219,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
 Size: 24599 bytes
 
-Modified: 01/19/2026 01:54:51
+Modified: 01/19/2026 17:44:05
 
 ========================================
 
@@ -2133,7 +2230,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
 Size: 5499 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/19/2026 19:46:01
 
 ========================================
 
@@ -2300,9 +2397,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 32186 bytes
+Size: 32670 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/19/2026 21:27:52
 
 ========================================
 
@@ -2312,6 +2409,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -2352,6 +2450,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   // 修改：使用枚举值而不是枚举类型本身
   AxisDirection _lastDirection = AxisDirection.down;
 
+  // 新增：判断用户是否在底部附近（用于决定是否自动跟随新消息）
+  bool get _isUserAtBottom {
+    if (!_scrollController.hasClients) return true;
+    final pos = _scrollController.position;
+    final distance = pos.maxScrollExtent - pos.pixels;
+    final isAtBottom = distance < 300.0;
+    final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
+    return isAtBottom || (distance < 600 && isScrollingDown);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2363,81 +2471,42 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     
     _scrollController.addListener(() {
       if (!mounted) return;
-      
-      final double currentScroll = _scrollController.position.pixels;
-      final double maxScroll = _scrollController.position.maxScrollExtent;
-      final double distanceFromBottom = maxScroll - currentScroll;
-      
-      // 判断滚动方向 - 使用更直接的方式
-      final bool isScrollingUp = _scrollController.position.userScrollDirection == ScrollDirection.reverse;
-      final bool isScrollingDown = _scrollController.position.userScrollDirection == ScrollDirection.forward;
-      
-      // 情况1：用户向下滚动（靠近底部）
-      if (isScrollingDown) {
-        // 只有在之前是向上滚动，现在转为向下滚动时才显示箭头
-        if (_lastDirection == AxisDirection.up && 
-            distanceFromBottom > 100.0) {
-          if (!_showScrollToBottomButton) {
-            setState(() {
-              _showScrollToBottomButton = true;
-            });
-            // 设置3秒后隐藏
-            _scrollButtonTimer?.cancel();
-            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-              if (mounted && _showScrollToBottomButton) {
-                setState(() {
-                  _showScrollToBottomButton = false;
-                });
-              }
-            });
-          } else {
-            // 如果箭头已经在显示，用户继续向下滚动，重置计时器
-            _scrollButtonTimer?.cancel();
-            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-              if (mounted && _showScrollToBottomButton) {
-                setState(() {
-                  _showScrollToBottomButton = false;
-                });
-              }
-            });
-          }
+
+      final pos = _scrollController.position;
+      final distanceFromBottom = pos.maxScrollExtent - pos.pixels;
+
+      final isScrollingUp = pos.userScrollDirection == ScrollDirection.reverse;
+      final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
+
+      if (isScrollingDown && distanceFromBottom > 100.0) {
+        if (_lastDirection == AxisDirection.up) {
+          setState(() => _showScrollToBottomButton = true);
+          _scrollButtonTimer?.cancel();
+          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted && _showScrollToBottomButton) {
+              setState(() => _showScrollToBottomButton = false);
+            }
+          });
         }
-        
-        // 如果距离底部很近了（<50px），立即隐藏箭头
-        if (distanceFromBottom < 50.0) {
-          if (_showScrollToBottomButton) {
-            setState(() {
-              _showScrollToBottomButton = false;
-            });
-            _scrollButtonTimer?.cancel();
-          }
-        }
-        
-        // 更新方向为向下
+      }
+
+      if (distanceFromBottom < 50.0) {
+        setState(() => _showScrollToBottomButton = false);
+        _scrollButtonTimer?.cancel();
+      }
+
+      if (isScrollingUp) {
+        _lastDirection = AxisDirection.up;
+      } else if (isScrollingDown) {
         _lastDirection = AxisDirection.down;
       }
-      
-      // 情况2：用户向上滚动（远离底部）
-      else if (isScrollingUp) {
-        // 更新方向为向上
-        _lastDirection = AxisDirection.up;
-      }
-      
-      // 情况3：滚动到顶部或特殊情况
-      else if (distanceFromBottom < 50.0) {
-        // 距离底部很近时自动隐藏
-        if (_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = false;
-          });
-          _scrollButtonTimer?.cancel();
-        }
-      }
     });
-    
+
+    // 初始滚动已不需要 jump，因为 reverse:true 后默认就在底
+    // 只加一个保险（几乎看不见）
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _scrollToBottom(animate: false);
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(0.0);
       }
     });
   }
@@ -2470,59 +2539,29 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
       
       if (keyboardVisible) {
-        _scrollToBottom(animate: true, hideArrow: true);
+        _scrollToBottom(animate: true);
       }
     }
     
     super.didChangeMetrics();
   }
 
-  void _scrollToBottom({
-    bool animate = true, 
-    bool hideArrow = false,
-  }) {
-    if (!mounted) return;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        final maxScrollExtent = _scrollController.position.maxScrollExtent;
-        final currentPixels = _scrollController.position.pixels;
-        final distanceFromBottom = maxScrollExtent - currentPixels;
-        
-        // 只有在离底部较远（>100px）时才滚动
-        if (distanceFromBottom > 100) {
-          if (animate) {
-            _scrollController.animateTo(
-              maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.fastOutSlowIn,
-            );
-          } else {
-            _scrollController.jumpTo(maxScrollExtent);
-          }
-        }
-        
-        // 程序自动滚动时强制隐藏箭头
-        if (hideArrow && _showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = false;
-          });
-          _scrollButtonTimer?.cancel();
-        }
-      }
-    });
-  }
+  // 简化版 _scrollToBottom（reverse:true 时目标是 0.0）
+  void _scrollToBottom({bool animate = false}) {
+    if (!mounted || !_scrollController.hasClients) return;
 
-  // 删除 _scrollWithSpring 函数，因为不再使用
-  // void _scrollWithSpring() {
-  //   if (!mounted || !_scrollController.hasClients) return;
-  //   
-  //   _scrollController.animateTo(
-  //     _scrollController.position.maxScrollExtent,
-  //     duration: const Duration(milliseconds: 380),
-  //     curve: Curves.elasticOut,
-  //   );
-  // }
+    const target = 0.0;
+
+    if (animate) {
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(target);
+    }
+  }
 
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
@@ -2560,8 +2599,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     } else {
       await _loadOpeningMessage();
     }
-    
-    _scrollToBottom(animate: false);
   }
 
   Future<void> _loadOpeningMessage() async {
@@ -2635,15 +2672,33 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       messageType: messageType,
     );
 
-    if (!mounted) return;
-    
+    // 第一阶段：只添加用户消息
     setState(() {
       _messages.add(userMessage);
-      _isLoading = true;
+      // 注意：这里**不**设 _isLoading = true，先让用户消息稳定出现
     });
 
-    _scrollToBottom(animate: true, hideArrow: true);
-    await _saveHistory();
+    // 立即强制下一帧滚动 + paint（核心防合并）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.jumpTo(0.0);
+      _scrollController.position.notifyListeners();  // 强制通知位置变化
+      
+      // 额外强制一帧
+      SchedulerBinding.instance.scheduleFrame();
+    });
+
+    // 异步保存历史
+    unawaited(_saveHistory());
+
+    // 短暂延迟后显示 loading（模拟"思考中"，避免抢用户消息的风头）
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       final systemPrompt = await _storage.getCharacterSystemPrompt();
@@ -2654,12 +2709,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       ];
 
       final contextMessages = _buildContextMessages();
-      apiMessages.addAll(
-        contextMessages.map((msg) => {
+      apiMessages.addAll(contextMessages.map((msg) => ({
           'role': msg['role']!,
           'content': msg['content']!,
-        }),
-      );
+        })));
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
       
@@ -2677,20 +2730,28 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         print('=============================\n');
       }
 
-      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
-      
       if (mounted) {
+        final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
         final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
+
         setState(() {
           _messages.addAll(aiMessages);
+          _isLoading = false;
         });
 
         await _saveHistory();
-        _scrollToBottom(animate: true, hideArrow: true);
+
+        // AI 加入后也强制跳一次（以防长回复推高）
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+            _scrollController.position.notifyListeners();
+          }
+        });
       }
     } catch (e) {
-      final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
       if (mounted) {
+        final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
         setState(() {
           _messages.add(Message(
             id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
@@ -2699,13 +2760,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             timestamp: errorTimestamp,
             messageType: MessageType.ai_dialogue,
           ));
+          _isLoading = false;
         });
-      }
-      await _saveHistory();
-      _scrollToBottom(animate: true, hideArrow: true);
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+        await _saveHistory();
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+            _scrollController.position.notifyListeners();
+          }
+        });
       }
     }
   }
@@ -2997,57 +3061,78 @@ class _ChatRoomPageState extends State<ChatRoomPage>
               onTap: () => FocusScope.of(context).unfocus(),
               child: Stack(
                 children: [
-                  ListView.builder(
+                  CustomScrollView(
                     controller: _scrollController,
-                    reverse: false,
-                    padding: const EdgeInsets.only(top: 20, bottom: 80),
-                    itemCount: _messages.length + (_isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (_isLoading && index == _messages.length) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                child: _avatarPath == null 
-                                    ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
-                                    : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                  borderRadius: BorderRadius.circular(18),
+                    reverse: true,
+                    slivers: [
+                      // 先加一个大的 SliverPadding 让开场白偏上
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: 120), // ← 调这个值，越大开场白越靠上
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            // 处理"正在输入..."（放在视觉最底部，即 index=0）
+                            if (_isLoading && index == 0) {
+                              // 只在用户消息后显示
+                              return AnimatedSize(
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOut,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                        backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+                                        child: _avatarPath == null 
+                                            ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                          borderRadius: BorderRadius.circular(18),
+                                        ),
+                                        child: Text(
+                                          "正在输入...", 
+                                          style: TextStyle(
+                                            fontSize: 16, 
+                                            color: isDark ? Colors.white : Colors.black87, 
+                                            height: 1.4
+                                          )
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                child: Text(
-                                  "正在输入...", 
-                                  style: TextStyle(
-                                    fontSize: 16, 
-                                    color: isDark ? Colors.white : Colors.black87, 
-                                    height: 1.4
-                                  )
-                                ),
+                              );
+                            }
+
+                            // 根据是否有loading调整索引
+                            final msgIndex = _messages.length - 1 - index + (_isLoading ? 1 : 0);
+                            if (msgIndex < 0 || msgIndex >= _messages.length) {
+                              return const SizedBox.shrink();
+                            }
+
+                            final msg = _messages[msgIndex];
+                            // 使用 GlobalKey 确保消息稳定性
+                            return Container(
+                              key: ValueKey(msg.id),
+                              child: GestureDetector(
+                                onLongPress: () => _showDeleteDialog(msgIndex),
+                                child: _buildMessageWidget(msg),
                               ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      if (index >= _messages.length) {
-                        return const SizedBox.shrink();
-                      }
-
-                      final msg = _messages[index];
-                      return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(index),
-                        child: _buildMessageWidget(msg),
-                      );  
-                    },
+                            );  
+                          },
+                          childCount: _messages.length + (_isLoading ? 1 : 0),
+                        ),
+                      ),
+                    ],
                   ),
                   
                   if (_showScrollToBottomButton)
@@ -3072,7 +3157,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             size: 20
                           ),
                           onPressed: () {
-                            _scrollToBottom(animate: true, hideArrow: true);
+                            _scrollToBottom(animate: true);
                           },
                         ),
                       ),
@@ -3156,7 +3241,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         final text = _controller.text.trim();
                         if (text.isNotEmpty) {
                           _sendMessage(text);
-                          _controller.clear();
+                              _controller.clear();
                         }
                       },
                       child: Container(
@@ -4304,7 +4389,7 @@ File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
 Size: 35021 bytes
 
-Modified: 01/19/2026 14:32:28
+Modified: 01/19/2026 17:44:05
 
 ========================================
 
@@ -5603,7 +5688,7 @@ File: D:\D\my_new_app\lib\services\storage_service.dart
 
 Size: 10133 bytes
 
-Modified: 01/19/2026 01:54:51
+Modified: 01/19/2026 19:46:01
 
 ========================================
 

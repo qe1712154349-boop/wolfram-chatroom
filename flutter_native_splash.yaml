@@ -1,0 +1,9 @@
+flutter_native_splash:
+  color: "#FDF7F7"  # 你的 light 背景
+  color_dark: "#060405"  # 你的 dark 背景
+  image: assets/splash.png  # 准备一张 512x512 PNG，或删除此行用纯色
+  android: true
+  ios: true
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true

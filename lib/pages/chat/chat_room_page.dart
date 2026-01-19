@@ -1,10 +1,11 @@
-// 在文件顶部添加 import
+// lib/pages/chat/chat_room_page.dart
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -42,6 +43,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String _systemPrompt = '';
   bool _narrationCentered = true;
 
+  // 新增字段
+  OverlayEntry? _loadingOverlay;
+  String? _savedInputText;  // 保存输入框
+  double _savedScrollOffset = 0.0;  // 保存滚动位置
+  
   // 修改：使用枚举值而不是枚举类型本身
   AxisDirection _lastDirection = AxisDirection.down;
 
@@ -59,11 +65,20 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // 1. 启动前台服务（保活）
+    _startForegroundService();
+    
+    // 2. 快速恢复状态（0.1s 内）
+    _restoreAppState();
+    
+    // 3. 原有初始化
     _loadCharacterData();
     _loadNarrationCentered();
     _loadUserSettings();
     _loadHistory();
     
+    // 4. 原有 scroll listener（不变）
     _scrollController.addListener(() {
       if (!mounted) return;
 
@@ -97,11 +112,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       }
     });
 
-    // 初始滚动已不需要 jump，因为 reverse:true 后默认就在底
-    // 只加一个保险（几乎看不见）
+    // 5. 初始滚动（恢复后自动跳）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
-        _scrollController.jumpTo(0.0);
+        _scrollController.jumpTo(_savedScrollOffset);
       }
     });
   }
@@ -113,6 +127,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
+    
+    // 保存最终状态
+    _storage.saveAppState(
+      messages: _messages,
+      scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
+      inputText: _controller.text,
+    );
+    
     super.dispose();
   }
 
@@ -120,9 +142,21 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     
+    final storage = StorageService();
+    
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // 切后台：0.1s 内保存状态
+      storage.saveAppState(
+        messages: _messages,
+        scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
+        inputText: _controller.text,
+        currentRoute: '/chat_room',
+      );
       _focusNode.unfocus();
       FocusScope.of(context).unfocus();
+    } else if (state == AppLifecycleState.resumed) {
+      // 切回：重启服务 + 恢复
+      _startForegroundService();
     }
   }
 
@@ -243,6 +277,27 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       _messages.clear();
     });
     await _storage.clearChatHistory();
+  }
+
+  // 新增方法：启动前台服务
+  Future<void> _startForegroundService() async {
+    if (!await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.startService(
+        notificationTitle: '沃夫朗聊天中',
+        notificationText: '随时回复你的消息',
+      );
+    }
+  }
+
+  // 新增方法：恢复应用状态
+  Future<void> _restoreAppState() async {
+    final state = await StorageService().loadAppState();
+    if (state.isNotEmpty) {
+      _savedInputText = state['inputText'];
+      _savedScrollOffset = state['scrollOffset'] ?? 0.0;
+      _controller.text = _savedInputText ?? '';  // 恢复输入框
+      if (kDebugMode) print('恢复状态：滚动 ${_savedScrollOffset}px，输入 ${_controller.text}');
+    }
   }
 
   Future<void> _sendMessage(String text) async {
