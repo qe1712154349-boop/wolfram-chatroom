@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -49,10 +50,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     if (!_scrollController.hasClients) return true;
     final pos = _scrollController.position;
     final distance = pos.maxScrollExtent - pos.pixels;
-    final isAtBottom = distance < 300.0; // 调小到 200~300 更灵敏
+    final isAtBottom = distance < 300.0;
     final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
-    return isAtBottom || (distance < 600 && isScrollingDown); // 向下滚时更宽容
+    return isAtBottom || (distance < 600 && isScrollingDown);
   }
+
+  // 新增：独立的 loading overlay
+  OverlayEntry? _loadingOverlay;
 
   @override
   void initState() {
@@ -112,6 +116,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
+    // 清理 loading overlay
+    _loadingOverlay?.remove();
+    _loadingOverlay = null;
     super.dispose();
   }
 
@@ -157,16 +164,71 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
-  // 删除 _scrollWithSpring 函数，因为不再使用
-  // void _scrollWithSpring() {
-  //   if (!mounted || !_scrollController.hasClients) return;
-  //   
-  //   _scrollController.animateTo(
-  //     _scrollController.position.maxScrollExtent,
-  //     duration: const Duration(milliseconds: 380),
-  //     curve: Curves.elasticOut,
-  //   );
-  // }
+  // 显示独立的 loading overlay
+  void _showLoadingOverlay() {
+    if (!mounted) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      // 移除之前的 overlay
+      _loadingOverlay?.remove();
+      
+      // 获取当前主题
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      
+      _loadingOverlay = OverlayEntry(
+        builder: (context) => Positioned(
+          bottom: 100,  // 调整到输入框上方，用户消息下方
+          left: 16,
+          right: 16,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                  backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+                  child: _avatarPath == null
+                      ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    "正在输入...",
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.4,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      
+      // 插入 overlay
+      Overlay.of(context).insert(_loadingOverlay!);
+    });
+  }
+
+  // 隐藏 loading overlay
+  void _hideLoadingOverlay() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadingOverlay?.remove();
+      _loadingOverlay = null;
+    });
+  }
 
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
@@ -204,8 +266,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     } else {
       await _loadOpeningMessage();
     }
-    
-    // ← 删掉这里的 _scrollToBottom，因为 reverse:true 后自动在底
   }
 
   Future<void> _loadOpeningMessage() async {
@@ -279,24 +339,32 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       messageType: messageType,
     );
 
-    if (!mounted) return;
-    
-    // 第一阶段：只加 user message 并显示 loading
+    // 第一阶段：只添加用户消息
     setState(() {
       _messages.add(userMessage);
-      _isLoading = true;
     });
 
-    // 立即确保滚动到最底 + 强制一帧重绘（非常关键）
-    if (_isUserAtBottom) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.jumpTo(0.0);           // 强制跳到视觉底部
-        }
-      });
+    // 立即强制下一帧滚动 + paint（核心防合并）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      
+      // 强制滚动到最底并通知所有监听器
+      _scrollController.jumpTo(0.0);
+      _scrollController.position.notifyListeners();  // 强制通知位置变化
+      
+      // 额外强制一帧
+      SchedulerBinding.instance.scheduleFrame();
+    });
+
+    // 异步保存历史
+    unawaited(_saveHistory());
+
+    // 短暂延迟后显示独立的 loading overlay
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (mounted) {
+      _showLoadingOverlay();
+      _isLoading = true;
     }
-    
-    await _saveHistory();
 
     try {
       final systemPrompt = await _storage.getCharacterSystemPrompt();
@@ -307,12 +375,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       ];
 
       final contextMessages = _buildContextMessages();
-      apiMessages.addAll(
-        contextMessages.map((msg) => ({
+      apiMessages.addAll(contextMessages.map((msg) => ({
           'role': msg['role']!,
           'content': msg['content']!,
-        })),
-      );
+        })));
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
       
@@ -330,30 +396,27 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         print('=============================\n');
       }
 
-      // 收到回复后才更新
       if (mounted) {
         final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
         final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
 
         setState(() {
           _messages.addAll(aiMessages);
-          // 注意：这里不 set _isLoading = false，因为 finally 会处理
         });
 
         await _saveHistory();
 
-        if (_isUserAtBottom) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _scrollController.hasClients) {
-              _scrollController.jumpTo(0.0);
-            }
-          });
-        }
+        // AI 加入后也强制跳一次（以防长回复推高）
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+            _scrollController.position.notifyListeners();
+          }
+        });
       }
     } catch (e) {
-      // 错误处理同上，但也用 postFrame 确保滚动
-      final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
       if (mounted) {
+        final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
         setState(() {
           _messages.add(Message(
             id: 'ai_error_${DateTime.now().millisecondsSinceEpoch}',
@@ -368,18 +431,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _scrollController.hasClients) {
             _scrollController.jumpTo(0.0);
+            _scrollController.position.notifyListeners();
           }
         });
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
-        // finally 再确保一次滚动（键盘/布局变化时保险）
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            _scrollController.jumpTo(0.0);
-          }
-        });
+        _hideLoadingOverlay();
+        _isLoading = false;
       }
     }
   }
@@ -682,56 +741,22 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            // reverse:true 时，index=0 是最新消息，index 越大越旧
-
-                            // 处理"正在输入..."（放在视觉最底部，即 index=0）
-                            if (_isLoading && index == 0) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                      backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                      child: _avatarPath == null 
-                                          ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                        borderRadius: BorderRadius.circular(18),
-                                      ),
-                                      child: Text(
-                                        "正在输入...", 
-                                        style: TextStyle(
-                                          fontSize: 16, 
-                                          color: isDark ? Colors.white : Colors.black87, 
-                                          height: 1.4
-                                        )
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
                             final msgIndex = _messages.length - 1 - index; // ← 核心2：反转索引
                             if (msgIndex < 0 || msgIndex >= _messages.length) {
                               return const SizedBox.shrink();
                             }
 
                             final msg = _messages[msgIndex];
-                            return GestureDetector(
-                              onLongPress: () => _showDeleteDialog(msgIndex), // 注意索引是原 msgIndex
-                              child: _buildMessageWidget(msg),
+                            // 使用 GlobalKey 确保消息稳定性
+                            return Container(
+                              key: ValueKey(msg.id), // 这里使用 ValueKey，如果还需要更强就用 GlobalKey
+                              child: GestureDetector(
+                                onLongPress: () => _showDeleteDialog(msgIndex), // 注意索引是原 msgIndex
+                                child: _buildMessageWidget(msg),
+                              ),
                             );  
                           },
-                          childCount: _messages.length + (_isLoading ? 1 : 0),
+                          childCount: _messages.length, // 注意：不再包含 loading
                         ),
                       ),
                     ],
@@ -843,7 +868,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         final text = _controller.text.trim();
                         if (text.isNotEmpty) {
                           _sendMessage(text);
-                          _controller.clear();
+                              _controller.clear();
                         }
                       },
                       child: Container(
