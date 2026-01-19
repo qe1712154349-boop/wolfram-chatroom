@@ -44,6 +44,16 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   // 修改：使用枚举值而不是枚举类型本身
   AxisDirection _lastDirection = AxisDirection.down;
 
+  // 新增：判断用户是否在底部附近（用于决定是否自动跟随新消息）
+  bool get _isUserAtBottom {
+    if (!_scrollController.hasClients) return true;
+    final pos = _scrollController.position;
+    final distance = pos.maxScrollExtent - pos.pixels;
+    final isAtBottom = distance < 300.0; // 调小到 200~300 更灵敏
+    final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
+    return isAtBottom || (distance < 600 && isScrollingDown); // 向下滚时更宽容
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,81 +65,42 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     
     _scrollController.addListener(() {
       if (!mounted) return;
-      
-      final double currentScroll = _scrollController.position.pixels;
-      final double maxScroll = _scrollController.position.maxScrollExtent;
-      final double distanceFromBottom = maxScroll - currentScroll;
-      
-      // 判断滚动方向 - 使用更直接的方式
-      final bool isScrollingUp = _scrollController.position.userScrollDirection == ScrollDirection.reverse;
-      final bool isScrollingDown = _scrollController.position.userScrollDirection == ScrollDirection.forward;
-      
-      // 情况1：用户向下滚动（靠近底部）
-      if (isScrollingDown) {
-        // 只有在之前是向上滚动，现在转为向下滚动时才显示箭头
-        if (_lastDirection == AxisDirection.up && 
-            distanceFromBottom > 100.0) {
-          if (!_showScrollToBottomButton) {
-            setState(() {
-              _showScrollToBottomButton = true;
-            });
-            // 设置3秒后隐藏
-            _scrollButtonTimer?.cancel();
-            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-              if (mounted && _showScrollToBottomButton) {
-                setState(() {
-                  _showScrollToBottomButton = false;
-                });
-              }
-            });
-          } else {
-            // 如果箭头已经在显示，用户继续向下滚动，重置计时器
-            _scrollButtonTimer?.cancel();
-            _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-              if (mounted && _showScrollToBottomButton) {
-                setState(() {
-                  _showScrollToBottomButton = false;
-                });
-              }
-            });
-          }
+
+      final pos = _scrollController.position;
+      final distanceFromBottom = pos.maxScrollExtent - pos.pixels;
+
+      final isScrollingUp = pos.userScrollDirection == ScrollDirection.reverse;
+      final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
+
+      if (isScrollingDown && distanceFromBottom > 100.0) {
+        if (_lastDirection == AxisDirection.up) {
+          setState(() => _showScrollToBottomButton = true);
+          _scrollButtonTimer?.cancel();
+          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted && _showScrollToBottomButton) {
+              setState(() => _showScrollToBottomButton = false);
+            }
+          });
         }
-        
-        // 如果距离底部很近了（<50px），立即隐藏箭头
-        if (distanceFromBottom < 50.0) {
-          if (_showScrollToBottomButton) {
-            setState(() {
-              _showScrollToBottomButton = false;
-            });
-            _scrollButtonTimer?.cancel();
-          }
-        }
-        
-        // 更新方向为向下
+      }
+
+      if (distanceFromBottom < 50.0) {
+        setState(() => _showScrollToBottomButton = false);
+        _scrollButtonTimer?.cancel();
+      }
+
+      if (isScrollingUp) {
+        _lastDirection = AxisDirection.up;
+      } else if (isScrollingDown) {
         _lastDirection = AxisDirection.down;
       }
-      
-      // 情况2：用户向上滚动（远离底部）
-      else if (isScrollingUp) {
-        // 更新方向为向上
-        _lastDirection = AxisDirection.up;
-      }
-      
-      // 情况3：滚动到顶部或特殊情况
-      else if (distanceFromBottom < 50.0) {
-        // 距离底部很近时自动隐藏
-        if (_showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = false;
-          });
-          _scrollButtonTimer?.cancel();
-        }
-      }
     });
-    
+
+    // 初始滚动已不需要 jump，因为 reverse:true 后默认就在底
+    // 只加一个保险（几乎看不见）
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _scrollToBottom(animate: false);
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(0.0);
       }
     });
   }
@@ -162,47 +133,28 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
       
       if (keyboardVisible) {
-        _scrollToBottom(animate: true, hideArrow: true);
+        _scrollToBottom(animate: true);
       }
     }
     
     super.didChangeMetrics();
   }
 
-  void _scrollToBottom({
-    bool animate = true, 
-    bool hideArrow = false,
-  }) {
-    if (!mounted) return;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        final maxScrollExtent = _scrollController.position.maxScrollExtent;
-        final currentPixels = _scrollController.position.pixels;
-        final distanceFromBottom = maxScrollExtent - currentPixels;
-        
-        // 只有在离底部较远（>100px）时才滚动
-        if (distanceFromBottom > 100) {
-          if (animate) {
-            _scrollController.animateTo(
-              maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.fastOutSlowIn,
-            );
-          } else {
-            _scrollController.jumpTo(maxScrollExtent);
-          }
-        }
-        
-        // 程序自动滚动时强制隐藏箭头
-        if (hideArrow && _showScrollToBottomButton) {
-          setState(() {
-            _showScrollToBottomButton = false;
-          });
-          _scrollButtonTimer?.cancel();
-        }
-      }
-    });
+  // 简化版 _scrollToBottom（reverse:true 时目标是 0.0）
+  void _scrollToBottom({bool animate = false}) {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    const target = 0.0;
+
+    if (animate) {
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(target);
+    }
   }
 
   // 删除 _scrollWithSpring 函数，因为不再使用
@@ -253,7 +205,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       await _loadOpeningMessage();
     }
     
-    _scrollToBottom(animate: false);
+    // ← 删掉这里的 _scrollToBottom，因为 reverse:true 后自动在底
   }
 
   Future<void> _loadOpeningMessage() async {
@@ -329,12 +281,21 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     if (!mounted) return;
     
+    // 第一阶段：只加 user message 并显示 loading
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
     });
 
-    _scrollToBottom(animate: true, hideArrow: true);
+    // 立即确保滚动到最底 + 强制一帧重绘（非常关键）
+    if (_isUserAtBottom) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(0.0);           // 强制跳到视觉底部
+        }
+      });
+    }
+    
     await _saveHistory();
 
     try {
@@ -347,10 +308,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       final contextMessages = _buildContextMessages();
       apiMessages.addAll(
-        contextMessages.map((msg) => {
+        contextMessages.map((msg) => ({
           'role': msg['role']!,
           'content': msg['content']!,
-        }),
+        })),
       );
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
@@ -369,18 +330,28 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         print('=============================\n');
       }
 
-      final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
-      
+      // 收到回复后才更新
       if (mounted) {
+        final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
         final aiMessages = await _parseAiResponse(aiReply ?? '', aiTimestamp);
+
         setState(() {
           _messages.addAll(aiMessages);
+          // 注意：这里不 set _isLoading = false，因为 finally 会处理
         });
 
         await _saveHistory();
-        _scrollToBottom(animate: true, hideArrow: true);
+
+        if (_isUserAtBottom) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _scrollController.hasClients) {
+              _scrollController.jumpTo(0.0);
+            }
+          });
+        }
       }
     } catch (e) {
+      // 错误处理同上，但也用 postFrame 确保滚动
       final errorTimestamp = DateFormat('HH:mm').format(DateTime.now());
       if (mounted) {
         setState(() {
@@ -392,12 +363,23 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             messageType: MessageType.ai_dialogue,
           ));
         });
+        await _saveHistory();
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
+        });
       }
-      await _saveHistory();
-      _scrollToBottom(animate: true, hideArrow: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        // finally 再确保一次滚动（键盘/布局变化时保险）
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
+        });
       }
     }
   }
@@ -689,57 +671,70 @@ class _ChatRoomPageState extends State<ChatRoomPage>
               onTap: () => FocusScope.of(context).unfocus(),
               child: Stack(
                 children: [
-                  ListView.builder(
+                  CustomScrollView(
                     controller: _scrollController,
-                    reverse: false,
-                    padding: const EdgeInsets.only(top: 20, bottom: 80),
-                    itemCount: _messages.length + (_isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (_isLoading && index == _messages.length) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                child: _avatarPath == null 
-                                    ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
-                                    : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Text(
-                                  "正在输入...", 
-                                  style: TextStyle(
-                                    fontSize: 16, 
-                                    color: isDark ? Colors.white : Colors.black87, 
-                                    height: 1.4
-                                  )
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                    reverse: true,
+                    slivers: [
+                      // 先加一个大的 SliverPadding 让开场白偏上
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: 120), // ← 调这个值，越大开场白越靠上
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            // reverse:true 时，index=0 是最新消息，index 越大越旧
 
-                      if (index >= _messages.length) {
-                        return const SizedBox.shrink();
-                      }
+                            // 处理"正在输入..."（放在视觉最底部，即 index=0）
+                            if (_isLoading && index == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                      backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+                                      child: _avatarPath == null 
+                                          ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                      child: Text(
+                                        "正在输入...", 
+                                        style: TextStyle(
+                                          fontSize: 16, 
+                                          color: isDark ? Colors.white : Colors.black87, 
+                                          height: 1.4
+                                        )
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
 
-                      final msg = _messages[index];
-                      return GestureDetector(
-                        onLongPress: () => _showDeleteDialog(index),
-                        child: _buildMessageWidget(msg),
-                      );  
-                    },
+                            final msgIndex = _messages.length - 1 - index; // ← 核心2：反转索引
+                            if (msgIndex < 0 || msgIndex >= _messages.length) {
+                              return const SizedBox.shrink();
+                            }
+
+                            final msg = _messages[msgIndex];
+                            return GestureDetector(
+                              onLongPress: () => _showDeleteDialog(msgIndex), // 注意索引是原 msgIndex
+                              child: _buildMessageWidget(msg),
+                            );  
+                          },
+                          childCount: _messages.length + (_isLoading ? 1 : 0),
+                        ),
+                      ),
+                    ],
                   ),
                   
                   if (_showScrollToBottomButton)
@@ -764,7 +759,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             size: 20
                           ),
                           onPressed: () {
-                            _scrollToBottom(animate: true, hideArrow: true);
+                            _scrollToBottom(animate: true);
                           },
                         ),
                       ),
