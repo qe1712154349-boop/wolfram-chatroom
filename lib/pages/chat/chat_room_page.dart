@@ -55,9 +55,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     return isAtBottom || (distance < 600 && isScrollingDown);
   }
 
-  // 新增：独立的 loading overlay
-  OverlayEntry? _loadingOverlay;
-
   @override
   void initState() {
     super.initState();
@@ -116,9 +113,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
-    // 清理 loading overlay
-    _loadingOverlay?.remove();
-    _loadingOverlay = null;
     super.dispose();
   }
 
@@ -162,72 +156,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     } else {
       _scrollController.jumpTo(target);
     }
-  }
-
-  // 显示独立的 loading overlay
-  void _showLoadingOverlay() {
-    if (!mounted) return;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      
-      // 移除之前的 overlay
-      _loadingOverlay?.remove();
-      
-      // 获取当前主题
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      
-      _loadingOverlay = OverlayEntry(
-        builder: (context) => Positioned(
-          bottom: 100,  // 调整到输入框上方，用户消息下方
-          left: 16,
-          right: 16,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                  backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                  child: _avatarPath == null
-                      ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white)
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    "正在输入...",
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.4,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-      
-      // 插入 overlay
-      Overlay.of(context).insert(_loadingOverlay!);
-    });
-  }
-
-  // 隐藏 loading overlay
-  void _hideLoadingOverlay() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadingOverlay?.remove();
-      _loadingOverlay = null;
-    });
   }
 
   Future<void> _loadCharacterData() async {
@@ -342,13 +270,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     // 第一阶段：只添加用户消息
     setState(() {
       _messages.add(userMessage);
+      // 注意：这里**不**设 _isLoading = true，先让用户消息稳定出现
     });
 
     // 立即强制下一帧滚动 + paint（核心防合并）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
-      
-      // 强制滚动到最底并通知所有监听器
       _scrollController.jumpTo(0.0);
       _scrollController.position.notifyListeners();  // 强制通知位置变化
       
@@ -359,11 +286,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     // 异步保存历史
     unawaited(_saveHistory());
 
-    // 短暂延迟后显示独立的 loading overlay
-    await Future.delayed(const Duration(milliseconds: 100));
+    // 短暂延迟后显示 loading（模拟"思考中"，避免抢用户消息的风头）
+    await Future.delayed(const Duration(milliseconds: 150));
+
     if (mounted) {
-      _showLoadingOverlay();
-      _isLoading = true;
+      setState(() {
+        _isLoading = true;
+      });
     }
 
     try {
@@ -402,6 +331,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
         setState(() {
           _messages.addAll(aiMessages);
+          _isLoading = false;
         });
 
         await _saveHistory();
@@ -425,6 +355,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             timestamp: errorTimestamp,
             messageType: MessageType.ai_dialogue,
           ));
+          _isLoading = false;
         });
         await _saveHistory();
 
@@ -434,11 +365,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             _scrollController.position.notifyListeners();
           }
         });
-      }
-    } finally {
-      if (mounted) {
-        _hideLoadingOverlay();
-        _isLoading = false;
       }
     }
   }
@@ -741,7 +667,49 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            final msgIndex = _messages.length - 1 - index; // ← 核心2：反转索引
+                            // 处理"正在输入..."（放在视觉最底部，即 index=0）
+                            if (_isLoading && index == 0) {
+                              // 只在用户消息后显示
+                              return AnimatedSize(
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOut,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                        backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
+                                        child: _avatarPath == null 
+                                            ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                                          borderRadius: BorderRadius.circular(18),
+                                        ),
+                                        child: Text(
+                                          "正在输入...", 
+                                          style: TextStyle(
+                                            fontSize: 16, 
+                                            color: isDark ? Colors.white : Colors.black87, 
+                                            height: 1.4
+                                          )
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // 根据是否有loading调整索引
+                            final msgIndex = _messages.length - 1 - index + (_isLoading ? 1 : 0);
                             if (msgIndex < 0 || msgIndex >= _messages.length) {
                               return const SizedBox.shrink();
                             }
@@ -749,14 +717,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             final msg = _messages[msgIndex];
                             // 使用 GlobalKey 确保消息稳定性
                             return Container(
-                              key: ValueKey(msg.id), // 这里使用 ValueKey，如果还需要更强就用 GlobalKey
+                              key: ValueKey(msg.id),
                               child: GestureDetector(
-                                onLongPress: () => _showDeleteDialog(msgIndex), // 注意索引是原 msgIndex
+                                onLongPress: () => _showDeleteDialog(msgIndex),
                                 child: _buildMessageWidget(msg),
                               ),
                             );  
                           },
-                          childCount: _messages.length, // 注意：不再包含 loading
+                          childCount: _messages.length + (_isLoading ? 1 : 0),
                         ),
                       ),
                     ],
