@@ -1,18 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-    
-    <!-- 核心保活权限 -->
+    package="com.example.my_new_app">  <!-- 替换成你实际包名（build.gradle 里的 applicationId） -->
+
+    <!-- 前台服务必须权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
-    <!-- Android 12+ 可选前台服务类型 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    
-    <!-- 电池优化忽略（可选，有助于保活） -->
+
+    <!-- 你的其他权限（相机、存储、通知、电池优化等） -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    
-    <!-- Android 13+ 通知权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- 相机特性（非必须） -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
     <application
         android:label="my_new_app"
@@ -22,23 +30,22 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:theme="@style/LaunchTheme">
-        
-        <!-- 前台服务 - 9.x 版本 -->
+
+        <!-- flutter_foreground_task 9.x 要求的 service -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
-            android:stopWithTask="false"
-            android:permission="android.permission.FOREGROUND_SERVICE" />
+            android:stopWithTask="false" />  <!-- stopWithTask 保留兼容，但 14+ 系统忽略 -->
 
-        <!-- 广播接收器 -->
+        <!-- 前台广播接收器（9.x 必须） -->
         <receiver
             android:name="com.pravera.flutter_foreground_task.receiver.ForegroundBroadcastReceiver"
             android:enabled="true"
             android:exported="false" />
 
-        <!-- 启动器 Activity -->
+        <!-- 主 Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -49,20 +56,18 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
             android:screenOrientation="portrait">
-            
-            <!-- Flutter主题 -->
+
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
-            
-            <!-- 启动器Intent -->
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <!-- Flutter嵌入 -->
+
+        <!-- Flutter 嵌入元数据 -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

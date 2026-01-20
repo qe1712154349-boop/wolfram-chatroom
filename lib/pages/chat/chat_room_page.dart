@@ -717,7 +717,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                     slivers: [
                       // 先加一个大的 SliverPadding 让开场白偏上
                       SliverToBoxAdapter(
-                        child: SizedBox(height: 405), // ← 调这个值，越大开场白越靠上
+                        child: SizedBox(height: 75), // ← 调这个值，越大开场白越靠上
                       ),
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
