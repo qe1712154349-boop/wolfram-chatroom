@@ -1,13 +1,50 @@
 // lib/models/message.dart
-import 'dart:convert';
 
+// 1. 使用 lowerCamelCase（Dart 官方推荐，解决所有 constant_identifier_names 警告）
 enum MessageType {
-  user_narration,    // 用户旁白
-  user_dialogue,     // 用户对话
-  ai_narration,      // AI旁白
-  ai_dialogue,       // AI对话
-  system_time,       // 系统时间
-  system_state,      // 系统状态
+  userNarration,     // 用户旁白
+  userDialogue,      // 用户对话
+  aiNarration,       // AI旁白
+  aiDialogue,        // AI对话
+  systemTime,        // 系统时间
+  systemState,       // 系统状态
+}
+
+// 2. 桥接 extension：处理 snake_case <-> camelCase 的兼容
+extension MessageTypeX on MessageType {
+  // 用于保存：新数据直接用 name（camelCase）
+  // 但我们不额外存 legacyName，因为我们想让新数据彻底现代化
+
+  // 用于读取：兼容旧的 snake_case 字符串
+  static MessageType fromStoredString(String? stored) {
+    if (stored == null) {
+      return MessageType.aiDialogue; // 默认 fallback
+    }
+
+    // 先尝试直接匹配 camelCase（新数据）
+    try {
+      return MessageType.values.byName(stored);
+    } on ArgumentError {
+      // 匹配失败 → 尝试 snake_case 兼容映射
+      switch (stored) {
+        case 'user_narration':
+          return MessageType.userNarration;
+        case 'user_dialogue':
+          return MessageType.userDialogue;
+        case 'ai_narration':
+          return MessageType.aiNarration;
+        case 'ai_dialogue':
+          return MessageType.aiDialogue;
+        case 'system_time':
+          return MessageType.systemTime;
+        case 'system_state':
+          return MessageType.systemState;
+        default:
+          // 未知格式 → fallback（可加日志）
+          return MessageType.aiDialogue;
+      }
+    }
+  }
 }
 
 class Message {
@@ -15,23 +52,21 @@ class Message {
   final String role; // 'user' 或 'assistant'
   final String timestamp;
   final MessageType messageType;
-  
-  // 核心：双内容字段
+
   final String rawContent;     // 原始完整字符串，带XML标签，用于发送给AI
   final String displayContent; // 纯文本，用于UI显示和搜索
-  
+
   Message({
     required this.id,
     required this.role,
-    required this.rawContent,
-    String? displayContent, // 可选，自动生成
     required this.timestamp,
     required this.messageType,
+    required this.rawContent,
+    String? displayContent,
   }) : displayContent = displayContent ?? _extractDisplayContent(rawContent);
 
-  // 从rawContent提取纯文本显示内容
   static String _extractDisplayContent(String raw) {
-    // 尝试解析XML格式
+    // ... 原有提取逻辑不变 ...
     final startResponse = raw.indexOf('<response>');
     final endResponse = raw.lastIndexOf('</response>');
     
@@ -43,7 +78,6 @@ class Message {
       
       String extractedText = '';
       
-      // 提取environment文本
       final envStart = responseInner.indexOf('<environment>');
       final envEnd = responseInner.indexOf('</environment>');
       if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
@@ -52,7 +86,6 @@ class Message {
             .trim();
       }
       
-      // 提取dialogue文本
       final diaStart = responseInner.indexOf('<dialogue>');
       final diaEnd = responseInner.indexOf('</dialogue>');
       if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
@@ -65,7 +98,6 @@ class Message {
       if (extractedText.isNotEmpty) return extractedText;
     }
     
-    // 如果没有XML标签或解析失败，简单清理标签
     return raw.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
@@ -73,32 +105,31 @@ class Message {
     return {
       'id': id,
       'role': role,
-      'raw_content': rawContent,      // 存原始XML
-      'display_content': displayContent, // 存纯文本
+      'raw_content': rawContent,
+      'display_content': displayContent,
       'timestamp': timestamp,
+      // 关键：新数据统一存 camelCase name
       'message_type': messageType.name,
     };
   }
 
-  factory Message.fromMap(Map<String, dynamic> map) {
-    // 兼容旧数据：如果没有raw_content，用content字段
-    final rawContent = map['raw_content'] ?? map['content'] ?? '';
-    final displayContent = map['display_content'] ?? '';
-    
-    return Message(
-      id: map['id'] as String,
-      role: map['role'] as String,
-      rawContent: rawContent,
-      displayContent: displayContent,
-      timestamp: map['timestamp'] as String,
-      messageType: MessageType.values.firstWhere(
-        (e) => e.name == (map['message_type'] as String?),
-        orElse: () => map['role'] == 'user' 
-            ? MessageType.user_dialogue 
-            : MessageType.ai_dialogue,
-      ),
-    );
-  }
+factory Message.fromMap(Map<String, dynamic> map) {
+  final rawContent = map['raw_content'] ?? map['content'] ?? '';
+  final displayContent = map['display_content'] ?? '';
+
+  // 核心兼容逻辑：使用 fromStoredString 处理 snake_case 和 camelCase
+  final storedType = map['message_type'] as String?;
+  final messageType = MessageTypeX.fromStoredString(storedType); // 直接调用，移除 ??
+
+  return Message(
+    id: map['id'] as String,
+    role: map['role'] as String,
+    timestamp: map['timestamp'] as String,
+    messageType: messageType,
+    rawContent: rawContent,
+    displayContent: displayContent,
+  );
+}
 
   @override
   String toString() {

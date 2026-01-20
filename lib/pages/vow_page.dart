@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import '../components/mood_day.dart';
 import '../components/order_card.dart';
-import '../app/theme.dart'; // 导入主题
 
 class VowPage extends StatelessWidget {
   const VowPage({super.key});

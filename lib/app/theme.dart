@@ -2,129 +2,65 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme => ThemeData(
-        // 修复1：添加 useMaterial3: true
-        useMaterial3: true,
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFFDF7F7),
-        primaryColor: const Color(0xFFFF5A7E),
-        cardColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFDF7F7),
-          elevation: 0,
-          foregroundColor: Color(0xFF1D1D1F),
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Color(0xFFFF5A7E),
-          unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed,
-        ),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Color(0xFF1D1D1F)),
-          bodyMedium: TextStyle(
-            fontFamily: 'System',
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-            height: 1.4,
-            color: Color(0xFF1D1D1F),
-          ),
-          bodySmall: TextStyle(color: Color(0xFF6D6D6F)),
-          titleMedium: TextStyle(color: Color(0xFF1D1D1F)),
-          labelLarge: TextStyle(color: Color(0xFF1D1D1F)),
-        ),
-        iconTheme: const IconThemeData(color: Color(0xFF1D1D1F)),
-        dividerColor: Colors.grey[300],
-        inputDecorationTheme: InputDecorationTheme(
-          fillColor: Colors.white,
-          filled: true,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[400]!),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[400]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
-          ),
-        ),
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFFFF5A7E),
-          background: Color(0xFFFDF7F7),
-          surface: Colors.white,
-          onBackground: Color(0xFF1D1D1F),
-          onSurface: Color(0xFF1D1D1F),
-        ),
-      );
-
-  static ThemeData get darkTheme => ThemeData(
-        // 修复2：添加 useMaterial3: true
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF060405),
-        primaryColor: const Color(0xFFF95685),       // 强调色（玫红）
-        cardColor: const Color(0xFF1A1A1A),              // 卡片、ListTile 背景
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0A0A0A),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF0A0A0A),
-          selectedItemColor: Color(0xFFF95685),
-          unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed,
-        ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: Colors.grey[100]),
-          bodyMedium: TextStyle(color: Colors.grey[200], fontSize: 16, height: 1.4),
-          bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
-          titleMedium: TextStyle(color: Colors.white),
-          labelLarge: TextStyle(color: Colors.white),
-        ),
-        iconTheme: IconThemeData(color: Colors.grey[300]),
-        dividerColor: Colors.grey[800],
-        inputDecorationTheme: InputDecorationTheme(
-          fillColor: const Color(0xFF252525),
-          filled: true,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[700]!),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[700]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: const Color(0xFFF95685)),
-          ),
-        ),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFF95685),
-          background: Color(0xFF060405),
-          surface: Color(0xFF1A1A1A),
-          onBackground: Colors.white,
-          onSurface: Colors.white,
-        ),
-      );
-
-  // 保留你原来的常量，但添加暗色版本
-  static const Color appBackgroundLight = Color(0xFFFDF7F7);
-  static const Color appBackgroundDark = Color(0xFF060405);
+  // ========== 主色 ==========
+  static const Color primaryLight = Color(0xFFFF5A7E);
+  static const Color primaryDark = Color(0xFFF95685);
   
-  static const Color pinkAccent = Color(0xFFFF5A7E);
-  static const Color pinkAccentDark = Color(0xFFF95685);
+  // ========== 背景色 ==========
+  static const Color backgroundLight = Color(0xFFFDF7F7);
+  static const Color backgroundDark = Color(0xFF060405);
+  static const Color surfaceLight = Color(0xFFFDF7F7);
+  static const Color surfaceDark = Color(0xFF060405);
+  static const Color surfaceVariantLight = Color(0xFFF5F5F5);
+  static const Color surfaceVariantDark = Color(0xFF1E1E1E);
   
-  // 亮色模式气泡颜色
+  // ========== 文字色 ==========
+  static const Color onSurfaceLight = Color(0xFF1D1D1F);
+  static const Color onSurfaceDark = Color(0xFFFFFFFF);
+  static const Color onSurfaceVariantLight = Color(0xFF6D6D6F);
+  static const Color onSurfaceVariantDark = Color(0xFFAAAAAA);
+  
+  // ========== 边框/轮廓色（关键！解决 Switch 边缘黑色问题） ==========
+  static const Color outlineLight = Color(0xFFE0E0E0);      // 浅灰色
+  static const Color outlineDark = Color(0xFF424242);       // 深灰色
+  static const Color outlineVariantLight = Color(0xFFC7C7CC); // 中灰色
+  static const Color outlineVariantDark = Color(0xFF303030);  // 更深灰
+  
+  // ========== 卡片/容器色 ==========
+  static const Color cardColorLight = Colors.white;
+  static const Color cardColorDark = Color(0xFF1A1A1A);
+  
+  // ========== 其他功能色 ==========
+  static const Color secondaryContainerLight = Color(0xFFFFE4E9);
+  static const Color secondaryContainerDark = Color(0xFF3A1F25);
+  static const Color errorLight = Color(0xFFBA1A1A);
+  static const Color errorDark = Color(0xFFFFB4AB);
+  
+  // ========== Switch 专用颜色（方便修改） ==========
+  static const Color switchActiveThumb = Color(0xFFFF5A7E);      // 开启小球颜色
+  static final Color switchActiveTrack = Color(0xFFFF5A7E).withValues(alpha: 0x80); // 50%透明度
+  static const Color switchInactiveThumb = Color(0xFF757575);   // 关闭小球颜色 ← 这里可以修改按钮off小球的颜色
+  static const Color switchInactiveTrack = Color(0xFFE0E0E0);   // 关闭轨道颜色
+  static const Color switchTrackOutline = Color(0xFFBDBDBD);    // 轨道边框颜色
+
+  // ========== 文字颜色（与按钮分开） ==========
+  static const Color textPrimaryLight = Color(0xFF1D1D1F);  // 主要文字
+  static const Color textPrimaryDark = Color(0xFFFFFFFF);
+  static const Color textSecondaryLight = Color(0xFF6D6D6F); // 次要文字
+  static const Color textSecondaryDark = Color(0xFFAAAAAA);
+  
+  // ========== 气泡颜色 ==========
   static const Color aiBubbleColorLight = Color(0xFFFFFFFF);
   static const Color aiBubbleBorderLight = Color(0xFFF1DCDE);
   static const Color userBubbleColorLight = Color(0xFFFFEAEF);
   static const Color userBubbleBorderLight = Color(0xFFEDD8DD);
   
-  // 暗色模式气泡颜色
   static const Color aiBubbleColorDark = Color(0xFF1A1A1A);
   static const Color aiBubbleBorderDark = Color(0xFF333333);
   static const Color userBubbleColorDark = Color(0xFFF95685);
   static const Color userBubbleBorderDark = Color(0xFFD6406E);
   
+  // ========== 页面特定颜色 ==========
   static const Color chatRoomTopLight = Color(0xFFFCECEF);
   static const Color chatRoomTopDark = Color(0xFF0A0A0A);
   
@@ -137,7 +73,7 @@ class AppTheme {
   static const Color messageFieldBorderLight = Color(0xFFB1A9AB);
   static const Color messageFieldBorderDark = Color(0xFF444444);
   
-  // 文字颜色
+  // ========== 文字颜色（兼容旧代码） ==========
   static const Color primaryTextLight = Color(0xFF1D1D1F);
   static const Color primaryTextDark = Color(0xFFFFFFFF);
   static const Color secondaryTextLight = Color(0xFF8E8E93);
@@ -147,10 +83,201 @@ class AppTheme {
   static const Color userTextColorLight = Color(0xFFBB2D71);
   static const Color userTextColorDark = Color(0xFFFFFFFF);
   
-  // 气泡圆角
+  // ========== 尺寸/圆角 ==========
   static const double bubbleBorderRadius = 18.0;
 
-  static get darkBackground => null;
+  // ========== 主题定义 ==========
+  static ThemeData get lightTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    
+    // 1. colorScheme - 基础颜色系统（不影响Switch）
+    colorScheme: ColorScheme.light(
+      primary: primaryLight,    // 主色
+      surface: surfaceLight,    // 表面色
+      onSurface: textPrimaryLight,         // 表面文字色
+      // outline 保持Flutter默认，不影响Switch
+    ),
+    
+    // 2. 文字主题 - 使用专门的文字颜色
+    textTheme: TextTheme(
+      bodyLarge: TextStyle(color: textPrimaryLight),
+      bodyMedium: TextStyle(
+        fontFamily: 'System',
+        fontSize: 16,
+        fontWeight: FontWeight.normal,
+        height: 1.4,
+        color: textPrimaryLight,  // 使用文字专用颜色
+      ),
+      bodySmall: TextStyle(color: textSecondaryLight),
+      titleMedium: TextStyle(color: textPrimaryLight),
+      labelLarge: TextStyle(color: textPrimaryLight),
+    ),
+    
+    // 3. Switch主题 - 独立配置，不影响文字
+    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchActiveThumb;        // 开启状态
+          }
+          return switchInactiveThumb;        // 关闭状态 - 深灰色小球
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchActiveTrack;        // 开启轨道
+          }
+          return switchInactiveTrack;        // 关闭轨道
+        },
+      ),
+      // 边框颜色
+      trackOutlineColor: WidgetStateProperty.all(switchTrackOutline),
+      // 边框宽度：开启时0，关闭时1px
+      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0.0;  // 开启时不要边框
+          }
+          return 1.0;    // 关闭时1px边框
+        },
+      ),
+    ),
+    
+    // 4. 其他主题配置保持不变...
+    scaffoldBackgroundColor: backgroundLight,
+    primaryColor: primaryLight,
+    cardColor: cardColorLight,
+    appBarTheme: AppBarTheme(
+      backgroundColor: surfaceLight,
+      elevation: 0,
+      foregroundColor: textPrimaryLight,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: Colors.white,
+      selectedItemColor: primaryLight,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+    ),
+    iconTheme: IconThemeData(color: textPrimaryLight),
+    dividerColor: Colors.grey[300],
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: Colors.white,
+      filled: true,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[400]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[400]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primaryLight),
+      ),
+    ),
+  );
+
+  // 暗色主题类似配置...
+  static ThemeData get darkTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    
+    // colorScheme - 暗色版本
+    colorScheme: ColorScheme.dark(
+      primary: primaryDark,
+      surface: surfaceDark,
+      onSurface: textPrimaryDark,
+    ),
+    
+    // 文字主题
+    textTheme: TextTheme(
+      bodyLarge: TextStyle(color: textPrimaryDark),
+      bodyMedium: TextStyle(
+        color: Colors.grey[200], 
+        fontSize: 16, 
+        height: 1.4
+      ),
+      bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
+      titleMedium: TextStyle(color: textPrimaryDark),
+      labelLarge: TextStyle(color: textPrimaryDark),
+    ),
+    
+    // Switch主题 - 暗色版本
+    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark;    // 暗色主色
+          }
+          return const Color(0xFF9E9E9E);      // 暗色关闭小球
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark.withValues(alpha: 0x80);  // 50%透明度
+          }
+          return const Color(0xFF424242);      // 暗色关闭轨道
+        },
+      ),
+      // 边框颜色
+      trackOutlineColor: WidgetStateProperty.all(const Color(0xFF616161)),
+      // 边框宽度：开启时0，关闭时1px
+      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0.0;  // 开启时不要边框
+          }
+          return 1.0;    // 关闭时1px边框
+        },
+      ),
+    ),
+    
+    // ... 其他暗色主题配置
+    scaffoldBackgroundColor: backgroundDark,
+    primaryColor: primaryDark,
+    cardColor: cardColorDark,
+    appBarTheme: AppBarTheme(
+      backgroundColor: chatRoomTopDark,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: chatRoomTopDark,
+      selectedItemColor: primaryDark,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+    ),
+    iconTheme: IconThemeData(color: Colors.grey[300]),
+    dividerColor: Colors.grey[800],
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: messageFieldBackgroundDark,
+      filled: true,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[700]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[700]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primaryDark),
+      ),
+    ),
+  );
+
+  // ========== 兼容性方法（保持现有代码不变） ==========
+  
+  // 旧常量别名（兼容现有代码）
+  static const Color appBackgroundLight = backgroundLight;
+  static const Color appBackgroundDark = backgroundDark;
+  static const Color pinkAccent = primaryLight;
+  static const Color pinkAccentDark = primaryDark;
+  
+  static Color get darkBackground => appBackgroundDark;
+  
+  // ========== 样式方法 ==========
   
   // 旁白样式
   static TextStyle narrationStyle(BuildContext context) => TextStyle(
@@ -183,7 +310,8 @@ class AppTheme {
     letterSpacing: 0.3,
   );
   
-  // 根据主题获取颜色
+  // ========== 颜色获取方法 ==========
+  
   static Color getAppBackground(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark 
         ? appBackgroundDark 
@@ -242,5 +370,19 @@ class AppTheme {
     return Theme.of(context).brightness == Brightness.dark 
         ? userTextColorDark 
         : userTextColorLight;
+  }
+  
+  // ========== 新增：获取边框颜色方法 ==========
+  
+  static Color getOutlineColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? outlineDark 
+        : outlineLight;
+  }
+  
+  static Color getOutlineVariantColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? outlineVariantDark 
+        : outlineVariantLight;
   }
 }

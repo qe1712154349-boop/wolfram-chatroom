@@ -191,7 +191,8 @@ class UIThemeManager {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
         ),
-        elevation: 2,
+        elevation: 0,
+        shadowColor: Colors.transparent, // 添加这行确保阴影完全透明
         padding: const EdgeInsets.symmetric(vertical: 16),
       );
     }

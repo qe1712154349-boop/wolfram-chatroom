@@ -163,8 +163,46 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     return WithForegroundTask(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
+        
+        // 🎨 主题设置 - 新增按钮样式配置
+        theme: AppTheme.lightTheme.copyWith(
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0, // ✅ 移除ElevatedButton阴影
+              shadowColor: Colors.transparent, // ✅ 确保阴影透明
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              elevation: 0, // ✅ 移除TextButton阴影
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              elevation: 0, // ✅ 移除OutlinedButton阴影
+            ),
+          ),
+        ),
+        
+        darkTheme: AppTheme.darkTheme.copyWith(
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0, // ✅ 暗色模式也移除阴影
+              shadowColor: Colors.transparent,
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              elevation: 0,
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              elevation: 0,
+            ),
+          ),
+        ),
+        
         themeMode: _themeMode,
         navigatorKey: _navigatorKey,
         home: const MainScreen(),

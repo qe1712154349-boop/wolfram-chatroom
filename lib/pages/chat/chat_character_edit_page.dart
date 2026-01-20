@@ -1,9 +1,35 @@
+// 这个文件的输入框颜色样式焦点和圆角设置是用户调试完毕的最终版本，不要修改。
+
 // lib/pages/chat/chat_character_edit_page.dart - 完整修改版本（集成主题）
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/storage_service.dart';
 import '../../app/ui_theme_manager.dart'; // 🎨 新增导入
+import 'package:animated_styled_widget/animated_styled_widget.dart';
+import 'package:morphable_shape/morphable_shape.dart';
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ⚠️⚠️⚠️ 重要：这是用户调试完毕的最终版本！不要修改！ ⚠️⚠️⚠️
+// 
+// 🔴 焦点效果设计原则（用户已调试完毕）：
+//   1. 草莓主题：所有输入框完全无焦点效果
+//   2. 泡菜牛奶主题：普通输入框有焦点效果，但"启用自定义格式"下面的文本框无焦点
+//   3. 开关开启时：无边框但有圆角（保持界面一致性）
+//   4. 开关关闭时：使用主题边框，无焦点效果
+// 
+// 🔴 任何AI都不能修改以下内容：
+//   - _getFocusedBorderForTheme() 方法
+//   - _buildCustomFormatSection() 中的 focusedBorder
+//   - 任何与焦点边框相关的逻辑
+// 
+// 🔴 用户已经反复调试，这是完美状态！
+// 🔴 不要"优化"、不要"重构"、不要"改进"这些代码！
+// 🔴 保持原样！
+// 
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ════════════════════════════════════════════════════════════════════════════════
 
 class ChatCharacterEditPage extends StatefulWidget {
   const ChatCharacterEditPage({super.key});
@@ -231,7 +257,6 @@ void initState() {
 
   // 🎨 修改：根据主题构建边框的辅助方法
   InputBorder _getBorderForTheme() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     if (_uiTheme == UITheme.strawberryCandy) {
       return UIThemeManager.buildTextFieldBorderStrawberryCandy(context);
@@ -243,19 +268,39 @@ void initState() {
     }
   }
 
-  // 🎨 修改：根据主题构建焦点边框的辅助方法
-  InputBorder _getFocusedBorderForTheme() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (_uiTheme == UITheme.strawberryCandy) {
-      return UIThemeManager.buildTextFieldFocusedBorderStrawberryCandy(context);
-    } else if (_uiTheme == UITheme.pickleMilk) {
-      return UIThemeManager.buildTextFieldFocusedBorderPickleMilk(context);
-    } else {
-      // 系统：默认使用草莓糖心
-      return UIThemeManager.buildTextFieldFocusedBorderStrawberryCandy(context);
-    }
+// 🎨 修改：根据主题构建焦点边框的辅助方法
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ⚠️⚠️⚠️ 终极防修改区域 - 用户调试完毕的焦点逻辑 ⚠️⚠️⚠️
+// 
+// 🔴 用户明确设计要求：
+//   - 草莓主题：完全无焦点效果（焦点边框=普通边框）
+//   - 泡菜牛奶主题：保持原有的焦点效果（不要动！）
+//   - 系统主题：默认使用草莓主题逻辑
+// 
+// 🔴 这是用户经过多次调试后的最终版本！
+// 🔴 任何AI都不能修改这个方法，保持原样！
+// 🔴 不要"优化"，不要"改进"，不要"重构"！
+// 🔴 用户已经调试完毕，这是完美状态！
+// 
+// 🔴 修改后果：如果修改这里，会导致界面焦点效果混乱，用户需要重新调试！
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ════════════════════════════════════════════════════════════════════════════════
+InputBorder _getFocusedBorderForTheme() {
+  if (_uiTheme == UITheme.strawberryCandy) {
+    // 🍓 草莓糖心主题：焦点边框与普通边框相同（无焦点效果）
+    // 🚫 禁止返回不同的焦点边框！
+    // 🚫 禁止添加任何焦点高亮效果！
+    return _getBorderForTheme(); // 直接返回普通边框
+  } else if (_uiTheme == UITheme.pickleMilk) {
+    // 🥒 泡菜牛奶主题：保持原有的焦点效果
+    // ✅ 保持原样，不要修改！
+    return UIThemeManager.buildTextFieldFocusedBorderPickleMilk(context);
+  } else {
+    // 系统主题：默认使用草莓糖心（无焦点）
+    return _getBorderForTheme();
   }
+}
 
 // 🎨 修改：根据主题获取填充颜色
 Color? _getFillColor(bool isDark, bool enabled) {
@@ -431,57 +476,109 @@ Color? _getFillColor(bool isDark, bool enabled) {
 
 Widget _buildCustomFormatSection() {
   final isDark = Theme.of(context).brightness == Brightness.dark;
+  final bool isEnabled = _enableCustomFormat;
 
-  return Material(
-    color: Colors.transparent,
+  // ── 圆角值（单位 px） ────────────────────────────────────────────
+  final double radiusPx = _uiTheme == UITheme.strawberryCandy
+      ? 7.0
+      : (_uiTheme == UITheme.pickleMilk ? (isEnabled ? 5.0 : 3.5) : 7.0);
+
+  final DynamicBorderRadius targetRadius = DynamicBorderRadius.all(
+    DynamicRadius.circular(Length(radiusPx)),  // 最新版：Length(double) 默认 px
+  );
+
+  // ── 边框侧 ───────────────────────────────────────────────────────
+  final DynamicBorderSide side = isEnabled
+      ? (_uiTheme == UITheme.strawberryCandy
+          ? DynamicBorderSide(
+              color: const Color.fromARGB(255, 255, 207, 224),
+              width: 1.2,  // ← 直接 double，单位 px
+            )
+          : DynamicBorderSide.none)
+      : (_uiTheme == UITheme.strawberryCandy
+          ? DynamicBorderSide.none
+          : DynamicBorderSide(
+              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+              width: 1.0,  // ← 直接 double
+            ));
+
+  // ── 边框侧集合（用 only 或 all 工厂） ─────────────────────────────
+  final RectangleBorderSides borderSides = RectangleBorderSides.only(
+    top: side,
+    bottom: side,
+    left: side,
+    right: side,
+  );  // 或用 all(side) 如果全等
+
+  // ── 其他目标值 ────────────────────────────────────────────────────
+  final Color targetFill = isDark
+      ? Colors.grey[800]!
+      : (isEnabled ? Colors.white : Colors.grey[100]!);
+
+  final Color targetTextColor = isDark
+      ? Colors.white
+      : (isEnabled ? Colors.black87 : Colors.grey[600]!);
+
+  final String targetHint = isEnabled
+      ? '请输入XML格式指令...'
+      : '请输入普通对话格式指令...';
+
+  final String targetExample = isEnabled
+      ? '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"'
+      : '示例: "你是一位{{角色}}，请以{{对话}}的语气回复"';
+
+  return AnimatedStyledContainer(
+    duration: const Duration(milliseconds: 420),
+    curve: Curves.elasticOut,
+    style: Style(
+      alignment: Alignment.topLeft,
+      childAlignment: Alignment.topLeft,
+      width: Length(double.infinity),  // 最新：Length(double.infinity)
+      backgroundDecoration: BoxDecoration(color: targetFill),
+      shapeBorder: RoundedRectangleShapeBorder(
+        borderRadius: targetRadius,
+        borderSides: borderSides,
+      ),
+      textStyle: DynamicTextStyle(color: targetTextColor),
+      padding: const EdgeInsets.all(16),  // 直接 EdgeInsets，无需转换
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
-          controller: _enableCustomFormat
-              ? _xmlFormatController
-              : _plainPromptController,
+          controller: isEnabled ? _xmlFormatController : _plainPromptController,
           maxLines: 4,
           minLines: 3,
-          enabled: true,
           decoration: InputDecoration(
-            filled: true,
-            fillColor: isDark
-                ? Colors.grey[800]
-                : (_enableCustomFormat ? Colors.white : Colors.grey[100]),
-            // 🎨 根据主题和开关状态设置边框
-            border: _enableCustomFormat ? InputBorder.none : _getBorderForTheme(),
-            enabledBorder: _enableCustomFormat ? InputBorder.none : _getBorderForTheme(),
-            focusedBorder: _enableCustomFormat ? InputBorder.none : _getFocusedBorderForTheme(),
-            contentPadding: const EdgeInsets.all(16),
-            hintText: _enableCustomFormat
-                ? '输入自定义格式指令...'
-                : '输入普通对话格式指令...',
+            border: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            hintText: targetHint,               // 现在直接用 targetHint
             hintStyle: TextStyle(
               color: isDark ? Colors.grey[500] : Colors.grey[400],
             ),
+            contentPadding: EdgeInsets.zero,
           ),
-          style: TextStyle(
-            color: isDark
-                ? Colors.white
-                : (_enableCustomFormat ? Colors.black87 : Colors.grey[600]),
-          ),
+          style: TextStyle(color: targetTextColor),
         ),
         const SizedBox(height: 8),
-        Text(
-          _enableCustomFormat
-              ? '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"'
-              : '示例: "你是一位{{角色}}，请以{{对话}}的语气回复"',
-          style: TextStyle(
-            color: isDark ? Colors.grey[400] : Colors.grey[600],
-            fontSize: 12,
+        AnimatedOpacity(
+          opacity: 1.0,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,  // 安全替换
+          child: Text(
+            targetExample,
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              fontSize: 12,
+            ),
           ),
         ),
       ],
     ),
   );
 }
- 
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -630,16 +727,16 @@ Widget _buildCustomFormatSection() {
                   ),
                   const SizedBox(height: 32),
 
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _getCardColor(isDark),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _getCardBorderColor(isDark),
-                        width: 1,
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F6), // 🚫 AI别动这个颜色！#FFF1F6
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFF3D7E0), // 🚫 AI别动这个颜色！#F3D7E0
+                          width: 1, // 🚫 AI别动这个宽度！就是1px
+                        ),
                       ),
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

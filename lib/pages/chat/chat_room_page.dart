@@ -44,7 +44,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   bool _narrationCentered = true;
 
   // 新增字段
-  OverlayEntry? _loadingOverlay;
   String? _savedInputText;  // 保存输入框
   double _savedScrollOffset = 0.0;  // 保存滚动位置
   
@@ -52,6 +51,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   AxisDirection _lastDirection = AxisDirection.down;
 
   // 新增：判断用户是否在底部附近（用于决定是否自动跟随新消息）
+  // ignore: unused_element
   bool get _isUserAtBottom {
     if (!_scrollController.hasClients) return true;
     final pos = _scrollController.position;
@@ -243,7 +243,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       rawContent: opening,
       displayContent: opening,
       timestamp: timestamp,
-      messageType: MessageType.ai_dialogue,
+      messageType: MessageType.aiDialogue,  // ← 已改
     );
     
     if (mounted) {
@@ -307,10 +307,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final timestamp = DateFormat('HH:mm').format(now);
     
     final MessageType messageType = text.trim().startsWith('/') 
-        ? MessageType.user_narration 
-        : MessageType.user_dialogue;
+        ? MessageType.userNarration   // ← 已改
+        : MessageType.userDialogue;   // ← 已改
 
-    final processedContent = messageType == MessageType.user_narration
+    final processedContent = messageType == MessageType.userNarration
         ? text.trim().substring(1).trim()
         : text.trim();
 
@@ -360,9 +360,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       final contextMessages = _buildContextMessages();
       apiMessages.addAll(contextMessages.map((msg) => ({
-          'role': msg['role']!,
-          'content': msg['content']!,
-        })));
+            'role': msg['role']!,
+            'content': msg['content']!,
+          })));
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
       
@@ -408,7 +408,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             role: 'assistant',
             rawContent: '出错啦… $e',
             timestamp: errorTimestamp,
-            messageType: MessageType.ai_dialogue,
+            messageType: MessageType.aiDialogue,  // ← 已改
           ));
           _isLoading = false;
         });
@@ -461,7 +461,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   List<Map<String, String>> _buildContextMessages({int maxCount = 20}) {
     if (_messages.isEmpty) return [];
 
-    final candidates = _messages.where((m) => m.messageType != MessageType.system_time).toList();
+    final candidates = _messages.where((m) => m.messageType != MessageType.systemTime).toList();  // ← 已改
 
     if (candidates.isEmpty) return [];
 
@@ -472,7 +472,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     for (final msg in recent) {
       final content = msg.role == 'user'
-          ? (msg.displayContent?.trim() ?? msg.rawContent.trim())
+          ? msg.displayContent.trim()  // 第477行：去掉 ?.，直接用 .
           : msg.rawContent.trim();
 
       if (content.isEmpty) continue;
@@ -502,7 +502,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         rawContent: '（思考中……）',
         displayContent: '（思考中……）',
         timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
+        messageType: MessageType.aiDialogue,  // ← 已改
       ));
       return messages;
     }
@@ -541,23 +541,23 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       if (displayEnvironment.isNotEmpty) {
         messages.add(Message(
-          id: 'ai_nar_${now}',
+          id:'ai_nar_$now',
           role: 'assistant',
           rawContent: rawContent,
           displayContent: displayEnvironment,
           timestamp: timestamp,
-          messageType: MessageType.ai_narration,
+          messageType: MessageType.aiNarration,  // ← 已改
         ));
       }
 
       if (displayDialogue.isNotEmpty) {
         messages.add(Message(
-          id: 'ai_dia_${now}',
+          id: 'ai_dia_$now',
           role: 'assistant',
           rawContent: rawContent,
           displayContent: displayDialogue,
           timestamp: timestamp,
-          messageType: MessageType.ai_dialogue,
+          messageType: MessageType.aiDialogue,  // ← 已改
         ));
       }
 
@@ -568,7 +568,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           rawContent: rawContent,
           displayContent: rawContent,
           timestamp: timestamp,
-          messageType: MessageType.ai_dialogue,
+          messageType: MessageType.aiDialogue,  // ← 已改
         ));
       }
     } else {
@@ -578,7 +578,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         rawContent: rawContent,
         displayContent: rawContent,
         timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
+        messageType: MessageType.aiDialogue,  // ← 已改
       ));
     }
 
@@ -589,37 +589,37 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final displayText = msg.displayContent;
     
     switch (msg.messageType) {
-      case MessageType.user_narration:
+      case MessageType.userNarration:  // ← 已改
         return NarrationMessage(
           text: displayText,
           isAI: false,
           isCentered: _narrationCentered,
         );
 
-      case MessageType.ai_narration:
+      case MessageType.aiNarration:  // ← 已改
         return NarrationMessage(
           text: displayText,
           isAI: true,
           isCentered: _narrationCentered,
         );
 
-      case MessageType.user_dialogue:
+      case MessageType.userDialogue:  // ← 已改
         return SentMessage(
           text: displayText,
           userAvatarPath: _userAvatarPath,
           showUserAvatar: _showUserAvatar,
         );
 
-      case MessageType.ai_dialogue:
+      case MessageType.aiDialogue:  // ← 已改
         return ReceivedMessage(
           text: displayText,
           avatarPath: _avatarPath,
         );
 
-      case MessageType.system_time:
+      case MessageType.systemTime:  // ← 已改
         return SystemTimeMessage(text: displayText);
 
-      case MessageType.system_state:
+      case MessageType.systemState:  // ← 已改
         return Container();
     }
   }
@@ -891,7 +891,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         final text = _controller.text.trim();
                         if (text.isNotEmpty) {
                           _sendMessage(text);
-                              _controller.clear();
+                          _controller.clear();
                         }
                       },
                       child: Container(

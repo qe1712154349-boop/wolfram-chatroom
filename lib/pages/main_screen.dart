@@ -4,7 +4,6 @@ import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
 import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
-import '../app/theme.dart'; // 导入主题
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

@@ -6,7 +6,6 @@ import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';  // 导入 Message 类
-import '../../app/theme.dart'; // 导入主题
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
