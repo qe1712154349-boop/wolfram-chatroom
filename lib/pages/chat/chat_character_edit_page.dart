@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/storage_service.dart';
 import '../../app/ui_theme_manager.dart'; // 🎨 新增导入
-import 'package:animated_styled_widget/animated_styled_widget.dart';
-import 'package:morphable_shape/morphable_shape.dart';
 
 // ════════════════════════════════════════════════════════════════════════════════
 // 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
@@ -476,102 +474,111 @@ Color? _getFillColor(bool isDark, bool enabled) {
 
 Widget _buildCustomFormatSection() {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final bool isEnabled = _enableCustomFormat;
 
-  // ── 圆角值（单位 px） ────────────────────────────────────────────
-  final double radiusPx = _uiTheme == UITheme.strawberryCandy
-      ? 7.0
-      : (_uiTheme == UITheme.pickleMilk ? (isEnabled ? 5.0 : 3.5) : 7.0);
+  // 根据主题决定圆角
+  double getBorderRadius(bool isForNoBorder) {
+    if (_uiTheme == UITheme.strawberryCandy) {
+      // 草莓主题：统一为7
+      return 7.0;
+    } else if (_uiTheme == UITheme.pickleMilk) {
+      // 牛奶主题：开关我修改完毕了，别动我的圆角数值
+      return isForNoBorder ? 5.0 : 3.5;
+    } else {
+      // 系统主题：默认用草莓主题
+      return 7.0;
+    }
+  }
 
-  final DynamicBorderRadius targetRadius = DynamicBorderRadius.all(
-    DynamicRadius.circular(Length(radiusPx)),  // 最新版：Length(double) 默认 px
-  );
+  // 开关开启时的样式（根据主题处理）
+  InputBorder getNoBorderWithRadius() {
+    final borderRadius = getBorderRadius(true);
+    
+    if (_uiTheme == UITheme.strawberryCandy) {
+      // 🍓 草莓主题：开关开启时添加 #F1D7E0 边框
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: const BorderSide(
+          color: Color.fromARGB(255, 255, 207, 224), // #改了边框颜色
+          width: 1.2,//改草莓开启自定义格式的边框px和颜色
+        ),
+      );
+    } else {
+      // 其他主题：保持原来的无边框样式
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide.none,
+      );
+    }
+  }
 
-  // ── 边框侧 ───────────────────────────────────────────────────────
-  final DynamicBorderSide side = isEnabled
-      ? (_uiTheme == UITheme.strawberryCandy
-          ? DynamicBorderSide(
-              color: const Color.fromARGB(255, 255, 207, 224),
-              width: 1.2,  // ← 直接 double，单位 px
-            )
-          : DynamicBorderSide.none)
-      : (_uiTheme == UITheme.strawberryCandy
-          ? DynamicBorderSide.none
-          : DynamicBorderSide(
-              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-              width: 1.0,  // ← 直接 double
-            ));
+  final noBorderWithRadius = getNoBorderWithRadius();
 
-  // ── 边框侧集合（用 only 或 all 工厂） ─────────────────────────────
-  final RectangleBorderSides borderSides = RectangleBorderSides.only(
-    top: side,
-    bottom: side,
-    left: side,
-    right: side,
-  );  // 或用 all(side) 如果全等
+  // 处理开关关闭时的边框
+  InputBorder getSmallerBorder() {
+    final themeBorder = _getBorderForTheme();
+    final borderRadius = getBorderRadius(false); // 开关关闭的圆角
+    
+    if (themeBorder is OutlineInputBorder) {
+      // 如果是 OutlineInputBorder，修改圆角
+      return themeBorder.copyWith(
+        borderRadius: BorderRadius.circular(borderRadius),
+      );
+    } else {
+      // 如果不是 OutlineInputBorder（比如草莓主题的 InputBorder.none），创建一个新的
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(
+          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+          width: 1.0,
+        ),
+      );
+    }
+  }
 
-  // ── 其他目标值 ────────────────────────────────────────────────────
-  final Color targetFill = isDark
-      ? Colors.grey[800]!
-      : (isEnabled ? Colors.white : Colors.grey[100]!);
+  final smallerBorder = getSmallerBorder();
 
-  final Color targetTextColor = isDark
-      ? Colors.white
-      : (isEnabled ? Colors.black87 : Colors.grey[600]!);
-
-  final String targetHint = isEnabled
-      ? '请输入XML格式指令...'
-      : '请输入普通对话格式指令...';
-
-  final String targetExample = isEnabled
-      ? '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"'
-      : '示例: "你是一位{{角色}}，请以{{对话}}的语气回复"';
-
-  return AnimatedStyledContainer(
-    duration: const Duration(milliseconds: 420),
-    curve: Curves.elasticOut,
-    style: Style(
-      alignment: Alignment.topLeft,
-      childAlignment: Alignment.topLeft,
-      width: Length(double.infinity),  // 最新：Length(double.infinity)
-      backgroundDecoration: BoxDecoration(color: targetFill),
-      shapeBorder: RoundedRectangleShapeBorder(
-        borderRadius: targetRadius,
-        borderSides: borderSides,
-      ),
-      textStyle: DynamicTextStyle(color: targetTextColor),
-      padding: const EdgeInsets.all(16),  // 直接 EdgeInsets，无需转换
-    ),
+  return Material(
+    color: Colors.transparent,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
-          controller: isEnabled ? _xmlFormatController : _plainPromptController,
+          controller: _enableCustomFormat
+              ? _xmlFormatController
+              : _plainPromptController,
           maxLines: 4,
           minLines: 3,
+          enabled: true,
           decoration: InputDecoration(
-            border: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            hintText: targetHint,               // 现在直接用 targetHint
+            filled: true,
+            fillColor: isDark
+                ? Colors.grey[800]
+                : (_enableCustomFormat ? Colors.white : Colors.grey[100]),
+            border: _enableCustomFormat ? noBorderWithRadius : smallerBorder,
+            enabledBorder: _enableCustomFormat ? noBorderWithRadius : smallerBorder,
+            focusedBorder: _enableCustomFormat ? noBorderWithRadius : smallerBorder,
+            contentPadding: const EdgeInsets.all(16),
+            hintText: _enableCustomFormat
+                ? '请输入XML格式指令...'
+                : '请输入普通对话格式指令...',
             hintStyle: TextStyle(
               color: isDark ? Colors.grey[500] : Colors.grey[400],
             ),
-            contentPadding: EdgeInsets.zero,
           ),
-          style: TextStyle(color: targetTextColor),
+          style: TextStyle(
+            color: isDark
+                ? Colors.white
+                : (_enableCustomFormat ? Colors.black87 : Colors.grey[600]),
+          ),
         ),
         const SizedBox(height: 8),
-        AnimatedOpacity(
-          opacity: 1.0,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOut,  // 安全替换
-          child: Text(
-            targetExample,
-            style: TextStyle(
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              fontSize: 12,
-            ),
+        Text(
+          _enableCustomFormat
+              ? '示例: "你是一位{{角色}}，请以{{风格}}的语气回复"'
+              : '示例: "你是一位{{角色}}，请以{{对话}}的语气回复"',
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 12,
           ),
         ),
       ],
