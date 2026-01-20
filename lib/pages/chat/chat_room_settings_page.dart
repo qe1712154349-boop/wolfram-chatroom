@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../app/theme.dart';  // 导入 AppTheme 以使用暗色常量
+import '../../services/export_service.dart';
 
 class ChatRoomSettingsPage extends StatefulWidget {
   final String characterName;
@@ -155,6 +156,32 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
             color: Colors.orange,
             onTap: () {},
           ),
+
+// 在 _buildSettingItem 列表里，加两个新 item（在举报下面）
+_buildSettingItem(
+  icon: Icons.file_download,
+  title: "导出全部配置",
+  subtitle: "人设 + 聊天记录 (.json)",
+  color: Colors.blue,
+  onTap: () async {
+    await ExportService.exportChat(
+      includeCharacter: true,
+      characterName: widget.characterName,
+    );
+  },
+),
+_buildSettingItem(
+  icon: Icons.file_download_outlined,
+  title: "仅导出聊天记录",
+  subtitle: "仅消息列表 (.json)",
+  color: Colors.green,
+  onTap: () async {
+    await ExportService.exportChat(
+      includeCharacter: false,
+      characterName: widget.characterName,
+    );
+  },
+),
         ],
       ),
     );
