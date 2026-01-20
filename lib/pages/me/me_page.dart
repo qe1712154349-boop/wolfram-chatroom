@@ -172,15 +172,15 @@ class _MePageState extends State<MePage> {
         const SizedBox(height: 10),
       
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "服务", Colors.green, context),
+        _buildListTile(Icons.wechat_outlined, "记录", Colors.green, context),
         Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.collections_bookmark_outlined, "收藏", Colors.orange, context),
+        _buildListTile(Icons.collections_bookmark_outlined, "收藏·碎碎念", Colors.orange, context),
         Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.photo_outlined, "相册", Colors.blue, context),
+        _buildListTile(Icons.photo_outlined, "书架", Colors.blue, context),
         Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.credit_card_outlined, "阅读", Colors.blueAccent, context),
+        _buildListTile(Icons.credit_card_outlined, "结婚纪念日", Colors.blueAccent, context),
         Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情日记", Colors.amber, context),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情不好·日记本（心情好也写）", Colors.amber, context),
         
         const SizedBox(height: 10),
       
