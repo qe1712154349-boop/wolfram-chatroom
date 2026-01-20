@@ -293,7 +293,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: _showUserAvatar,
                   onChanged: _toggleShowUserAvatar,
                   activeThumbColor: const Color(0xFFFF5A7E),
-                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+                  activeTrackColor: const Color(0xFFFF5A7E).withValues(alpha: 0.5),
                 ),
               ],
             ),

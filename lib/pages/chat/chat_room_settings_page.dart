@@ -83,7 +83,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
+                  color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withAlpha(26),
                   spreadRadius: 1,
                   blurRadius: 5,
                 ),
@@ -176,7 +176,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
+            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withAlpha(26),
             spreadRadius: 1,
             blurRadius: 3,
           ),

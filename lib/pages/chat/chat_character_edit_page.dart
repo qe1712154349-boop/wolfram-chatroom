@@ -411,17 +411,17 @@ Color? _getFillColor(bool isDark, bool enabled) {
               });
             },
             // 🎨 根据主题设置Switch颜色
-            thumbColor: const MaterialStatePropertyAll(Colors.white),
-            trackColor: MaterialStateProperty.resolveWith((states) {
+            thumbColor: const WidgetStatePropertyAll(Colors.white),
+            trackColor: WidgetStateProperty.resolveWith((states) {
               final primaryColor = _uiTheme == UITheme.strawberryCandy
                   ? const Color(0xFFFF5A7E)
                   : const Color(0xFFFF5A7E);
-              if (states.contains(MaterialState.selected)) {
-                return primaryColor.withOpacity(0.5);
+              if (states.contains(WidgetState.selected)) {
+                return primaryColor.withValues(alpha: 0.5);
               }
-              return Colors.grey.withOpacity(0.3);
+              return Colors.grey.withValues(alpha: 0.3);
             }),
-            trackOutlineColor: const MaterialStatePropertyAll(Colors.transparent),
+            trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
             materialTapTargetSize: MaterialTapTargetSize.padded,
           ),
         ],

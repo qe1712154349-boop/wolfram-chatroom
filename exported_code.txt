@@ -3,30 +3,35 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 5193 bytes
+Size: 5260 bytes
 
-Modified: 01/19/2026 22:44:35
+Modified: 01/20/2026 03:19:46
 
 ========================================
 
-// lib/main.dart - 终极后台保活版
+// lib/main.dart - 最终稳定版（flutter_foreground_task 6.1.3 兼容）
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 
+// 前台任务入口（6.x 必须）
+@pragma('vm:entry-point')
+void startCallback() {
+  FlutterForegroundTask.setTaskHandler(MyForegroundTaskHandler());
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. 初始化前台服务（进程不死核心）
-  await _initForegroundTask();
+  _initForegroundTask();  // 去掉 await
 
-  // 2. 强制竖屏（可选，聊天 App 推荐）
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -35,51 +40,59 @@ void main() async {
   runApp(const MyBunnyApp());
 }
 
-// 前台服务初始化（100% 防杀后台）
 Future<void> _initForegroundTask() async {
-  await FlutterForegroundTask.init(
-    androidNotificationOptions: AndroidNotificationOptions(
-      channelId: 'chat_keepalive',
-      channelName: '沃夫朗聊天',
-      channelDescription: '保持聊天室活跃，随时响应消息',
-      channelImportance: NotificationChannelImportance.LOW,
-      priority: NotificationPriority.LOW,
-      iconData: const NotificationIconData(
-        resType: ResourceType.mipmap,
-        resPrefix: ResourcePrefix.ic,
-        name: 'launcher',
+  try {
+    FlutterForegroundTask.init(  // 去掉 await
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'wolf_chat_foreground',
+        channelName: '沃夫朗聊天',
+        channelDescription: '保持聊天室活跃，随时响应消息',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+        iconData: const NotificationIconData(
+          resType: ResourceType.mipmap,
+          resPrefix: ResourcePrefix.ic,
+          name: 'launcher',
+        ),
       ),
-    ),
-    iosNotificationOptions: const IOSNotificationOptions(
-      showNotification: true,
-      playSound: false,
-    ),
-    foregroundTaskOptions: const ForegroundTaskOptions(
-      interval: 5000,  // 5s 心跳
-      isOnceEvent: false,
-      autoRunOnBoot: true,
-      allowWakeLock: true,
-      allowWifiLock: false,
-    ),
-  );
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: true,
+        playSound: false,
+      ),
+      foregroundTaskOptions: const ForegroundTaskOptions(
+        interval: 5000,
+        isOnceEvent: false,
+        autoRunOnBoot: true,
+        allowWakeLock: true,
+        allowWifiLock: false,
+      ),
+    );
 
-  // 设置服务回调（心跳保活）
-  FlutterForegroundTask.setTaskHandler(MyForegroundTaskHandler());
+    if (kDebugMode) {
+      print('✅ 前台服务初始化成功');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ 前台服务初始化失败: $e');
+    }
+  }
 }
 
-// 后台心跳任务（每5s执行，防止进程被杀）
 class MyForegroundTaskHandler extends TaskHandler {
   @override
-  void onStart(DateTime timestamp, SendPort? sendPort) {}
-
-  @override
-  void onEvent(DateTime timestamp, SendPort? sendPort) {
-    // 心跳：轻量操作，保持进程活跃
-    sendPort?.send('heartbeat');
+  void onStart(DateTime timestamp, SendPort? sendPort) {
+    if (kDebugMode) print('Foreground service started at $timestamp');
   }
 
   @override
-  void onDestroy(DateTime timestamp, SendPort? sendPort) {}
+  void onRepeatEvent(DateTime timestamp, SendPort? sendPort) {  // 改为 onRepeatEvent
+    if (kDebugMode) print('Heartbeat at $timestamp');
+  }
+
+  @override
+  void onDestroy(DateTime timestamp, SendPort? sendPort) {
+    if (kDebugMode) print('Foreground service destroyed at $timestamp');
+  }
 }
 
 class MyBunnyApp extends StatefulWidget {
@@ -99,8 +112,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadThemeMode();
-
-    // 启动前台服务（进入 App 立即保活）
     _startForegroundService();
   }
 
@@ -116,13 +127,11 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
     switch (state) {
       case AppLifecycleState.resumed:
-        // 切回前台：确保服务运行 + 恢复状态
         _startForegroundService();
-        _storage.saveAppState();  // 强制保存
+        _storage.saveAppState();
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
-        // 切后台：立即保存状态
         _storage.saveAppState();
         break;
       case AppLifecycleState.detached:
@@ -140,13 +149,9 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   void _updateThemeMode(String savedMode) {
     setState(() {
-      if (savedMode == 'dark') {
-        _themeMode = ThemeMode.dark;
-      } else if (savedMode == 'light') {
-        _themeMode = ThemeMode.light;
-      } else {
-        _themeMode = ThemeMode.system;
-      }
+      if (savedMode == 'dark') _themeMode = ThemeMode.dark;
+      else if (savedMode == 'light') _themeMode = ThemeMode.light;
+      else _themeMode = ThemeMode.system;
     });
   }
 
@@ -158,8 +163,8 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     if (!await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.startService(
         notificationTitle: '沃夫朗聊天室',
-        notificationText: '随时在线，等待你的消息...',
-        callback: FlutterForegroundTask.setTaskHandler,
+        notificationText: '在线等待你的消息...',
+        callback: startCallback,
       );
     }
   }
@@ -887,7 +892,7 @@ File: D:\D\my_new_app\lib\models\message.dart
 
 Size: 3623 bytes
 
-Modified: 01/18/2026 15:44:53
+Modified: 01/20/2026 13:33:13
 
 ========================================
 
@@ -1217,9 +1222,9 @@ class VowPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
-Size: 24599 bytes
+Size: 24603 bytes
 
-Modified: 01/19/2026 17:44:05
+Modified: 01/20/2026 13:57:06
 
 ========================================
 
@@ -1636,17 +1641,17 @@ Color? _getFillColor(bool isDark, bool enabled) {
               });
             },
             // 🎨 根据主题设置Switch颜色
-            thumbColor: const MaterialStatePropertyAll(Colors.white),
-            trackColor: MaterialStateProperty.resolveWith((states) {
+            thumbColor: const WidgetStatePropertyAll(Colors.white),
+            trackColor: WidgetStateProperty.resolveWith((states) {
               final primaryColor = _uiTheme == UITheme.strawberryCandy
                   ? const Color(0xFFFF5A7E)
                   : const Color(0xFFFF5A7E);
-              if (states.contains(MaterialState.selected)) {
-                return primaryColor.withOpacity(0.5);
+              if (states.contains(WidgetState.selected)) {
+                return primaryColor.withValues(alpha: 0.5);
               }
-              return Colors.grey.withOpacity(0.3);
+              return Colors.grey.withValues(alpha: 0.3);
             }),
-            trackOutlineColor: const MaterialStatePropertyAll(Colors.transparent),
+            trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
             materialTapTargetSize: MaterialTapTargetSize.padded,
           ),
         ],
@@ -2397,19 +2402,20 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 32670 bytes
+Size: 34542 bytes
 
-Modified: 01/19/2026 21:27:52
+Modified: 01/20/2026 01:48:17
 
 ========================================
 
-// 在文件顶部添加 import
+// lib/pages/chat/chat_room_page.dart
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
@@ -2447,6 +2453,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String _systemPrompt = '';
   bool _narrationCentered = true;
 
+  // 新增字段
+  OverlayEntry? _loadingOverlay;
+  String? _savedInputText;  // 保存输入框
+  double _savedScrollOffset = 0.0;  // 保存滚动位置
+  
   // 修改：使用枚举值而不是枚举类型本身
   AxisDirection _lastDirection = AxisDirection.down;
 
@@ -2464,11 +2475,20 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // 1. 启动前台服务（保活）
+    _startForegroundService();
+    
+    // 2. 快速恢复状态（0.1s 内）
+    _restoreAppState();
+    
+    // 3. 原有初始化
     _loadCharacterData();
     _loadNarrationCentered();
     _loadUserSettings();
     _loadHistory();
     
+    // 4. 原有 scroll listener（不变）
     _scrollController.addListener(() {
       if (!mounted) return;
 
@@ -2502,11 +2522,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       }
     });
 
-    // 初始滚动已不需要 jump，因为 reverse:true 后默认就在底
-    // 只加一个保险（几乎看不见）
+    // 5. 初始滚动（恢复后自动跳）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
-        _scrollController.jumpTo(0.0);
+        _scrollController.jumpTo(_savedScrollOffset);
       }
     });
   }
@@ -2518,6 +2537,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
+    
+    // 保存最终状态
+    _storage.saveAppState(
+      messages: _messages,
+      scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
+      inputText: _controller.text,
+    );
+    
     super.dispose();
   }
 
@@ -2525,9 +2552,21 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     
+    final storage = StorageService();
+    
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // 切后台：0.1s 内保存状态
+      storage.saveAppState(
+        messages: _messages,
+        scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
+        inputText: _controller.text,
+        currentRoute: '/chat_room',
+      );
       _focusNode.unfocus();
       FocusScope.of(context).unfocus();
+    } else if (state == AppLifecycleState.resumed) {
+      // 切回：重启服务 + 恢复
+      _startForegroundService();
     }
   }
 
@@ -2648,6 +2687,27 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       _messages.clear();
     });
     await _storage.clearChatHistory();
+  }
+
+  // 新增方法：启动前台服务
+  Future<void> _startForegroundService() async {
+    if (!await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.startService(
+        notificationTitle: '沃夫朗聊天中',
+        notificationText: '随时回复你的消息',
+      );
+    }
+  }
+
+  // 新增方法：恢复应用状态
+  Future<void> _restoreAppState() async {
+    final state = await StorageService().loadAppState();
+    if (state.isNotEmpty) {
+      _savedInputText = state['inputText'];
+      _savedScrollOffset = state['scrollOffset'] ?? 0.0;
+      _controller.text = _savedInputText ?? '';  // 恢复输入框
+      if (kDebugMode) print('恢复状态：滚动 ${_savedScrollOffset}px，输入 ${_controller.text}');
+    }
   }
 
   Future<void> _sendMessage(String text) async {
@@ -3337,9 +3397,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_settings_page.dart
 
-Size: 7537 bytes
+Size: 7549 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/20/2026 13:57:06
 
 ========================================
 
@@ -3428,7 +3488,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
+                  color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withAlpha(26),
                   spreadRadius: 1,
                   blurRadius: 5,
                 ),
@@ -3521,7 +3581,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withAlpha(26),
+            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withAlpha(26),
             spreadRadius: 1,
             blurRadius: 3,
           ),
@@ -4056,9 +4116,9 @@ class _MePageState extends State<MePage> {
 
 File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
 
-Size: 9306 bytes
+Size: 9312 bytes
 
-Modified: 01/18/2026 17:12:30
+Modified: 01/20/2026 13:55:27
 
 ========================================
 
@@ -4357,7 +4417,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: _showUserAvatar,
                   onChanged: _toggleShowUserAvatar,
                   activeThumbColor: const Color(0xFFFF5A7E),
-                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+                  activeTrackColor: const Color(0xFFFF5A7E).withValues(alpha: 0.5),
                 ),
               ],
             ),
@@ -5686,9 +5746,9 @@ Modified: 01/02/2026 16:37:48
 
 File: D:\D\my_new_app\lib\services\storage_service.dart
 
-Size: 10133 bytes
+Size: 12061 bytes
 
-Modified: 01/19/2026 19:46:01
+Modified: 01/20/2026 01:48:17
 
 ========================================
 
@@ -5719,7 +5779,7 @@ class StorageService {
     return prefs.getBool('developer_mode') ?? false;
   }
 
-    // ── 新增：夜间模式相关 ──
+  // ── 新增：夜间模式相关 ──
   Future<void> saveThemeMode(String mode) async {
     final prefs = await _prefs;
     await prefs.setString('theme_mode', mode); // 'light', 'dark', 'system'
@@ -5978,30 +6038,86 @@ class StorageService {
     return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
   }
 
-// 在StorageService类中添加以下方法：
+  // ── 新增：UI主题相关 ──
+  Future<void> saveUITheme(String theme) async {
+    final prefs = await _prefs;
+    await prefs.setString('ui_theme', theme);
+  }
 
-// ── 新增：UI主题相关 ──
-Future<void> saveUITheme(String theme) async {
-  final prefs = await _prefs;
-  await prefs.setString('ui_theme', theme);
-}
+  Future<String> getUITheme() async {
+    final prefs = await _prefs;
+    return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
+  }
 
-Future<String> getUITheme() async {
-  final prefs = await _prefs;
-  return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
-}
+  // 获取边框样式（兼容旧版本）
+  Future<String> getBorderStyle() async {
+    final prefs = await _prefs;
+    return prefs.getString('border_style') ?? '无边框';
+  }
 
-// 获取边框样式（兼容旧版本）
-Future<String> getBorderStyle() async {
-  final prefs = await _prefs;
-  return prefs.getString('border_style') ?? '无边框';
-}
+  Future<void> saveBorderStyle(String style) async {
+    final prefs = await _prefs;
+    await prefs.setString('border_style', style);
+  }
 
-Future<void> saveBorderStyle(String style) async {
-  final prefs = await _prefs;
-  await prefs.setString('border_style', style);
-}
+  // ── 新增：App 状态快照（防进程杀） ──
+  Future<void> saveAppState({
+    List<Message>? messages,  // 聊天历史
+    double? scrollOffset,     // 滚动位置
+    String? inputText,        // 输入框内容
+    String? currentRoute,     // 当前页面
+  }) async {
+    final prefs = await _prefs;
+    
+    // 1. 保存聊天历史（如果传入）
+    if (messages != null && messages.isNotEmpty) {
+      await saveChatHistory(messages);
+    }
+    
+    // 2. 保存滚动位置
+    if (scrollOffset != null) {
+      await prefs.setDouble('chat_scroll_offset', scrollOffset);
+    }
+    
+    // 3. 保存输入框内容
+    if (inputText != null) {
+      await prefs.setString('chat_input_text', inputText);
+    }
+    
+    // 4. 保存当前路由（快速恢复页面）
+    if (currentRoute != null) {
+      await prefs.setString('last_route', currentRoute);
+    }
+    
+    // 5. 时间戳（判断是否过期）
+    await prefs.setInt('last_state_time', DateTime.now().millisecondsSinceEpoch);
+  }
 
+  Future<Map<String, dynamic>> loadAppState() async {
+    final prefs = await _prefs;
+    final lastTime = prefs.getInt('last_state_time') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    // 状态过期阈值：30分钟
+    if (now - lastTime > 30 * 60 * 1000) {
+      return {}; // 过期，返回空
+    }
+    
+    return {
+      'scrollOffset': prefs.getDouble('chat_scroll_offset') ?? 0.0,
+      'inputText': prefs.getString('chat_input_text') ?? '',
+      'lastRoute': prefs.getString('last_route') ?? '/chat',
+      'chatHistory': await loadChatHistory(), // 已有方法
+    };
+  }
+
+  Future<void> clearAppState() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_scroll_offset');
+    await prefs.remove('chat_input_text');
+    await prefs.remove('last_route');
+    await prefs.remove('last_state_time');
+  }
 }
 
 
