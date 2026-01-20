@@ -1,8 +1,33 @@
-// lib/pages/entrance/moments_detail_page.dart - 完整替换
+// lib/pages/entrance/moments_detail_page.dart - 已修改
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart'; // 修改为你的实际路径
 
-class MomentsDetailPage extends StatelessWidget {
+class MomentsDetailPage extends StatefulWidget {
   const MomentsDetailPage({super.key});
+
+  @override
+  State<MomentsDetailPage> createState() => _MomentsDetailPageState();
+}
+
+class _MomentsDetailPageState extends State<MomentsDetailPage> {
+  // 新增：发动态方法
+  Future<void> _pickAndPublish() async {
+    final List<XFile>? images = await ImagePicker().pickMultiImage();
+    if (images == null || images.isEmpty) return;
+
+    final success = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublishMomentPage(initialImages: images),
+      ),
+    );
+    
+    if (success == true) {
+      // TODO: 刷新朋友圈列表
+      print('发布成功，需要刷新朋友圈');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +55,10 @@ class MomentsDetailPage extends StatelessWidget {
                         icon: const Icon(Icons.arrow_back, color: Colors.white), 
                         onPressed: () => Navigator.pop(context)
                       ),
+                      // 修改：相机按钮调用发动态方法
                       IconButton(
                         icon: const Icon(Icons.camera_alt, color: Colors.white), 
-                        onPressed: () {}
+                        onPressed: _pickAndPublish  // 直接调用方法
                       ),
                     ],
                   ),

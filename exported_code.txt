@@ -3,9 +3,9 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 5260 bytes
+Size: 6592 bytes
 
-Modified: 01/20/2026 03:19:46
+Modified: 01/20/2026 18:27:41
 
 ========================================
 
@@ -174,8 +174,46 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     return WithForegroundTask(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
+        
+        // 🎨 主题设置 - 新增按钮样式配置
+        theme: AppTheme.lightTheme.copyWith(
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0, // ✅ 移除ElevatedButton阴影
+              shadowColor: Colors.transparent, // ✅ 确保阴影透明
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              elevation: 0, // ✅ 移除TextButton阴影
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              elevation: 0, // ✅ 移除OutlinedButton阴影
+            ),
+          ),
+        ),
+        
+        darkTheme: AppTheme.darkTheme.copyWith(
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0, // ✅ 暗色模式也移除阴影
+              shadowColor: Colors.transparent,
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              elevation: 0,
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              elevation: 0,
+            ),
+          ),
+        ),
+        
         themeMode: _themeMode,
         navigatorKey: _navigatorKey,
         home: const MainScreen(),
@@ -194,9 +232,9 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
 File: D:\D\my_new_app\lib\app\theme.dart
 
-Size: 9257 bytes
+Size: 14694 bytes
 
-Modified: 01/19/2026 17:44:05
+Modified: 01/20/2026 16:20:47
 
 ========================================
 
@@ -204,129 +242,65 @@ Modified: 01/19/2026 17:44:05
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme => ThemeData(
-        // 修复1：添加 useMaterial3: true
-        useMaterial3: true,
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFFDF7F7),
-        primaryColor: const Color(0xFFFF5A7E),
-        cardColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFDF7F7),
-          elevation: 0,
-          foregroundColor: Color(0xFF1D1D1F),
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Color(0xFFFF5A7E),
-          unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed,
-        ),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Color(0xFF1D1D1F)),
-          bodyMedium: TextStyle(
-            fontFamily: 'System',
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-            height: 1.4,
-            color: Color(0xFF1D1D1F),
-          ),
-          bodySmall: TextStyle(color: Color(0xFF6D6D6F)),
-          titleMedium: TextStyle(color: Color(0xFF1D1D1F)),
-          labelLarge: TextStyle(color: Color(0xFF1D1D1F)),
-        ),
-        iconTheme: const IconThemeData(color: Color(0xFF1D1D1F)),
-        dividerColor: Colors.grey[300],
-        inputDecorationTheme: InputDecorationTheme(
-          fillColor: Colors.white,
-          filled: true,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[400]!),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[400]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
-          ),
-        ),
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFFFF5A7E),
-          background: Color(0xFFFDF7F7),
-          surface: Colors.white,
-          onBackground: Color(0xFF1D1D1F),
-          onSurface: Color(0xFF1D1D1F),
-        ),
-      );
-
-  static ThemeData get darkTheme => ThemeData(
-        // 修复2：添加 useMaterial3: true
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF060405),
-        primaryColor: const Color(0xFFF95685),       // 强调色（玫红）
-        cardColor: const Color(0xFF1A1A1A),              // 卡片、ListTile 背景
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0A0A0A),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF0A0A0A),
-          selectedItemColor: Color(0xFFF95685),
-          unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed,
-        ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: Colors.grey[100]),
-          bodyMedium: TextStyle(color: Colors.grey[200], fontSize: 16, height: 1.4),
-          bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
-          titleMedium: TextStyle(color: Colors.white),
-          labelLarge: TextStyle(color: Colors.white),
-        ),
-        iconTheme: IconThemeData(color: Colors.grey[300]),
-        dividerColor: Colors.grey[800],
-        inputDecorationTheme: InputDecorationTheme(
-          fillColor: const Color(0xFF252525),
-          filled: true,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[700]!),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey[700]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: const Color(0xFFF95685)),
-          ),
-        ),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFF95685),
-          background: Color(0xFF060405),
-          surface: Color(0xFF1A1A1A),
-          onBackground: Colors.white,
-          onSurface: Colors.white,
-        ),
-      );
-
-  // 保留你原来的常量，但添加暗色版本
-  static const Color appBackgroundLight = Color(0xFFFDF7F7);
-  static const Color appBackgroundDark = Color(0xFF060405);
+  // ========== 主色 ==========
+  static const Color primaryLight = Color(0xFFFF5A7E);
+  static const Color primaryDark = Color(0xFFF95685);
   
-  static const Color pinkAccent = Color(0xFFFF5A7E);
-  static const Color pinkAccentDark = Color(0xFFF95685);
+  // ========== 背景色 ==========
+  static const Color backgroundLight = Color(0xFFFDF7F7);
+  static const Color backgroundDark = Color(0xFF060405);
+  static const Color surfaceLight = Color(0xFFFDF7F7);
+  static const Color surfaceDark = Color(0xFF060405);
+  static const Color surfaceVariantLight = Color(0xFFF5F5F5);
+  static const Color surfaceVariantDark = Color(0xFF1E1E1E);
   
-  // 亮色模式气泡颜色
+  // ========== 文字色 ==========
+  static const Color onSurfaceLight = Color(0xFF1D1D1F);
+  static const Color onSurfaceDark = Color(0xFFFFFFFF);
+  static const Color onSurfaceVariantLight = Color(0xFF6D6D6F);
+  static const Color onSurfaceVariantDark = Color(0xFFAAAAAA);
+  
+  // ========== 边框/轮廓色（关键！解决 Switch 边缘黑色问题） ==========
+  static const Color outlineLight = Color(0xFFE0E0E0);      // 浅灰色
+  static const Color outlineDark = Color(0xFF424242);       // 深灰色
+  static const Color outlineVariantLight = Color(0xFFC7C7CC); // 中灰色
+  static const Color outlineVariantDark = Color(0xFF303030);  // 更深灰
+  
+  // ========== 卡片/容器色 ==========
+  static const Color cardColorLight = Colors.white;
+  static const Color cardColorDark = Color(0xFF1A1A1A);
+  
+  // ========== 其他功能色 ==========
+  static const Color secondaryContainerLight = Color(0xFFFFE4E9);
+  static const Color secondaryContainerDark = Color(0xFF3A1F25);
+  static const Color errorLight = Color(0xFFBA1A1A);
+  static const Color errorDark = Color(0xFFFFB4AB);
+  
+  // ========== Switch 专用颜色（方便修改） ==========
+  static const Color switchActiveThumb = Color(0xFFFF5A7E);      // 开启小球颜色
+  static final Color switchActiveTrack = Color(0xFFFF5A7E).withValues(alpha: 0x80); // 50%透明度
+  static const Color switchInactiveThumb = Color(0xFF757575);   // 关闭小球颜色 ← 这里可以修改按钮off小球的颜色
+  static const Color switchInactiveTrack = Color(0xFFE0E0E0);   // 关闭轨道颜色
+  static const Color switchTrackOutline = Color(0xFFBDBDBD);    // 轨道边框颜色
+
+  // ========== 文字颜色（与按钮分开） ==========
+  static const Color textPrimaryLight = Color(0xFF1D1D1F);  // 主要文字
+  static const Color textPrimaryDark = Color(0xFFFFFFFF);
+  static const Color textSecondaryLight = Color(0xFF6D6D6F); // 次要文字
+  static const Color textSecondaryDark = Color(0xFFAAAAAA);
+  
+  // ========== 气泡颜色 ==========
   static const Color aiBubbleColorLight = Color(0xFFFFFFFF);
   static const Color aiBubbleBorderLight = Color(0xFFF1DCDE);
   static const Color userBubbleColorLight = Color(0xFFFFEAEF);
   static const Color userBubbleBorderLight = Color(0xFFEDD8DD);
   
-  // 暗色模式气泡颜色
   static const Color aiBubbleColorDark = Color(0xFF1A1A1A);
   static const Color aiBubbleBorderDark = Color(0xFF333333);
   static const Color userBubbleColorDark = Color(0xFFF95685);
   static const Color userBubbleBorderDark = Color(0xFFD6406E);
   
+  // ========== 页面特定颜色 ==========
   static const Color chatRoomTopLight = Color(0xFFFCECEF);
   static const Color chatRoomTopDark = Color(0xFF0A0A0A);
   
@@ -339,7 +313,7 @@ class AppTheme {
   static const Color messageFieldBorderLight = Color(0xFFB1A9AB);
   static const Color messageFieldBorderDark = Color(0xFF444444);
   
-  // 文字颜色
+  // ========== 文字颜色（兼容旧代码） ==========
   static const Color primaryTextLight = Color(0xFF1D1D1F);
   static const Color primaryTextDark = Color(0xFFFFFFFF);
   static const Color secondaryTextLight = Color(0xFF8E8E93);
@@ -349,10 +323,201 @@ class AppTheme {
   static const Color userTextColorLight = Color(0xFFBB2D71);
   static const Color userTextColorDark = Color(0xFFFFFFFF);
   
-  // 气泡圆角
+  // ========== 尺寸/圆角 ==========
   static const double bubbleBorderRadius = 18.0;
 
-  static get darkBackground => null;
+  // ========== 主题定义 ==========
+  static ThemeData get lightTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    
+    // 1. colorScheme - 基础颜色系统（不影响Switch）
+    colorScheme: ColorScheme.light(
+      primary: primaryLight,    // 主色
+      surface: surfaceLight,    // 表面色
+      onSurface: textPrimaryLight,         // 表面文字色
+      // outline 保持Flutter默认，不影响Switch
+    ),
+    
+    // 2. 文字主题 - 使用专门的文字颜色
+    textTheme: TextTheme(
+      bodyLarge: TextStyle(color: textPrimaryLight),
+      bodyMedium: TextStyle(
+        fontFamily: 'System',
+        fontSize: 16,
+        fontWeight: FontWeight.normal,
+        height: 1.4,
+        color: textPrimaryLight,  // 使用文字专用颜色
+      ),
+      bodySmall: TextStyle(color: textSecondaryLight),
+      titleMedium: TextStyle(color: textPrimaryLight),
+      labelLarge: TextStyle(color: textPrimaryLight),
+    ),
+    
+    // 3. Switch主题 - 独立配置，不影响文字
+    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchActiveThumb;        // 开启状态
+          }
+          return switchInactiveThumb;        // 关闭状态 - 深灰色小球
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchActiveTrack;        // 开启轨道
+          }
+          return switchInactiveTrack;        // 关闭轨道
+        },
+      ),
+      // 边框颜色
+      trackOutlineColor: WidgetStateProperty.all(switchTrackOutline),
+      // 边框宽度：开启时0，关闭时1px
+      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0.0;  // 开启时不要边框
+          }
+          return 1.0;    // 关闭时1px边框
+        },
+      ),
+    ),
+    
+    // 4. 其他主题配置保持不变...
+    scaffoldBackgroundColor: backgroundLight,
+    primaryColor: primaryLight,
+    cardColor: cardColorLight,
+    appBarTheme: AppBarTheme(
+      backgroundColor: surfaceLight,
+      elevation: 0,
+      foregroundColor: textPrimaryLight,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: Colors.white,
+      selectedItemColor: primaryLight,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+    ),
+    iconTheme: IconThemeData(color: textPrimaryLight),
+    dividerColor: Colors.grey[300],
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: Colors.white,
+      filled: true,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[400]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[400]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primaryLight),
+      ),
+    ),
+  );
+
+  // 暗色主题类似配置...
+  static ThemeData get darkTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    
+    // colorScheme - 暗色版本
+    colorScheme: ColorScheme.dark(
+      primary: primaryDark,
+      surface: surfaceDark,
+      onSurface: textPrimaryDark,
+    ),
+    
+    // 文字主题
+    textTheme: TextTheme(
+      bodyLarge: TextStyle(color: textPrimaryDark),
+      bodyMedium: TextStyle(
+        color: Colors.grey[200], 
+        fontSize: 16, 
+        height: 1.4
+      ),
+      bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
+      titleMedium: TextStyle(color: textPrimaryDark),
+      labelLarge: TextStyle(color: textPrimaryDark),
+    ),
+    
+    // Switch主题 - 暗色版本
+    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark;    // 暗色主色
+          }
+          return const Color(0xFF9E9E9E);      // 暗色关闭小球
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark.withValues(alpha: 0x80);  // 50%透明度
+          }
+          return const Color(0xFF424242);      // 暗色关闭轨道
+        },
+      ),
+      // 边框颜色
+      trackOutlineColor: WidgetStateProperty.all(const Color(0xFF616161)),
+      // 边框宽度：开启时0，关闭时1px
+      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0.0;  // 开启时不要边框
+          }
+          return 1.0;    // 关闭时1px边框
+        },
+      ),
+    ),
+    
+    // ... 其他暗色主题配置
+    scaffoldBackgroundColor: backgroundDark,
+    primaryColor: primaryDark,
+    cardColor: cardColorDark,
+    appBarTheme: AppBarTheme(
+      backgroundColor: chatRoomTopDark,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: chatRoomTopDark,
+      selectedItemColor: primaryDark,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+    ),
+    iconTheme: IconThemeData(color: Colors.grey[300]),
+    dividerColor: Colors.grey[800],
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: messageFieldBackgroundDark,
+      filled: true,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[700]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[700]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primaryDark),
+      ),
+    ),
+  );
+
+  // ========== 兼容性方法（保持现有代码不变） ==========
+  
+  // 旧常量别名（兼容现有代码）
+  static const Color appBackgroundLight = backgroundLight;
+  static const Color appBackgroundDark = backgroundDark;
+  static const Color pinkAccent = primaryLight;
+  static const Color pinkAccentDark = primaryDark;
+  
+  static Color get darkBackground => appBackgroundDark;
+  
+  // ========== 样式方法 ==========
   
   // 旁白样式
   static TextStyle narrationStyle(BuildContext context) => TextStyle(
@@ -385,7 +550,8 @@ class AppTheme {
     letterSpacing: 0.3,
   );
   
-  // 根据主题获取颜色
+  // ========== 颜色获取方法 ==========
+  
   static Color getAppBackground(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark 
         ? appBackgroundDark 
@@ -445,6 +611,20 @@ class AppTheme {
         ? userTextColorDark 
         : userTextColorLight;
   }
+  
+  // ========== 新增：获取边框颜色方法 ==========
+  
+  static Color getOutlineColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? outlineDark 
+        : outlineLight;
+  }
+  
+  static Color getOutlineVariantColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? outlineVariantDark 
+        : outlineVariantLight;
+  }
 }
 
 
@@ -453,9 +633,9 @@ class AppTheme {
 
 File: D:\D\my_new_app\lib\app\ui_theme_manager.dart
 
-Size: 8651 bytes
+Size: 8733 bytes
 
-Modified: 01/19/2026 17:44:05
+Modified: 01/20/2026 18:20:06
 
 ========================================
 
@@ -652,7 +832,8 @@ class UIThemeManager {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
         ),
-        elevation: 2,
+        elevation: 0,
+        shadowColor: Colors.transparent, // 添加这行确保阴影完全透明
         padding: const EdgeInsets.symmetric(vertical: 16),
       );
     }
@@ -890,22 +1071,59 @@ class OrderCard extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\models\message.dart
 
-Size: 3623 bytes
+Size: 4676 bytes
 
-Modified: 01/20/2026 13:33:13
+Modified: 01/20/2026 15:23:30
 
 ========================================
 
 // lib/models/message.dart
-import 'dart:convert';
 
+// 1. 使用 lowerCamelCase（Dart 官方推荐，解决所有 constant_identifier_names 警告）
 enum MessageType {
-  user_narration,    // 用户旁白
-  user_dialogue,     // 用户对话
-  ai_narration,      // AI旁白
-  ai_dialogue,       // AI对话
-  system_time,       // 系统时间
-  system_state,      // 系统状态
+  userNarration,     // 用户旁白
+  userDialogue,      // 用户对话
+  aiNarration,       // AI旁白
+  aiDialogue,        // AI对话
+  systemTime,        // 系统时间
+  systemState,       // 系统状态
+}
+
+// 2. 桥接 extension：处理 snake_case <-> camelCase 的兼容
+extension MessageTypeX on MessageType {
+  // 用于保存：新数据直接用 name（camelCase）
+  // 但我们不额外存 legacyName，因为我们想让新数据彻底现代化
+
+  // 用于读取：兼容旧的 snake_case 字符串
+  static MessageType fromStoredString(String? stored) {
+    if (stored == null) {
+      return MessageType.aiDialogue; // 默认 fallback
+    }
+
+    // 先尝试直接匹配 camelCase（新数据）
+    try {
+      return MessageType.values.byName(stored);
+    } on ArgumentError {
+      // 匹配失败 → 尝试 snake_case 兼容映射
+      switch (stored) {
+        case 'user_narration':
+          return MessageType.userNarration;
+        case 'user_dialogue':
+          return MessageType.userDialogue;
+        case 'ai_narration':
+          return MessageType.aiNarration;
+        case 'ai_dialogue':
+          return MessageType.aiDialogue;
+        case 'system_time':
+          return MessageType.systemTime;
+        case 'system_state':
+          return MessageType.systemState;
+        default:
+          // 未知格式 → fallback（可加日志）
+          return MessageType.aiDialogue;
+      }
+    }
+  }
 }
 
 class Message {
@@ -913,23 +1131,21 @@ class Message {
   final String role; // 'user' 或 'assistant'
   final String timestamp;
   final MessageType messageType;
-  
-  // 核心：双内容字段
+
   final String rawContent;     // 原始完整字符串，带XML标签，用于发送给AI
   final String displayContent; // 纯文本，用于UI显示和搜索
-  
+
   Message({
     required this.id,
     required this.role,
-    required this.rawContent,
-    String? displayContent, // 可选，自动生成
     required this.timestamp,
     required this.messageType,
+    required this.rawContent,
+    String? displayContent,
   }) : displayContent = displayContent ?? _extractDisplayContent(rawContent);
 
-  // 从rawContent提取纯文本显示内容
   static String _extractDisplayContent(String raw) {
-    // 尝试解析XML格式
+    // ... 原有提取逻辑不变 ...
     final startResponse = raw.indexOf('<response>');
     final endResponse = raw.lastIndexOf('</response>');
     
@@ -941,7 +1157,6 @@ class Message {
       
       String extractedText = '';
       
-      // 提取environment文本
       final envStart = responseInner.indexOf('<environment>');
       final envEnd = responseInner.indexOf('</environment>');
       if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
@@ -950,7 +1165,6 @@ class Message {
             .trim();
       }
       
-      // 提取dialogue文本
       final diaStart = responseInner.indexOf('<dialogue>');
       final diaEnd = responseInner.indexOf('</dialogue>');
       if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
@@ -963,7 +1177,6 @@ class Message {
       if (extractedText.isNotEmpty) return extractedText;
     }
     
-    // 如果没有XML标签或解析失败，简单清理标签
     return raw.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
@@ -971,32 +1184,31 @@ class Message {
     return {
       'id': id,
       'role': role,
-      'raw_content': rawContent,      // 存原始XML
-      'display_content': displayContent, // 存纯文本
+      'raw_content': rawContent,
+      'display_content': displayContent,
       'timestamp': timestamp,
+      // 关键：新数据统一存 camelCase name
       'message_type': messageType.name,
     };
   }
 
-  factory Message.fromMap(Map<String, dynamic> map) {
-    // 兼容旧数据：如果没有raw_content，用content字段
-    final rawContent = map['raw_content'] ?? map['content'] ?? '';
-    final displayContent = map['display_content'] ?? '';
-    
-    return Message(
-      id: map['id'] as String,
-      role: map['role'] as String,
-      rawContent: rawContent,
-      displayContent: displayContent,
-      timestamp: map['timestamp'] as String,
-      messageType: MessageType.values.firstWhere(
-        (e) => e.name == (map['message_type'] as String?),
-        orElse: () => map['role'] == 'user' 
-            ? MessageType.user_dialogue 
-            : MessageType.ai_dialogue,
-      ),
-    );
-  }
+factory Message.fromMap(Map<String, dynamic> map) {
+  final rawContent = map['raw_content'] ?? map['content'] ?? '';
+  final displayContent = map['display_content'] ?? '';
+
+  // 核心兼容逻辑：使用 fromStoredString 处理 snake_case 和 camelCase
+  final storedType = map['message_type'] as String?;
+  final messageType = MessageTypeX.fromStoredString(storedType); // 直接调用，移除 ??
+
+  return Message(
+    id: map['id'] as String,
+    role: map['role'] as String,
+    timestamp: map['timestamp'] as String,
+    messageType: messageType,
+    rawContent: rawContent,
+    displayContent: displayContent,
+  );
+}
 
   @override
   String toString() {
@@ -1023,9 +1235,9 @@ Modified: 01/02/2026 16:38:14
 
 File: D:\D\my_new_app\lib\pages\main_screen.dart
 
-Size: 1715 bytes
+Size: 1670 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/20/2026 15:23:30
 
 ========================================
 
@@ -1035,7 +1247,6 @@ import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
 import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
-import '../app/theme.dart'; // 导入主题
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -1086,9 +1297,9 @@ class _MainScreenState extends State<MainScreen> {
 
 File: D:\D\my_new_app\lib\pages\vow_page.dart
 
-Size: 4475 bytes
+Size: 4430 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/20/2026 15:23:30
 
 ========================================
 
@@ -1096,7 +1307,6 @@ Modified: 01/18/2026 15:43:26
 import 'package:flutter/material.dart';
 import '../components/mood_day.dart';
 import '../components/order_card.dart';
-import '../app/theme.dart'; // 导入主题
 
 class VowPage extends StatelessWidget {
   const VowPage({super.key});
@@ -1222,11 +1432,13 @@ class VowPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
-Size: 24603 bytes
+Size: 30056 bytes
 
-Modified: 01/20/2026 13:57:06
+Modified: 01/20/2026 20:40:33
 
 ========================================
+
+// 这个文件的输入框颜色样式焦点和圆角设置是用户调试完毕的最终版本，不要修改。
 
 // lib/pages/chat/chat_character_edit_page.dart - 完整修改版本（集成主题）
 import 'dart:io';
@@ -1234,6 +1446,28 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/storage_service.dart';
 import '../../app/ui_theme_manager.dart'; // 🎨 新增导入
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ⚠️⚠️⚠️ 重要：这是用户调试完毕的最终版本！不要修改！ ⚠️⚠️⚠️
+// 
+// 🔴 焦点效果设计原则（用户已调试完毕）：
+//   1. 草莓主题：所有输入框完全无焦点效果
+//   2. 泡菜牛奶主题：普通输入框有焦点效果，但"启用自定义格式"下面的文本框无焦点
+//   3. 开关开启时：无边框但有圆角（保持界面一致性）
+//   4. 开关关闭时：使用主题边框，无焦点效果
+// 
+// 🔴 任何AI都不能修改以下内容：
+//   - _getFocusedBorderForTheme() 方法
+//   - _buildCustomFormatSection() 中的 focusedBorder
+//   - 任何与焦点边框相关的逻辑
+// 
+// 🔴 用户已经反复调试，这是完美状态！
+// 🔴 不要"优化"、不要"重构"、不要"改进"这些代码！
+// 🔴 保持原样！
+// 
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ════════════════════════════════════════════════════════════════════════════════
 
 class ChatCharacterEditPage extends StatefulWidget {
   const ChatCharacterEditPage({super.key});
@@ -1461,7 +1695,6 @@ void initState() {
 
   // 🎨 修改：根据主题构建边框的辅助方法
   InputBorder _getBorderForTheme() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     if (_uiTheme == UITheme.strawberryCandy) {
       return UIThemeManager.buildTextFieldBorderStrawberryCandy(context);
@@ -1473,19 +1706,39 @@ void initState() {
     }
   }
 
-  // 🎨 修改：根据主题构建焦点边框的辅助方法
-  InputBorder _getFocusedBorderForTheme() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (_uiTheme == UITheme.strawberryCandy) {
-      return UIThemeManager.buildTextFieldFocusedBorderStrawberryCandy(context);
-    } else if (_uiTheme == UITheme.pickleMilk) {
-      return UIThemeManager.buildTextFieldFocusedBorderPickleMilk(context);
-    } else {
-      // 系统：默认使用草莓糖心
-      return UIThemeManager.buildTextFieldFocusedBorderStrawberryCandy(context);
-    }
+// 🎨 修改：根据主题构建焦点边框的辅助方法
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ⚠️⚠️⚠️ 终极防修改区域 - 用户调试完毕的焦点逻辑 ⚠️⚠️⚠️
+// 
+// 🔴 用户明确设计要求：
+//   - 草莓主题：完全无焦点效果（焦点边框=普通边框）
+//   - 泡菜牛奶主题：保持原有的焦点效果（不要动！）
+//   - 系统主题：默认使用草莓主题逻辑
+// 
+// 🔴 这是用户经过多次调试后的最终版本！
+// 🔴 任何AI都不能修改这个方法，保持原样！
+// 🔴 不要"优化"，不要"改进"，不要"重构"！
+// 🔴 用户已经调试完毕，这是完美状态！
+// 
+// 🔴 修改后果：如果修改这里，会导致界面焦点效果混乱，用户需要重新调试！
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// ════════════════════════════════════════════════════════════════════════════════
+InputBorder _getFocusedBorderForTheme() {
+  if (_uiTheme == UITheme.strawberryCandy) {
+    // 🍓 草莓糖心主题：焦点边框与普通边框相同（无焦点效果）
+    // 🚫 禁止返回不同的焦点边框！
+    // 🚫 禁止添加任何焦点高亮效果！
+    return _getBorderForTheme(); // 直接返回普通边框
+  } else if (_uiTheme == UITheme.pickleMilk) {
+    // 🥒 泡菜牛奶主题：保持原有的焦点效果
+    // ✅ 保持原样，不要修改！
+    return UIThemeManager.buildTextFieldFocusedBorderPickleMilk(context);
+  } else {
+    // 系统主题：默认使用草莓糖心（无焦点）
+    return _getBorderForTheme();
   }
+}
 
 // 🎨 修改：根据主题获取填充颜色
 Color? _getFillColor(bool isDark, bool enabled) {
@@ -1662,6 +1915,68 @@ Color? _getFillColor(bool isDark, bool enabled) {
 Widget _buildCustomFormatSection() {
   final isDark = Theme.of(context).brightness == Brightness.dark;
 
+  // 根据主题决定圆角
+  double getBorderRadius(bool isForNoBorder) {
+    if (_uiTheme == UITheme.strawberryCandy) {
+      // 草莓主题：统一为7
+      return 7.0;
+    } else if (_uiTheme == UITheme.pickleMilk) {
+      // 牛奶主题：开关我修改完毕了，别动我的圆角数值
+      return isForNoBorder ? 5.0 : 3.5;
+    } else {
+      // 系统主题：默认用草莓主题
+      return 7.0;
+    }
+  }
+
+  // 开关开启时的样式（根据主题处理）
+  InputBorder getNoBorderWithRadius() {
+    final borderRadius = getBorderRadius(true);
+    
+    if (_uiTheme == UITheme.strawberryCandy) {
+      // 🍓 草莓主题：开关开启时添加 #F1D7E0 边框
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: const BorderSide(
+          color: Color.fromARGB(255, 255, 207, 224), // #改了边框颜色
+          width: 1.2,//改草莓开启自定义格式的边框px和颜色
+        ),
+      );
+    } else {
+      // 其他主题：保持原来的无边框样式
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide.none,
+      );
+    }
+  }
+
+  final noBorderWithRadius = getNoBorderWithRadius();
+
+  // 处理开关关闭时的边框
+  InputBorder getSmallerBorder() {
+    final themeBorder = _getBorderForTheme();
+    final borderRadius = getBorderRadius(false); // 开关关闭的圆角
+    
+    if (themeBorder is OutlineInputBorder) {
+      // 如果是 OutlineInputBorder，修改圆角
+      return themeBorder.copyWith(
+        borderRadius: BorderRadius.circular(borderRadius),
+      );
+    } else {
+      // 如果不是 OutlineInputBorder（比如草莓主题的 InputBorder.none），创建一个新的
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(
+          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+          width: 1.0,
+        ),
+      );
+    }
+  }
+
+  final smallerBorder = getSmallerBorder();
+
   return Material(
     color: Colors.transparent,
     child: Column(
@@ -1679,14 +1994,13 @@ Widget _buildCustomFormatSection() {
             fillColor: isDark
                 ? Colors.grey[800]
                 : (_enableCustomFormat ? Colors.white : Colors.grey[100]),
-            // 🎨 根据主题和开关状态设置边框
-            border: _enableCustomFormat ? InputBorder.none : _getBorderForTheme(),
-            enabledBorder: _enableCustomFormat ? InputBorder.none : _getBorderForTheme(),
-            focusedBorder: _enableCustomFormat ? InputBorder.none : _getFocusedBorderForTheme(),
+            border: _enableCustomFormat ? noBorderWithRadius : smallerBorder,
+            enabledBorder: _enableCustomFormat ? noBorderWithRadius : smallerBorder,
+            focusedBorder: _enableCustomFormat ? noBorderWithRadius : smallerBorder,
             contentPadding: const EdgeInsets.all(16),
             hintText: _enableCustomFormat
-                ? '输入自定义格式指令...'
-                : '输入普通对话格式指令...',
+                ? '请输入XML格式指令...'
+                : '请输入普通对话格式指令...',
             hintStyle: TextStyle(
               color: isDark ? Colors.grey[500] : Colors.grey[400],
             ),
@@ -1711,7 +2025,7 @@ Widget _buildCustomFormatSection() {
     ),
   );
 }
- 
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1860,16 +2174,16 @@ Widget _buildCustomFormatSection() {
                   ),
                   const SizedBox(height: 32),
 
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _getCardColor(isDark),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _getCardBorderColor(isDark),
-                        width: 1,
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F6), // 🚫 AI别动这个颜色！#FFF1F6
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFF3D7E0), // 🚫 AI别动这个颜色！#F3D7E0
+                          width: 1, // 🚫 AI别动这个宽度！就是1px
+                        ),
                       ),
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2233,9 +2547,9 @@ class NarrationMessage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
-Size: 5499 bytes
+Size: 5451 bytes
 
-Modified: 01/19/2026 19:46:01
+Modified: 01/20/2026 15:23:30
 
 ========================================
 
@@ -2247,7 +2561,6 @@ import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';  // 导入 Message 类
-import '../../app/theme.dart'; // 导入主题
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -2402,9 +2715,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 34542 bytes
+Size: 34770 bytes
 
-Modified: 01/20/2026 01:48:17
+Modified: 01/20/2026 20:46:28
 
 ========================================
 
@@ -2454,7 +2767,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   bool _narrationCentered = true;
 
   // 新增字段
-  OverlayEntry? _loadingOverlay;
   String? _savedInputText;  // 保存输入框
   double _savedScrollOffset = 0.0;  // 保存滚动位置
   
@@ -2462,6 +2774,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   AxisDirection _lastDirection = AxisDirection.down;
 
   // 新增：判断用户是否在底部附近（用于决定是否自动跟随新消息）
+  // ignore: unused_element
   bool get _isUserAtBottom {
     if (!_scrollController.hasClients) return true;
     final pos = _scrollController.position;
@@ -2653,7 +2966,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       rawContent: opening,
       displayContent: opening,
       timestamp: timestamp,
-      messageType: MessageType.ai_dialogue,
+      messageType: MessageType.aiDialogue,  // ← 已改
     );
     
     if (mounted) {
@@ -2717,10 +3030,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final timestamp = DateFormat('HH:mm').format(now);
     
     final MessageType messageType = text.trim().startsWith('/') 
-        ? MessageType.user_narration 
-        : MessageType.user_dialogue;
+        ? MessageType.userNarration   // ← 已改
+        : MessageType.userDialogue;   // ← 已改
 
-    final processedContent = messageType == MessageType.user_narration
+    final processedContent = messageType == MessageType.userNarration
         ? text.trim().substring(1).trim()
         : text.trim();
 
@@ -2770,9 +3083,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       final contextMessages = _buildContextMessages();
       apiMessages.addAll(contextMessages.map((msg) => ({
-          'role': msg['role']!,
-          'content': msg['content']!,
-        })));
+            'role': msg['role']!,
+            'content': msg['content']!,
+          })));
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
       
@@ -2818,7 +3131,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             role: 'assistant',
             rawContent: '出错啦… $e',
             timestamp: errorTimestamp,
-            messageType: MessageType.ai_dialogue,
+            messageType: MessageType.aiDialogue,  // ← 已改
           ));
           _isLoading = false;
         });
@@ -2871,7 +3184,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   List<Map<String, String>> _buildContextMessages({int maxCount = 20}) {
     if (_messages.isEmpty) return [];
 
-    final candidates = _messages.where((m) => m.messageType != MessageType.system_time).toList();
+    final candidates = _messages.where((m) => m.messageType != MessageType.systemTime).toList();  // ← 已改
 
     if (candidates.isEmpty) return [];
 
@@ -2882,7 +3195,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     for (final msg in recent) {
       final content = msg.role == 'user'
-          ? (msg.displayContent?.trim() ?? msg.rawContent.trim())
+          ? msg.displayContent.trim()  // 第477行：去掉 ?.，直接用 .
           : msg.rawContent.trim();
 
       if (content.isEmpty) continue;
@@ -2912,7 +3225,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         rawContent: '（思考中……）',
         displayContent: '（思考中……）',
         timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
+        messageType: MessageType.aiDialogue,  // ← 已改
       ));
       return messages;
     }
@@ -2951,23 +3264,23 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       if (displayEnvironment.isNotEmpty) {
         messages.add(Message(
-          id: 'ai_nar_${now}',
+          id:'ai_nar_$now',
           role: 'assistant',
           rawContent: rawContent,
           displayContent: displayEnvironment,
           timestamp: timestamp,
-          messageType: MessageType.ai_narration,
+          messageType: MessageType.aiNarration,  // ← 已改
         ));
       }
 
       if (displayDialogue.isNotEmpty) {
         messages.add(Message(
-          id: 'ai_dia_${now}',
+          id: 'ai_dia_$now',
           role: 'assistant',
           rawContent: rawContent,
           displayContent: displayDialogue,
           timestamp: timestamp,
-          messageType: MessageType.ai_dialogue,
+          messageType: MessageType.aiDialogue,  // ← 已改
         ));
       }
 
@@ -2978,7 +3291,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           rawContent: rawContent,
           displayContent: rawContent,
           timestamp: timestamp,
-          messageType: MessageType.ai_dialogue,
+          messageType: MessageType.aiDialogue,  // ← 已改
         ));
       }
     } else {
@@ -2988,7 +3301,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         rawContent: rawContent,
         displayContent: rawContent,
         timestamp: timestamp,
-        messageType: MessageType.ai_dialogue,
+        messageType: MessageType.aiDialogue,  // ← 已改
       ));
     }
 
@@ -2999,37 +3312,37 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     final displayText = msg.displayContent;
     
     switch (msg.messageType) {
-      case MessageType.user_narration:
+      case MessageType.userNarration:  // ← 已改
         return NarrationMessage(
           text: displayText,
           isAI: false,
           isCentered: _narrationCentered,
         );
 
-      case MessageType.ai_narration:
+      case MessageType.aiNarration:  // ← 已改
         return NarrationMessage(
           text: displayText,
           isAI: true,
           isCentered: _narrationCentered,
         );
 
-      case MessageType.user_dialogue:
+      case MessageType.userDialogue:  // ← 已改
         return SentMessage(
           text: displayText,
           userAvatarPath: _userAvatarPath,
           showUserAvatar: _showUserAvatar,
         );
 
-      case MessageType.ai_dialogue:
+      case MessageType.aiDialogue:  // ← 已改
         return ReceivedMessage(
           text: displayText,
           avatarPath: _avatarPath,
         );
 
-      case MessageType.system_time:
+      case MessageType.systemTime:  // ← 已改
         return SystemTimeMessage(text: displayText);
 
-      case MessageType.system_state:
+      case MessageType.systemState:  // ← 已改
         return Container();
     }
   }
@@ -3127,7 +3440,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                     slivers: [
                       // 先加一个大的 SliverPadding 让开场白偏上
                       SliverToBoxAdapter(
-                        child: SizedBox(height: 120), // ← 调这个值，越大开场白越靠上
+                        child: SizedBox(height: 405), // ← 调这个值，越大开场白越靠上
                       ),
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
@@ -3301,7 +3614,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         final text = _controller.text.trim();
                         if (text.isNotEmpty) {
                           _sendMessage(text);
-                              _controller.clear();
+                          _controller.clear();
                         }
                       },
                       child: Container(
@@ -4116,9 +4429,9 @@ class _MePageState extends State<MePage> {
 
 File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
 
-Size: 9312 bytes
+Size: 9446 bytes
 
-Modified: 01/20/2026 13:55:27
+Modified: 01/20/2026 16:56:58
 
 ========================================
 
@@ -4136,14 +4449,38 @@ class ProfileSettingsPage extends StatefulWidget {
 }
 
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
+  // ========== 服务 ==========
   final StorageService _storage = StorageService();
   final ImagePicker _picker = ImagePicker();
   
+  // ========== 状态 ==========
   String? _userAvatarPath;
   String _userName = 'name';
   bool _showUserAvatar = true;
   bool _isLoading = false;
   bool _isSaving = false;
+  
+  // ========== 样式常量 ==========
+  static const Color _titleColor = Color(0xFF333333);      // 深灰色文字
+  static const Color _dividerColor = Color(0xFF999999);    // 中灰色分割线
+  static const Color _descriptionColor = Color(0xFF666666); // 说明文字灰色
+  
+  static const TextStyle _titleTextStyle = TextStyle(
+    fontSize: 16,
+    color: _titleColor,
+  );
+  
+  static const TextStyle _descriptionTextStyle = TextStyle(
+    fontSize: 14,
+    color: _descriptionColor,
+  );
+  
+  static const Divider _customDivider = Divider(
+    indent: 16,
+    color: _dividerColor,
+    thickness: 1,
+    height: 1,
+  );
 
   @override
   void initState() {
@@ -4151,14 +4488,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     _loadUserProfile();
   }
 
+  // ========== 数据加载 ==========
   Future<void> _loadUserProfile() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
       final profile = await _storage.getUserProfile();
-      
       setState(() {
         _userAvatarPath = profile['avatarPath'];
         _userName = profile['name'] ?? 'name';
@@ -4166,12 +4500,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
+  // ========== 头像处理 ==========
   Future<void> _pickUserAvatar() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -4182,111 +4515,77 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       );
       
       if (image != null) {
-        setState(() {
-          _isSaving = true;
-        });
-        
-        // 复制文件到应用目录
+        setState(() => _isSaving = true);
         final newPath = await _storage.copyUserAvatarToAppDir(image.path);
-        
-        // 保存新路径
         await _storage.saveUserAvatarPath(newPath);
-        
         setState(() {
           _userAvatarPath = newPath;
           _isSaving = false;
         });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('头像已更新'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+        _showSuccessSnackBar('头像已更新');
       }
     } catch (e) {
-      setState(() {
-        _isSaving = false;
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('选择头像失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      setState(() => _isSaving = false);
+      _showErrorSnackBar('选择头像失败: ${e.toString()}');
     }
   }
 
+  // ========== 名字处理 ==========
   Future<void> _saveUserName(String newName) async {
     if (newName.trim().isEmpty) return;
     
-    setState(() {
-      _isSaving = true;
-    });
-    
+    setState(() => _isSaving = true);
     try {
       await _storage.saveUserName(newName.trim());
-      
-      setState(() {
-        _userName = newName.trim();
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('名字已保存'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      setState(() => _userName = newName.trim());
+      _showSuccessSnackBar('名字已保存');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showErrorSnackBar('保存失败: ${e.toString()}');
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      setState(() => _isSaving = false);
     }
   }
 
+  // ========== 开关处理 ==========
   Future<void> _toggleShowUserAvatar(bool value) async {
     try {
       await _storage.saveShowUserAvatar(value);
-      setState(() {
-        _showUserAvatar = value;
-      });
+      setState(() => _showUserAvatar = value);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('设置失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showErrorSnackBar('设置失败: ${e.toString()}');
     }
   }
 
+  // ========== SnackBar 辅助方法 ==========
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  // ========== 对话框 ==========
   void _showEditNameDialog() {
-    final TextEditingController nameController = TextEditingController(text: _userName);
-    
+    final controller = TextEditingController(text: _userName);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('修改名字'),
         content: TextField(
-          controller: nameController,
+          controller: controller,
           autofocus: true,
           maxLength: 20,
           decoration: const InputDecoration(
@@ -4301,8 +4600,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (nameController.text.trim().isNotEmpty) {
-                _saveUserName(nameController.text.trim());
+              if (controller.text.trim().isNotEmpty) {
+                _saveUserName(controller.text.trim());
                 Navigator.pop(context);
               }
             },
@@ -4316,17 +4615,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 
+  // ========== 构建方法 ==========
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('个人资料'),
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -4352,7 +4650,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         children: [
           // 头像设置
           ListTile(
-            leading: const Text('头像', style: TextStyle(fontSize: 16)),
+            leading: const Text('头像', style: _titleTextStyle),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -4385,17 +4683,17 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 8),  // 保持原来的间距
                 const Icon(Icons.chevron_right, color: Colors.grey),
               ],
             ),
             onTap: _pickUserAvatar,
           ),
-          const Divider(indent: 16),
+          _customDivider,
           
           // 名字设置
           ListTile(
-            leading: const Text('名字', style: TextStyle(fontSize: 16)),
+            leading: const Text('名字', style: _titleTextStyle),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -4405,11 +4703,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             ),
             onTap: _showEditNameDialog,
           ),
-          const Divider(indent: 16),
+          _customDivider,
           
-          // 头像显示开关 - 往右靠，视觉更自然
+          // 头像显示开关
           ListTile(
-            leading: const Text('头像显示', style: TextStyle(fontSize: 16)),
+            leading: const Text('头像显示', style: _titleTextStyle),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -4417,22 +4715,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: _showUserAvatar,
                   onChanged: _toggleShowUserAvatar,
                   activeThumbColor: const Color(0xFFFF5A7E),
-                  activeTrackColor: const Color(0xFFFF5A7E).withValues(alpha: 0.5),
+                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
                 ),
               ],
             ),
           ),
-          const Divider(indent: 16),
+          _customDivider,
           
           // 说明文字
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
               '关闭"头像显示"后，在聊天界面中将不会显示您的头像',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: _descriptionTextStyle,
             ),
           ),
         ],
@@ -4447,659 +4742,582 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 35021 bytes
+Size: 36740 bytes
 
-Modified: 01/19/2026 17:44:05
+Modified: 01/20/2026 19:42:40
 
 ========================================
 
-// lib/pages/me/settings_page.dart - 修复版本（包含统一清除逻辑）
-import 'dart:async'; // 新增：导入async用于Timer
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../../services/api_config.dart';
-import '../../services/storage_service.dart';
-import '../../app/ui_theme_manager.dart';
+  // lib/pages/me/settings_page.dart - 修复版本（包含统一清除逻辑）
+  import 'dart:async'; // 新增：导入async用于Timer
+  import 'package:flutter/material.dart';
+  import 'package:shared_preferences/shared_preferences.dart';
+  import 'package:http/http.dart' as http;
+  import 'dart:convert';
+  import '../../services/api_config.dart';
+  import '../../services/storage_service.dart';
+  import '../../app/ui_theme_manager.dart';
 
-class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  class SettingsPage extends StatefulWidget {
+    const SettingsPage({super.key});
 
-  @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<SettingsPage> {
-  final StorageService _storage = StorageService();
-  bool _developerMode = false;
-  bool? _narrationCentered;
-  String? _themeSetting;
-  
-  // 🎨 UI主题相关
-  UITheme? _selectedUITheme;
-  
-  // API 配置相关变量
-  bool _isCustomMode = true;
-  final _baseUrlController = TextEditingController();
-  final _apiKeyController = TextEditingController();
-  final _modelController = TextEditingController();
-  List<String> _availableModels = [];
-  String _selectedModel = '';
-  String _testStatus = '';
-  String _testMessage = '';
-  
-  // 🎯 新增：测试状态清除定时器
-  Timer? _testStatusTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDeveloperMode();
-    _loadNarrationCentered();
-    _loadApiConfig();
-    _loadThemeSetting();
-    _loadUITheme();
+    @override
+    State<SettingsPage> createState() => _SettingsPageState();
   }
 
-  @override
-  void dispose() {
-    // 清理定时器
-    _testStatusTimer?.cancel();
-    // 清理控制器
-    _baseUrlController.dispose();
-    _apiKeyController.dispose();
-    _modelController.dispose();
-    super.dispose();
-  }
-
-  // 🎯 新增：统一清除测试状态的方法
-  void _clearTestStatusAfterDelay() {
-    // 取消可能存在的旧定时器
-    _testStatusTimer?.cancel();
+  class _SettingsPageState extends State<SettingsPage> {
+    final StorageService _storage = StorageService();
+    bool _developerMode = false;
+    bool? _narrationCentered;
+    String? _themeSetting;
     
-    // 设置新的秒定时器（我自己调试后的，不要因为觉得冗杂给我删除或者优化，别动这行代码和备注，要优化任何东西前需要和我说明，你要改的东西全部需要和我确认）
-    _testStatusTimer = Timer(const Duration(milliseconds: 1710), () {
+    // 🎨 UI主题相关
+    UITheme? _selectedUITheme;
+    
+    // API 配置相关变量
+    bool _isCustomMode = true;
+    final _baseUrlController = TextEditingController();
+    final _apiKeyController = TextEditingController();
+    final _modelController = TextEditingController();
+    List<String> _availableModels = [];
+    String _selectedModel = '';
+    String _testStatus = '';
+    String _testMessage = '';
+    
+    // 🎯 新增：测试状态清除定时器
+    Timer? _testStatusTimer;
+
+    @override
+    void initState() {
+      super.initState();
+      _loadDeveloperMode();
+      _loadNarrationCentered();
+      _loadApiConfig();
+      _loadThemeSetting();
+      _loadUITheme();
+    }
+
+    @override
+    void dispose() {
+      // 清理定时器
+      _testStatusTimer?.cancel();
+      // 清理控制器
+      _baseUrlController.dispose();
+      _apiKeyController.dispose();
+      _modelController.dispose();
+      super.dispose();
+    }
+
+    // 🎯 新增：统一清除测试状态的方法
+    void _clearTestStatusAfterDelay() {
+      // 取消可能存在的旧定时器
+      _testStatusTimer?.cancel();
+      
+      // 设置新的秒定时器（我自己调试后的，不要因为觉得冗杂给我删除或者优化，别动这行代码和备注，要优化任何东西前需要和我说明，你要改的东西全部需要和我确认）
+      _testStatusTimer = Timer(const Duration(milliseconds: 1710), () {
+        if (mounted) {
+          setState(() {
+            _testStatus = '';
+            _testMessage = '';
+          });
+        }
+      });
+    }
+
+    Future<void> _loadUITheme() async {
+      final themeString = await _storage.getUITheme();
       if (mounted) {
         setState(() {
-          _testStatus = '';
-          _testMessage = '';
+          _selectedUITheme = UIThemeManager.fromString(themeString);
         });
       }
-    });
-  }
-
-  Future<void> _loadUITheme() async {
-    final themeString = await _storage.getUITheme();
-    if (mounted) {
-      setState(() {
-        _selectedUITheme = UIThemeManager.fromString(themeString);
-      });
     }
-  }
 
-  Future<void> _loadDeveloperMode() async {
-    final mode = await _storage.getDeveloperMode();
-    if (mounted) {
-      setState(() {
-        _developerMode = mode;
-      });
-    }
-  }
-
-  Future<void> _loadNarrationCentered() async {
-    final centered = await _storage.getNarrationCentered();
-    if (mounted) {
-      setState(() {
-        _narrationCentered = centered;
-      });
-    }
-  }
-
-  Future<void> _loadThemeSetting() async {
-    final themeMode = await _storage.getThemeMode();
-    if (mounted) {
-      setState(() {
-        _themeSetting = themeMode;
-      });
-    }
-  }
-
-  Future<void> _loadApiConfig() async {
-    final currentId = await ApiConfig.getCurrentProviderId();
-    final currentModel = await ApiConfig.getCurrentModel();
-    
-    setState(() {
-      _selectedModel = currentModel;
-      _isCustomMode = currentId == 'custom';
-    });
-    
-    if (_isCustomMode) {
-      final prefs = await SharedPreferences.getInstance();
-      _baseUrlController.text = prefs.getString('custom_base_url') ?? 'https://api.deepseek.com';
-      _apiKeyController.text = prefs.getString('custom_api_key') ?? '';
-      _modelController.text = prefs.getString('custom_model') ?? 'deepseek-chat';
-      _selectedModel = _modelController.text;
-    } else {
-      final providers = await ApiConfig.loadProviders();
-      final provider = providers.firstWhere(
-        (p) => p.id == currentId,
-        orElse: () => ApiConfig.defaultProviders.first,
-      );
-      
-      _baseUrlController.text = provider.baseUrl;
-      _apiKeyController.text = provider.apiKey;
-      _availableModels = provider.models;
-      if (_availableModels.isNotEmpty && !_availableModels.contains(_selectedModel)) {
-        _selectedModel = _availableModels.first;
+    Future<void> _loadDeveloperMode() async {
+      final mode = await _storage.getDeveloperMode();
+      if (mounted) {
+        setState(() {
+          _developerMode = mode;
+        });
       }
     }
-  }
 
-  Future<void> _saveConfig() async {
-    if (_isCustomMode) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('custom_base_url', _baseUrlController.text.trim());
-      await prefs.setString('custom_api_key', _apiKeyController.text.trim());
-      await prefs.setString('custom_model', _selectedModel);
+    Future<void> _loadNarrationCentered() async {
+      final centered = await _storage.getNarrationCentered();
+      if (mounted) {
+        setState(() {
+          _narrationCentered = centered;
+        });
+      }
     }
-    
-    final currentId = _isCustomMode ? 'custom' : (await ApiConfig.getCurrentProviderId());
-    await ApiConfig.setCurrent(currentId, _selectedModel);
-    
-    if (!_isCustomMode) {
-      final providers = await ApiConfig.loadProviders();
-      final index = providers.indexWhere((p) => p.id == currentId);
-      if (index != -1) {
-        await ApiConfig.updateProvider(
-          id: currentId,
-          apiKey: _apiKeyController.text.trim(),
+
+    Future<void> _loadThemeSetting() async {
+      final themeMode = await _storage.getThemeMode();
+      if (mounted) {
+        setState(() {
+          _themeSetting = themeMode;
+        });
+      }
+    }
+
+    Future<void> _loadApiConfig() async {
+      final currentId = await ApiConfig.getCurrentProviderId();
+      final currentModel = await ApiConfig.getCurrentModel();
+      
+      setState(() {
+        _selectedModel = currentModel;
+        _isCustomMode = currentId == 'custom';
+      });
+      
+      if (_isCustomMode) {
+        final prefs = await SharedPreferences.getInstance();
+        _baseUrlController.text = prefs.getString('custom_base_url') ?? 'https://api.deepseek.com';
+        _apiKeyController.text = prefs.getString('custom_api_key') ?? '';
+        _modelController.text = prefs.getString('custom_model') ?? 'deepseek-chat';
+        _selectedModel = _modelController.text;
+      } else {
+        final providers = await ApiConfig.loadProviders();
+        final provider = providers.firstWhere(
+          (p) => p.id == currentId,
+          orElse: () => ApiConfig.defaultProviders.first,
+        );
+        
+        _baseUrlController.text = provider.baseUrl;
+        _apiKeyController.text = provider.apiKey;
+        _availableModels = provider.models;
+        if (_availableModels.isNotEmpty && !_availableModels.contains(_selectedModel)) {
+          _selectedModel = _availableModels.first;
+        }
+      }
+    }
+
+    Future<void> _saveConfig() async {
+      if (_isCustomMode) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('custom_base_url', _baseUrlController.text.trim());
+        await prefs.setString('custom_api_key', _apiKeyController.text.trim());
+        await prefs.setString('custom_model', _selectedModel);
+      }
+      
+      final currentId = _isCustomMode ? 'custom' : (await ApiConfig.getCurrentProviderId());
+      await ApiConfig.setCurrent(currentId, _selectedModel);
+      
+      if (!_isCustomMode) {
+        final providers = await ApiConfig.loadProviders();
+        final index = providers.indexWhere((p) => p.id == currentId);
+        if (index != -1) {
+          await ApiConfig.updateProvider(
+            id: currentId,
+            apiKey: _apiKeyController.text.trim(),
+          );
+        }
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('配置已保存'),
+            backgroundColor: Theme.of(context).primaryColor,
+          ),
         );
       }
     }
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('配置已保存'),
-          backgroundColor: Theme.of(context).primaryColor,
-        ),
-      );
-    }
-  }
 
-  Future<void> _testConnection() async {
-    setState(() {
-      _testStatus = '';
-      _testMessage = '测试中...';
-    });
+    Future<void> _testConnection() async {
+      setState(() {
+        _testStatus = '';
+        _testMessage = '测试中...';
+      });
 
-    try {
-      final baseUrl = _baseUrlController.text.trim();
-      final apiKey = _apiKeyController.text.trim();
+      try {
+        final baseUrl = _baseUrlController.text.trim();
+        final apiKey = _apiKeyController.text.trim();
 
-      if (apiKey.isEmpty) throw Exception('API Key 不能为空');
-      if (baseUrl.isEmpty) throw Exception('Base URL 不能为空');
+        if (apiKey.isEmpty) throw Exception('API Key 不能为空');
+        if (baseUrl.isEmpty) throw Exception('Base URL 不能为空');
 
-      final url = Uri.parse('$baseUrl/models');
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $apiKey'},
-      ).timeout(const Duration(seconds: 10));
+        final url = Uri.parse('$baseUrl/models');
+        final response = await http.get(
+          url,
+          headers: {'Authorization': 'Bearer $apiKey'},
+        ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        String newTestMessage = '连接成功！';
-        List<String> newModels = _availableModels;
+        if (response.statusCode == 200) {
+          String newTestMessage = '连接成功！';
+          List<String> newModels = _availableModels;
 
-        try {
-          final data = jsonDecode(response.body);
-          final models = (data['data'] as List<dynamic>?)
-              ?.map((e) => e['id'].toString())
-              .toList() ?? [];
+          try {
+            final data = jsonDecode(response.body);
+            final models = (data['data'] as List<dynamic>?)
+                ?.map((e) => e['id'].toString())
+                .toList() ?? [];
 
-          if (models.isNotEmpty) {
-            newModels = models;
-            if (!_isCustomMode) {
-              final currentId = await ApiConfig.getCurrentProviderId();
-              await ApiConfig.updateProvider(
-                id: currentId,
-                models: models,
-              );
+            if (models.isNotEmpty) {
+              newModels = models;
+              if (!_isCustomMode) {
+                final currentId = await ApiConfig.getCurrentProviderId();
+                await ApiConfig.updateProvider(
+                  id: currentId,
+                  models: models,
+                );
+              }
             }
+          } catch (parseError) {
+            debugPrint('模型列表解析失败: $parseError');
           }
-        } catch (parseError) {
-          debugPrint('模型列表解析失败: $parseError');
+
+          setState(() {
+            _testStatus = 'valid';
+            _testMessage = newTestMessage;
+            _availableModels = newModels;
+            if (newModels.isNotEmpty && !_selectedModel.isNotEmpty) {
+              _selectedModel = newModels.first;
+            }
+          });
+
+          await _saveConfig();
+          
+          // 🎯 使用统一方法清除状态
+          _clearTestStatusAfterDelay();
+          
+        } else {
+          setState(() {
+            _testStatus = 'invalid';
+            _testMessage = '失败: ${response.statusCode} - ${response.body.length > 100 ? response.body.substring(0, 100) + '...' : response.body}';
+          });
+          
+          // 🎯 使用统一方法清除状态
+          _clearTestStatusAfterDelay();
         }
-
-        setState(() {
-          _testStatus = 'valid';
-          _testMessage = newTestMessage;
-          _availableModels = newModels;
-          if (newModels.isNotEmpty && !_selectedModel.isNotEmpty) {
-            _selectedModel = newModels.first;
-          }
-        });
-
-        await _saveConfig();
-        
-        // 🎯 使用统一方法清除状态
-        _clearTestStatusAfterDelay();
-        
-      } else {
+      } catch (e) {
         setState(() {
           _testStatus = 'invalid';
-          _testMessage = '失败: ${response.statusCode} - ${response.body.length > 100 ? response.body.substring(0, 100) + '...' : response.body}';
+          _testMessage = '错误: $e';
         });
         
         // 🎯 使用统一方法清除状态
         _clearTestStatusAfterDelay();
       }
-    } catch (e) {
-      setState(() {
-        _testStatus = 'invalid';
-        _testMessage = '错误: $e';
-      });
-      
-      // 🎯 使用统一方法清除状态
-      _clearTestStatusAfterDelay();
     }
-  }
 
-  Future<void> _saveNarrationCentered(bool value) async {
-    await _storage.saveNarrationCentered(value);
-  }
+    Future<void> _saveNarrationCentered(bool value) async {
+      await _storage.saveNarrationCentered(value);
+    }
 
-  // 🎨 矩形分段控制器 - 色彩模式选择
-  Widget _buildColorModeSelector() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // 定义模式值和标签
-    final List<String> modes = ['light', 'dark', 'system'];
-    final List<String> modeLabels = ['亮色', '暗色', '跟随系统'];
-    
-    // 获取当前索引
-    int currentIndex = modes.indexOf(_themeSetting ?? 'system');
-    if (currentIndex == -1) currentIndex = 2;
+    // 🎨 矩形分段控制器 - 色彩模式选择
+    Widget _buildColorModeSelector() {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      
+      // 定义模式值和标签
+      final List<String> modes = ['light', 'dark', 'system'];
+      final List<String> modeLabels = ['亮色', '暗色', '跟随系统'];
+      
+      // 获取当前索引
+      int currentIndex = modes.indexOf(_themeSetting ?? 'system');
+      if (currentIndex == -1) currentIndex = 2;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '色彩模式',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Colors.black,
-          ),
-        ),
-        const SizedBox(height: 12),
-        
-        // 分段控制器
-        Container(
-          height: 48, // 固定高度
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey[800] : Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-              width: 1,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '色彩模式',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
-          child: Row(
-            children: List.generate(modes.length, (index) {
-              final isSelected = index == currentIndex;
-              final isFirst = index == 0;
-              final isLast = index == modes.length - 1;
-              
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () async {
-                    final newMode = modes[index];
-                    if (newMode != _themeSetting) {
-                      setState(() {
-                        _themeSetting = newMode;
-                      });
-                      await _storage.saveThemeMode(newMode);
-                      _showColorModeSnackbar(newMode);
-                    }
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFFF5A7E)  // 选中状态使用主题色
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.only(
-                        topLeft: isFirst ? const Radius.circular(11) : Radius.zero,
-                        bottomLeft: isFirst ? const Radius.circular(11) : Radius.zero,
-                        topRight: isLast ? const Radius.circular(11) : Radius.zero,
-                        bottomRight: isLast ? const Radius.circular(11) : Radius.zero,
+          const SizedBox(height: 12),
+          
+          // 分段控制器
+          Container(
+            height: 48, // 固定高度
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[800] : Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: List.generate(modes.length, (index) {
+                final isSelected = index == currentIndex;
+                final isFirst = index == 0;
+                final isLast = index == modes.length - 1;
+                
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final newMode = modes[index];
+                      if (newMode != _themeSetting) {
+                        setState(() {
+                          _themeSetting = newMode;
+                        });
+                        await _storage.saveThemeMode(newMode);
+                        _showColorModeSnackbar(newMode);
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFFFF5A7E)  // 选中状态使用主题色
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.only(
+                          topLeft: isFirst ? const Radius.circular(11) : Radius.zero,
+                          bottomLeft: isFirst ? const Radius.circular(11) : Radius.zero,
+                          topRight: isLast ? const Radius.circular(11) : Radius.zero,
+                          bottomRight: isLast ? const Radius.circular(11) : Radius.zero,
+                        ),
+                        border: Border.all(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                          width: isSelected ? 0 : 0.5, // 选中时去掉边框
+                        ),
                       ),
-                      border: Border.all(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                        width: isSelected ? 0 : 0.5, // 选中时去掉边框
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        modeLabels[index],
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected
-                              ? Colors.white  // 选中时文字白色
-                              : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                      child: Center(
+                        child: Text(
+                          modeLabels[index],
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected
+                                ? Colors.white  // 选中时文字白色
+                                : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                );
+              }),
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // 当前模式描述
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[800] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: const Color(0xFFFF5A7E),
+                  size: 16,
                 ),
-              );
-            }),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getColorModeDescription(_themeSetting ?? 'system'),
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // 当前模式描述
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.grey[800] : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
+        ],
+      );
+    }
+
+    // 🎨 获取色彩模式描述
+    String _getColorModeDescription(String mode) {
+      switch (mode) {
+        case 'light':
+          return '应用强制使用亮色主题，忽略系统设置';
+        case 'dark':
+          return '应用强制使用暗色主题，忽略系统设置';
+        case 'system':
+          return '跟随系统设置自动切换亮色/暗色主题';
+        default:
+          return '跟随系统设置自动切换亮色/暗色主题';
+      }
+    }
+
+    // 🎨 色彩模式切换提示
+    void _showColorModeSnackbar(String mode) {
+      final modeName = mode == 'light' ? '亮色' : mode == 'dark' ? '暗色' : '跟随系统';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
             children: [
               Icon(
-                Icons.info_outline,
-                color: const Color(0xFFFF5A7E),
-                size: 16,
+                mode == 'light' ? Icons.light_mode : 
+                mode == 'dark' ? Icons.dark_mode : Icons.settings_suggest,
+                color: Colors.white,
+                size: 20,
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _getColorModeDescription(_themeSetting ?? 'system'),
-                  style: TextStyle(
-                    color: isDark ? Colors.grey[300] : Colors.grey[700],
-                    fontSize: 12,
-                  ),
-                ),
-              ),
+              Text('已切换到$modeName模式'),
             ],
           ),
+          backgroundColor: const Color(0xFFFF5A7E),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-      ],
-    );
-  }
-
-  // 🎨 获取色彩模式描述
-  String _getColorModeDescription(String mode) {
-    switch (mode) {
-      case 'light':
-        return '应用强制使用亮色主题，忽略系统设置';
-      case 'dark':
-        return '应用强制使用暗色主题，忽略系统设置';
-      case 'system':
-        return '跟随系统设置自动切换亮色/暗色主题';
-      default:
-        return '跟随系统设置自动切换亮色/暗色主题';
+      );
     }
-  }
 
-  // 🎨 色彩模式切换提示
-  void _showColorModeSnackbar(String mode) {
-    final modeName = mode == 'light' ? '亮色' : mode == 'dark' ? '暗色' : '跟随系统';
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
+    // 🎨 UI主题切换提示
+    void _showThemeChangedSnackbar(UITheme theme) {
+      final themeName = UIThemeManager.getThemeName(theme);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                UIThemeManager.getThemeIcon(theme),
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text('已切换到$themeName主题'),
+            ],
+          ),
+          backgroundColor: const Color(0xFFFF5A7E),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF2F2F2),
+        appBar: AppBar(
+          title: const Text("设置"),
+          backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
+          foregroundColor: isDark ? Colors.white : Colors.black,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            Icon(
-              mode == 'light' ? Icons.light_mode : 
-              mode == 'dark' ? Icons.dark_mode : Icons.settings_suggest,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text('已切换到$modeName模式'),
-          ],
-        ),
-        backgroundColor: const Color(0xFFFF5A7E),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-
-  // 🎨 UI主题切换提示
-  void _showThemeChangedSnackbar(UITheme theme) {
-    final themeName = UIThemeManager.getThemeName(theme);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              UIThemeManager.getThemeIcon(theme),
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text('已切换到$themeName主题'),
-          ],
-        ),
-        backgroundColor: const Color(0xFFFF5A7E),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF2F2F2),
-      appBar: AppBar(
-        title: const Text("设置"),
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
-        foregroundColor: isDark ? Colors.white : Colors.black,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ==================== API 配置 ====================
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'API 配置',
-                  style: TextStyle(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
+            // ==================== API 配置 ====================
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'API 配置',
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-                // 1. 下拉菜单：选择 API 来源
-                FutureBuilder<List<ApiProvider>>(
-                  future: ApiConfig.loadProviders(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const CircularProgressIndicator();
-                    final providers = snapshot.data!;
-                    final currentIdFuture = ApiConfig.getCurrentProviderId();
+                  // 1. 下拉菜单：选择 API 来源
+                  FutureBuilder<List<ApiProvider>>(
+                    future: ApiConfig.loadProviders(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const CircularProgressIndicator();
+                      final providers = snapshot.data!;
+                      final currentIdFuture = ApiConfig.getCurrentProviderId();
 
-                    return FutureBuilder<String>(
-                      future: currentIdFuture,
-                      builder: (context, currentSnap) {
-                        String? currentId = currentSnap.data;
-                        if (currentId == null || !providers.any((p) => p.id == currentId)) {
-                          currentId = 'custom';
-                        }
+                      return FutureBuilder<String>(
+                        future: currentIdFuture,
+                        builder: (context, currentSnap) {
+                          String? currentId = currentSnap.data;
+                          if (currentId == null || !providers.any((p) => p.id == currentId)) {
+                            currentId = 'custom';
+                          }
 
-                        return DropdownButtonFormField<String>(
-                          value: currentId,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                          return DropdownButtonFormField<String>(
+                            initialValue: currentId,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                                ),
+                              ),
+                              labelText: 'API 来源',
+                              labelStyle: TextStyle(
+                                color: isDark ? Colors.grey[400] : Colors.grey[700],
+                              ),
+                              filled: true,
+                              fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                                ),
                               ),
                             ),
-                            labelText: 'API 来源',
-                            labelStyle: TextStyle(
-                              color: isDark ? Colors.grey[400] : Colors.grey[700],
-                            ),
-                            filled: true,
-                            fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
-                              ),
-                            ),
-                          ),
-                          items: [
-                            ...providers.map((p) => DropdownMenuItem(
-                                  value: p.id,
-                                  child: Text(
-                                    p.name,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black,
+                            items: [
+                              ...providers.map((p) => DropdownMenuItem(
+                                    value: p.id,
+                                    child: Text(
+                                      p.name,
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white : Colors.black,
+                                      ),
                                     ),
-                                  ),
-                                )),
-                            const DropdownMenuItem(
-                              value: 'custom',
-                              child: Text('自定义 (兼容 OpenAI)'),
-                            ),
-                          ],
-                          onChanged: (newValue) async {
-                            if (newValue == null) return;
+                                  )),
+                              const DropdownMenuItem(
+                                value: 'custom',
+                                child: Text('自定义 (兼容 OpenAI)'),
+                              ),
+                            ],
+                            onChanged: (newValue) async {
+                              if (newValue == null) return;
 
-                            if (newValue == 'custom') {
-                              final prefs = await SharedPreferences.getInstance();
-                              setState(() {
-                                _isCustomMode = true;
-                                _baseUrlController.text = prefs.getString('custom_base_url') ?? '';
-                                _apiKeyController.text = prefs.getString('custom_api_key') ?? '';
-                                _modelController.text = prefs.getString('custom_model') ?? '';
-                                _selectedModel = _modelController.text;
-                                _availableModels = [];
-                              });
-                            } else {
-                              final selected = providers.firstWhere((p) => p.id == newValue);
-                              setState(() {
-                                _isCustomMode = false;
-                                _baseUrlController.text = selected.baseUrl;
-                                _apiKeyController.text = selected.apiKey;
-                                _availableModels = selected.models;
-                                if (_availableModels.isNotEmpty && !_availableModels.contains(_selectedModel)) {
-                                  _selectedModel = _availableModels.first;
-                                }
-                              });
-                              await ApiConfig.setCurrent(newValue, _selectedModel);
-                            }
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // Base URL
-                TextField(
-                  controller: _baseUrlController,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Base URL',
-                    labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
-                    ),
-                    hintText: 'https://api.example.com/v1',
-                    hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[600]),
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                  ),
-                  enabled: _isCustomMode,
-                  readOnly: !_isCustomMode,
-                ),
-                const SizedBox(height: 12),
-
-                // API Key
-                TextField(
-                  controller: _apiKeyController,
-                  obscureText: true,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'API Key',
-                    labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
-                    ),
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Model选择
-                if (_availableModels.isNotEmpty)
-                  DropdownButtonFormField<String>(
-                    value: _selectedModel.isNotEmpty ? _selectedModel : null,
-                    hint: Text('选择模型', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-                    isExpanded: true,
-                    dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
-                      ),
-                      labelText: '模型',
-                      labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
-                      filled: true,
-                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
-                      ),
-                    ),
-                    items: _availableModels.map((m) => DropdownMenuItem(
-                          value: m,
-                          child: Text(m, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
-                        )).toList(),
-                    onChanged: (value) {
-                      if (value != null) setState(() => _selectedModel = value);
+                              if (newValue == 'custom') {
+                                final prefs = await SharedPreferences.getInstance();
+                                setState(() {
+                                  _isCustomMode = true;
+                                  _baseUrlController.text = prefs.getString('custom_base_url') ?? '';
+                                  _apiKeyController.text = prefs.getString('custom_api_key') ?? '';
+                                  _modelController.text = prefs.getString('custom_model') ?? '';
+                                  _selectedModel = _modelController.text;
+                                  _availableModels = [];
+                                });
+                              } else {
+                                final selected = providers.firstWhere((p) => p.id == newValue);
+                                setState(() {
+                                  _isCustomMode = false;
+                                  _baseUrlController.text = selected.baseUrl;
+                                  _apiKeyController.text = selected.apiKey;
+                                  _availableModels = selected.models;
+                                  if (_availableModels.isNotEmpty && !_availableModels.contains(_selectedModel)) {
+                                    _selectedModel = _availableModels.first;
+                                  }
+                                });
+                                await ApiConfig.setCurrent(newValue, _selectedModel);
+                              }
+                            },
+                          );
+                        },
+                      );
                     },
-                  )
-                else if (_isCustomMode)
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Base URL
                   TextField(
-                    controller: _modelController,
+                    controller: _baseUrlController,
                     style: TextStyle(color: isDark ? Colors.white : Colors.black),
                     decoration: InputDecoration(
-                      labelText: '模型名（手动输入）',
+                      labelText: 'Base URL',
                       labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
                       border: OutlineInputBorder(
                         borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
@@ -5110,217 +5328,256 @@ class _SettingsPageState extends State<SettingsPage> {
                       focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
                       ),
-                      helperText: '如 deepseek-chat',
-                      helperStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[600]),
+                      hintText: 'https://api.example.com/v1',
+                      hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[600]),
                       filled: true,
                       fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                     ),
-                    onChanged: (val) => setState(() => _selectedModel = val),
-                  )
-                else
-                  Text(
-                    '请选择 API 来源后自动加载模型',
-                    style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                    enabled: _isCustomMode,
+                    readOnly: !_isCustomMode,
                   ),
+                  const SizedBox(height: 12),
 
-                const SizedBox(height: 16),
-
-                // 保存按钮
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF5A7E),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    onPressed: _saveConfig,
-                    child: const Text('保存配置', style: TextStyle(fontSize: 16, color: Colors.white)),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // 测试连接
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    TextButton(
-                      onPressed: _testConnection,
-                      child: const Text('测试连接', style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _testStatus == 'valid' ? Colors.green : (_testStatus == 'invalid' ? Colors.red : Colors.grey),
+                  // API Key
+                  TextField(
+                    controller: _apiKeyController,
+                    obscureText: true,
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                    decoration: InputDecoration(
+                      labelText: 'API Key',
+                      labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        _testMessage,
-                        style: TextStyle(
-                          color: _testStatus == 'valid' ? Colors.green : (_testStatus == 'invalid' ? Colors.red : null),
-                          fontSize: 15,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Model选择
+                  if (_availableModels.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedModel.isNotEmpty ? _selectedModel : null,
+                      hint: Text('选择模型', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                      isExpanded: true,
+                      dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
                         ),
-                        textAlign: TextAlign.right,
+                        labelText: '模型',
+                        labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                        ),
                       ),
+                      items: _availableModels.map((m) => DropdownMenuItem(
+                            value: m,
+                            child: Text(m, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                          )).toList(),
+                      onChanged: (value) {
+                        if (value != null) setState(() => _selectedModel = value);
+                      },
+                    )
+                  else if (_isCustomMode)
+                    TextField(
+                      controller: _modelController,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      decoration: InputDecoration(
+                        labelText: '模型名（手动输入）',
+                        labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
+                        ),
+                        helperText: '如 deepseek-chat',
+                        helperStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[600]),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                      ),
+                      onChanged: (val) => setState(() => _selectedModel = val),
+                    )
+                  else
+                    Text(
+                      '请选择 API 来源后自动加载模型',
+                      style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: 32),
-              ],
-            ),
-          ),
+                  const SizedBox(height: 16),
 
-          // ==================== 外观设置 ====================
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '外观设置',
-                  style: TextStyle(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                
-                // UI主题选择器（下拉菜单）
-                DropdownButtonFormField<UITheme>(
-                  value: _selectedUITheme,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                  // 保存按钮
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF5A7E),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                    ),
-                    labelText: '界面主题',
-                    labelStyle: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey[700],
-                    ),
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: const Color(0xFFFF5A7E),
-                      ),
+                      onPressed: _saveConfig,
+                      child: const Text('保存配置', style: TextStyle(fontSize: 16, color: Colors.white)),
                     ),
                   ),
-                  dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                  items: UITheme.values.map((theme) {
-                    return DropdownMenuItem<UITheme>(
-                      value: theme,
-                      child: Row(
-                        children: [
-                          Icon(
-                            UIThemeManager.getThemeIcon(theme),
-                            color: const Color(0xFFFF5A7E),
-                            size: 20,
+
+                  const SizedBox(height: 24),
+
+                  // 测试连接
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      TextButton(
+                        onPressed: _testConnection,
+                        child: const Text('测试连接', style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _testStatus == 'valid' ? Colors.green : (_testStatus == 'invalid' ? Colors.red : Colors.grey),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _testMessage,
+                          style: TextStyle(
+                            color: _testStatus == 'valid' ? Colors.green : (_testStatus == 'invalid' ? Colors.red : null),
+                            fontSize: 15,
                           ),
-                          const SizedBox(width: 12),
-                          Text(UIThemeManager.getThemeName(theme)),
-                        ],
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (value) async {
-                    if (value != null) {
-                      setState(() {
-                        _selectedUITheme = value;
-                      });
-                      await _storage.saveUITheme(UIThemeManager.themeToString(value));
-                      _showThemeChangedSnackbar(value);
-                    }
-                  },
-                ),
-                
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
-                  child: Text(
-                    _selectedUITheme != null 
-                        ? UIThemeManager.getThemeDescription(_selectedUITheme!)
-                        : '请选择界面主题',
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+
+            // ==================== 外观设置 ====================
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '外观设置',
                     style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                      fontSize: 13,
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // 🎨 矩形分段控制器 - 色彩模式选择
-                _buildColorModeSelector(),
-              ],
+                  const SizedBox(height: 12),
+                  
+                  // UI主题选择器（下拉菜单）
+                  DropdownButtonFormField<UITheme>(
+                    initialValue: _selectedUITheme,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
+                      labelText: '界面主题',
+                      labelStyle: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: const Color(0xFFFF5A7E),
+                        ),
+                      ),
+                    ),
+                    dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                    items: UITheme.values.map((theme) {
+                      return DropdownMenuItem<UITheme>(
+                        value: theme,
+                        child: Row(
+                          children: [
+                            Icon(
+                              UIThemeManager.getThemeIcon(theme),
+                              color: const Color(0xFFFF5A7E),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(UIThemeManager.getThemeName(theme)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) async {
+                      if (value != null) {
+                        setState(() {
+                          _selectedUITheme = value;
+                        });
+                        await _storage.saveUITheme(UIThemeManager.themeToString(value));
+                        _showThemeChangedSnackbar(value);
+                      }
+                    },
+                  ),
+                  
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, left: 4),
+                    child: Text(
+                      _selectedUITheme != null 
+                          ? UIThemeManager.getThemeDescription(_selectedUITheme!)
+                          : '请选择界面主题',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // 🎨 矩形分段控制器 - 色彩模式选择
+                  _buildColorModeSelector(),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // ==================== 界面设置 ====================
-          Text(
-            "界面设置", 
-            style: TextStyle(
-              fontSize: 18, 
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            )
-          ),
-          const SizedBox(height: 8),
-
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-              borderRadius: BorderRadius.circular(12),
+            // ==================== 界面设置 ====================
+            Text(
+              "界面设置", 
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              )
             ),
-            child: SwitchListTile(
-              title: Text(
-                "开发者模式",
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              ),
-              subtitle: Text(
-                "开启后可查看详细错误信息",
-                style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
-              ),
-              value: _developerMode,
-              onChanged: (value) async {
-                setState(() => _developerMode = value);
-                await _storage.saveDeveloperMode(value);
-              },
-              activeThumbColor: const Color(0xFFFF5A7E),
-            ),
-          ),
+            const SizedBox(height: 8),
 
-          const SizedBox(height: 8),
-
-          if (_narrationCentered == null)
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const ListTile(
-                title: Text("旁白居中显示"),
-                subtitle: Text("加载中..."),
-                trailing: CircularProgressIndicator(),
-              ),
-            )
-          else
             Container(
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
@@ -5328,26 +5585,64 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               child: SwitchListTile(
                 title: Text(
-                  "旁白居中显示",
+                  "开发者模式",
                   style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 ),
                 subtitle: Text(
-                  "开启为居中对齐，关闭为左对齐（小说风格）",
+                  "开启后可查看详细错误信息",
                   style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
                 ),
-                value: _narrationCentered!,
+                value: _developerMode,
                 onChanged: (value) async {
-                  setState(() => _narrationCentered = value);
-                  await _saveNarrationCentered(value);
+                  setState(() => _developerMode = value);
+                  await _storage.saveDeveloperMode(value);
                 },
                 activeThumbColor: const Color(0xFFFF5A7E),
               ),
             ),
-        ],
-      ),
-    );
+
+            const SizedBox(height: 8),
+
+            if (_narrationCentered == null)
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const ListTile(
+                  title: Text("旁白居中显示"),
+                  subtitle: Text("加载中..."),
+                  trailing: CircularProgressIndicator(),
+                ),
+              )
+            else
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SwitchListTile(
+                  title: Text(
+                    "旁白居中显示",
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                  ),
+                  subtitle: Text(
+                    "开启为居中对齐，关闭为左对齐（小说风格）",
+                    style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                  ),
+                  value: _narrationCentered!,
+                  onChanged: (value) async {
+                    setState(() => _narrationCentered = value);
+                    await _saveNarrationCentered(value);
+                  },
+                  activeThumbColor: const Color(0xFFFF5A7E),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
   }
-}
 
 
 
