@@ -1,7 +1,8 @@
-// lib/pages/entrance/moments_detail_page.dart - 已修改
+// lib/pages/entrance/moments_detail_page.dart - 完全修正版
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart'; // 修改为你的实际路径
+import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart';
+import 'package:my_new_app/pages/friends_circle/camera_capture_page.dart';
 
 class MomentsDetailPage extends StatefulWidget {
   const MomentsDetailPage({super.key});
@@ -11,9 +12,41 @@ class MomentsDetailPage extends StatefulWidget {
 }
 
 class _MomentsDetailPageState extends State<MomentsDetailPage> {
-  // 新增：发动态方法
-  Future<void> _pickAndPublish() async {
-    final List<XFile>? images = await ImagePicker().pickMultiImage();
+  bool _showActionSheet = false;
+
+  void _showImageSourceActionSheet() {
+    setState(() {
+      _showActionSheet = true;
+    });
+  }
+
+  void _hideActionSheet() {
+    setState(() {
+      _showActionSheet = false;
+    });
+  }
+
+  Future<void> _openCamera() async {
+    _hideActionSheet();
+    await Future.delayed(const Duration(milliseconds: 300));
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CameraCapturePage(),
+      ),
+    );
+  }
+
+  Future<void> _pickFromGallery() async {
+    _hideActionSheet();
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    final List<XFile>? images = await ImagePicker().pickMultiImage(
+      maxWidth: 1080,
+      imageQuality: 88,
+      limit: 9,
+    );
+    
     if (images == null || images.isEmpty) return;
 
     final success = await Navigator.push(
@@ -24,8 +57,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     );
     
     if (success == true) {
-      // TODO: 刷新朋友圈列表
-      print('发布成功，需要刷新朋友圈');
+      debugPrint('发布成功，需要刷新朋友圈');
     }
   }
 
@@ -33,79 +65,246 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
-      body: ListView(
-        children: [
-          Stack(
+    return Stack(
+      children: [
+        // 主内容
+        Scaffold(
+          backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
+          body: ListView(
             children: [
-              Container(
-                height: 300,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage('https://via.placeholder.com/800x400?text=Moments+Cover'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white), 
-                        onPressed: () => Navigator.pop(context)
-                      ),
-                      // 修改：相机按钮调用发动态方法
-                      IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.white), 
-                        onPressed: _pickAndPublish  // 直接调用方法
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 20,
-                right: 20,
-                child: Row(
-                  children: [
-                    const Text("尘不言", 
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontSize: 20, 
-                          fontWeight: FontWeight.bold, 
-                          shadows: [Shadow(blurRadius: 10, color: Colors.black45)]
-                        )),
-                    const SizedBox(width: 15),
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 3),
-                        borderRadius: BorderRadius.circular(8),
-                        image: const DecorationImage(
-                          image: NetworkImage('https://via.placeholder.com/150'), 
-                          fit: BoxFit.cover
-                        ),
+              Stack(
+                children: [
+                  Container(
+                    height: 300,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: NetworkImage('https://via.placeholder.com/800x400?text=Moments+Cover'),
+                        fit: BoxFit.cover,
                       ),
                     ),
-                  ],
-                ),
+                    child: SafeArea(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white), 
+                            onPressed: () => Navigator.pop(context)
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.camera_alt, color: Colors.white), 
+                            onPressed: _showImageSourceActionSheet
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 20,
+                    right: 20,
+                    child: Row(
+                      children: [
+                        const Text("尘不言", 
+                            style: TextStyle(
+                              color: Colors.white, 
+                              fontSize: 20, 
+                              fontWeight: FontWeight.bold, 
+                              shadows: [Shadow(blurRadius: 10, color: Colors.black45)]
+                            )),
+                        const SizedBox(width: 15),
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 3),
+                            borderRadius: BorderRadius.circular(8),
+                            image: const DecorationImage(
+                              image: NetworkImage('https://via.placeholder.com/150'), 
+                              fit: BoxFit.cover
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              _buildMomentItem(
+                context: context,
+                avatar: 'https://via.placeholder.com/150',
+                name: '',
+                content: '',
+                images: [],
+                time: '4天前',
               ),
             ],
           ),
-          const SizedBox(height: 20),
+        ),
 
-          _buildMomentItem(
-            context: context,
-            avatar: 'https://via.placeholder.com/150',
-            name: '',
-            content: '',
-            images: [],
-            time: '4天前',
+        // 底部动作面板（覆盖层）
+        if (_showActionSheet)
+          GestureDetector(
+            onTap: _hideActionSheet,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              color: Colors.black.withOpacity(_showActionSheet ? 0.4 : 0.0),
+              width: double.infinity,
+              height: double.infinity,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // 第一个卡片（拍摄 + 相册选择）
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOut,
+                    transform: Matrix4.translationValues(
+                      0, 
+                      _showActionSheet ? 0 : 200, 
+                      0
+                    ),
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // 拍摄选项
+                        _buildActionItem(
+                          icon: Icons.camera_alt_outlined,
+                          title: '拍摄',
+                          subtitle: '照片或视频',
+                          onTap: _openCamera,
+                          showDivider: true,
+                        ),
+                        // 从相册选择选项
+                        _buildActionItem(
+                          icon: Icons.photo_library_outlined,
+                          title: '从相册选择',
+                          subtitle: null,
+                          onTap: _pickFromGallery,
+                          showDivider: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 8), // 真正的空隙（用于阴影效果）
+                  
+                  // 第二个卡片（取消按钮）
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOut,
+                    transform: Matrix4.translationValues(
+                      0, 
+                      _showActionSheet ? 0 : 200, 
+                      0
+                    ),
+                    margin: const EdgeInsets.only(left: 12, right: 12, bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: _buildActionItem(
+                      icon: null,
+                      title: '取消',
+                      subtitle: null,
+                      onTap: _hideActionSheet,
+                      showDivider: false,
+                      isCancel: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
+      ],
+    );
+  }
+
+  // 构建动作面板选项项
+  Widget _buildActionItem({
+    required IconData? icon,
+    required String title,
+    required String? subtitle,
+    required VoidCallback onTap,
+    required bool showDivider,
+    bool isCancel = false,
+  }) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+              child: Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      color: isCancel ? Colors.red : const Color(0xFF333333),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: isCancel ? FontWeight.w400 : FontWeight.w500,
+                            color: isCancel ? Colors.red : const Color(0xFF333333),
+                          ),
+                        ),
+                        if (subtitle != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              subtitle,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF888888),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDivider)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            height: 0.5,
+            color: const Color(0xFFE0E0E0),
+          ),
+      ],
     );
   }
 
