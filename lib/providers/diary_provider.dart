@@ -8,9 +8,6 @@ import 'package:isar_community/isar.dart';
 import '../services/isar_service.dart';
 import '../models/diary_entry.dart';
 
-// 必须定义这个 Provider，否则 ref.read(isarServiceProvider) 会 undefined
-final isarServiceProvider = Provider<IsarService>((ref) => IsarService());
-
 final diaryListProvider = AsyncNotifierProvider<DiaryNotifier, List<DiaryEntry>>(
   DiaryNotifier.new,
 );
@@ -18,12 +15,8 @@ final diaryListProvider = AsyncNotifierProvider<DiaryNotifier, List<DiaryEntry>>
 class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
   @override
   Future<List<DiaryEntry>> build() async {
-    return _loadAllDiaries();
-  }
-
-  Future<List<DiaryEntry>> _loadAllDiaries() async {
-    final isar = await ref.read(isarServiceProvider).isar;
-    return await isar.diaryEntrys
+    final Isar isar = await ref.watch(isarProvider.future); // 显式声明 Isar 类型
+    return isar.diaryEntrys
         .where()
         .sortByCreatedAtDesc()
         .findAll();
@@ -32,7 +25,7 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
   Future<void> addDiary(String content) async {
     state = const AsyncLoading();
     try {
-      final isar = await ref.read(isarServiceProvider).isar;
+      final Isar isar = await ref.watch(isarProvider.future);
       final newEntry = DiaryEntry()
         ..content = content
         ..coverColor1 = _generateRandomPastelColor()
@@ -43,7 +36,7 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
         await _generateAndSaveCover(newEntry);
       });
 
-      state = AsyncData(await _loadAllDiaries());
+      state = AsyncData(await build());
     } catch (e, st) {
       state = AsyncError(e, st);
     }
@@ -52,14 +45,14 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
   Future<void> updateDiary(DiaryEntry entry, String newContent) async {
     state = const AsyncLoading();
     try {
-      final isar = await ref.read(isarServiceProvider).isar;
+      final Isar isar = await ref.watch(isarProvider.future);
       entry.content = newContent;
 
       await isar.writeTxn(() async {
         await isar.diaryEntrys.put(entry);
       });
 
-      state = AsyncData(await _loadAllDiaries());
+      state = AsyncData(await build());
     } catch (e, st) {
       state = AsyncError(e, st);
     }
@@ -68,24 +61,24 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
   Future<void> deleteDiary(DiaryEntry entry) async {
     state = const AsyncLoading();
     try {
-      final isar = await ref.read(isarServiceProvider).isar;
+      final Isar isar = await ref.watch(isarProvider.future);
 
       await isar.writeTxn(() async {
         await isar.diaryEntrys.delete(entry.id);
 
-        final coverPath = await ref.read(isarServiceProvider).getCoverFilePath(entry.coverFileName);
+        final coverPath = await getCoverFilePath('${entry.id}.png');
         final file = File(coverPath);
         if (await file.exists()) await file.delete();
       });
 
-      state = AsyncData(await _loadAllDiaries());
+      state = AsyncData(await build());
     } catch (e, st) {
       state = AsyncError(e, st);
     }
   }
 
   Future<String> getCoverPath(DiaryEntry entry) async {
-    return await ref.read(isarServiceProvider).getCoverFilePath(entry.coverFileName);
+    return await getCoverFilePath('${entry.id}.png');
   }
 
   String _generateRandomPastelColor() {
@@ -125,7 +118,6 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
       fontFamily: 'sans-serif',
     );
 
-    // 移除 const，因为 ui.ParagraphStyle 不是 const 构造器
     final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textDirection: ui.TextDirection.ltr,
     ))
@@ -145,7 +137,7 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     final pngBytes = byteData!.buffer.asUint8List();
 
-    final coverPath = await ref.read(isarServiceProvider).getCoverFilePath('${entry.id}.png');
+    final coverPath = await getCoverFilePath('${entry.id}.png');
     final file = File(coverPath);
     await file.writeAsBytes(pngBytes);
   }

@@ -1,17 +1,20 @@
-// lib/main.dart - 升级到 flutter_foreground_task 9.2.0 兼容版 + ProviderScope
+// lib/main.dart - 完整修复版：所有 import + 前台服务 + Riverpod + Isar 兼容
 import 'dart:isolate';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart'; // ★ 新增导入 intl 初始化
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';  // 新增
+import 'services/isar_service.dart'; // 必须导入，用于 isarProvider
 
-// ✅ 前台任务入口（9.x 必须 top-level + @pragma）
+// 前台任务入口（flutter_foreground_task 9.x 必须）
 @pragma('vm:entry-point')
 void startCallback() {
   FlutterForegroundTask.setTaskHandler(MyForegroundTaskHandler());
@@ -20,7 +23,12 @@ void startCallback() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await _initForegroundTask();  // ✅ 9.x 推荐 await
+// ★ 新增：全局初始化 intl locale（必须 await，否则 DateFormat('zh_CN') 会崩溃）
+  await initializeDateFormatting('zh_CN', null);
+  
+  await _initForegroundTask();
+
+  // Isar 初始化交给 isarProvider 自动 await（无需手动调用）
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -28,16 +36,14 @@ void main() async {
   ]);
 
   runApp(
-    ProviderScope(  // 🎯 包裹整个应用，就加这一行！
-      child: const MyBunnyApp(),
+    const ProviderScope(
+      child: MyBunnyApp(),
     ),
   );
 }
 
 Future<void> _initForegroundTask() async {
   try {
-    // ✅ 9.x 不再需要 init() 方法，但为了兼容性可以保留空调用
-    // 或者完全移除这行代码
     if (kDebugMode) {
       print('✅ 前台服务初始化成功（9.2.0）');
     }
@@ -48,14 +54,12 @@ Future<void> _initForegroundTask() async {
   }
 }
 
-// ✅ 9.x TaskHandler：必须返回 Future<void> + 新增参数
 class MyForegroundTaskHandler extends TaskHandler {
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     if (kDebugMode) {
       print('Foreground service started at $timestamp by ${starter.name}');
     }
-    // 可添加初始化逻辑
   }
 
   @override
@@ -63,8 +67,6 @@ class MyForegroundTaskHandler extends TaskHandler {
     if (kDebugMode) {
       print('Heartbeat at $timestamp');
     }
-    // ✅ 移除了 SendPort 参数（如果你不需要通信）
-    // 心跳逻辑
   }
 
   @override
@@ -72,8 +74,6 @@ class MyForegroundTaskHandler extends TaskHandler {
     if (kDebugMode) {
       print('Foreground service destroyed at $timestamp, timeout: $isTimeout');
     }
-    // ✅ 新增 isTimeout 参数
-    // 清理资源
   }
 }
 
@@ -144,19 +144,12 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
   Future<void> _startForegroundService() async {
     try {
       if (!await FlutterForegroundTask.isRunningService) {
-        // ✅ 9.x 新API：需要 serviceId + serviceTypes
         final result = await FlutterForegroundTask.startService(
-          serviceId: 256,  // 唯一 id，任意正整数
+          serviceId: 256,
           notificationTitle: '小猫',
           notificationText: '在线等待你的消息...',
-          // 如果需要自定义图标（9.x 方式，取代旧 iconData）：
-          // notificationIcon: const NotificationIcon(
-          //   resType: ResourceType.mipmap,
-          //   resPrefix: ResourcePrefix.ic_launcher,
-          //   name: 'launcher',
-          // ),
           callback: startCallback,
-          serviceTypes: [ForegroundServiceTypes.dataSync],  // ← 关键修正
+          serviceTypes: [ForegroundServiceTypes.dataSync],
         );
 
         if (kDebugMode) {
@@ -175,8 +168,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     return WithForegroundTask(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        
-        // 🎨 主题设置
         theme: AppTheme.lightTheme.copyWith(
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
@@ -195,7 +186,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
             ),
           ),
         ),
-        
         darkTheme: AppTheme.darkTheme.copyWith(
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
@@ -214,7 +204,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
             ),
           ),
         ),
-        
         themeMode: _themeMode,
         navigatorKey: _navigatorKey,
         home: const MainScreen(),
