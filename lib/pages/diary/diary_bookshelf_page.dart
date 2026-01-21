@@ -1,4 +1,3 @@
-// lib/pages/diary/diary_bookshelf_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,178 +12,142 @@ class DiaryBookshelfPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('📖 DiaryBookshelfPage 开始构建...');
-    
-    try {
-      final diaries = ref.watch(diaryListProvider);
-      print('✅ 成功获取日记数据，数量: ${diaries.length}');
-      
-      final isLoading = ref.watch(diaryListProvider).isEmpty && ref.read(diaryListProvider.notifier).state.isEmpty;
+    debugPrint('📖 DiaryBookshelfPage 开始构建...');
 
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFF5A7E),
-          title: const Text(
-            '我的日记书架',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+    final diariesAsync = ref.watch(diaryListProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFF5A7E),
+        title: const Text(
+          '我的日记书架',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => ref.invalidate(diaryListProvider),
+            tooltip: '刷新',
+          ),
+        ],
+      ),
+      body: diariesAsync.when(
+        data: (diaries) {
+          debugPrint('✅ 成功获取日记数据，数量: ${diaries.length}');
+          return diaries.isEmpty
+              ? _buildEmptyState(context, ref)
+              : _buildBookshelfGrid(context, ref, diaries);
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
+        ),
+        error: (error, stackTrace) {
+          debugPrint('日记加载错误: $error\n$stackTrace');
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                const SizedBox(height: 24),
+                const Text(
+                  '加载日记失败',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5A7E),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => ref.invalidate(diaryListProvider),
+                ),
+              ],
             ),
-          ),
-          centerTitle: true,
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: () => ref.refresh(diaryListProvider.notifier).loadAllDiaries(),
-              tooltip: '刷新',
-            ),
-          ],
-        ),
-        body: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFFF5A7E),
-                ),
-              )
-            : diaries.isEmpty
-                ? _buildEmptyState(context)
-                : _buildBookshelfGrid(context, ref, diaries),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: const Color(0xFFFF5A7E),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-          elevation: 4,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DiaryEditorPage(),
-              ),
-            );
-          },
-          child: const Icon(Icons.add, size: 28),
-        ),
-      );
-      
-    } catch (e, stackTrace) {
-      print('💥 DiaryBookshelfPage 构建时发生严重错误:');
-      print('错误类型: ${e.runtimeType}');
-      print('错误信息: $e');
-      print('堆栈跟踪: $stackTrace');
-      
-      // 返回一个简单的错误页面，而不是崩溃
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('日记本'),
-          backgroundColor: const Color(0xFFFF5A7E),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                '日记本加载失败',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '错误: ${e.toString().split('\n').first}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5A7E),
-                ),
-                child: const Text('返回', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFFFF5A7E),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        elevation: 6,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DiaryEditorPage()),
+          ).then((_) {
+            // 修复点1: 使用闭包捕获 ref + mounted 检查
+            if (context.mounted) {
+              ref.invalidate(diaryListProvider);
+            }
+          });
+        },
+        child: const Icon(Icons.add, size: 32),
+      ),
+    );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.menu_book_outlined,
-            size: 100,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 20),
+          Icon(Icons.menu_book_outlined, size: 120, color: Colors.grey[400]),
+          const SizedBox(height: 24),
           Text(
             '日记书架空空如也',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 22, color: Colors.grey[700], fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            '点击右下角 + 写下第一篇日记吧',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
+          const SizedBox(height: 12),
+          Text(
+            '点击右下角 + 开始记录你的心情吧',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 30),
-          ElevatedButton(
+          const SizedBox(height: 40),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.edit),
+            label: const Text('写第一篇日记'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5A7E),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const DiaryEditorPage(),
-                ),
-              );
+                MaterialPageRoute(builder: (_) => const DiaryEditorPage()),
+              ).then((_) {
+                // 修复点2: 同上，捕获 ref + mounted
+                if (context.mounted) {
+                  ref.invalidate(diaryListProvider);
+                }
+              });
             },
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.edit, size: 18),
-                SizedBox(width: 8),
-                Text('开始写日记'),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBookshelfGrid(
-      BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
+  Widget _buildBookshelfGrid(BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
     return GridView.builder(
       padding: const EdgeInsets.all(20),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -194,53 +157,48 @@ class DiaryBookshelfPage extends ConsumerWidget {
         mainAxisSpacing: 20,
       ),
       itemCount: diaries.length,
-      itemBuilder: (ctx, index) {
+      itemBuilder: (context, index) {
         final entry = diaries[index];
         return _buildDiaryCard(context, ref, entry);
       },
     );
   }
 
-  Widget _buildDiaryCard(
-      BuildContext context, WidgetRef ref, DiaryEntry entry) {
+  Widget _buildDiaryCard(BuildContext context, WidgetRef ref, DiaryEntry entry) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => DiaryDetailPage(entry: entry),
-          ),
-        );
+          MaterialPageRoute(builder: (_) => DiaryDetailPage(entry: entry)),
+        ).then((_) {
+          // 修复点3: 同上，捕获 ref + mounted
+          if (context.mounted) {
+            ref.invalidate(diaryListProvider);
+          }
+        });
       },
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.black,
-            width: 3,
-          ),
-          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black, width: 3),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(4, 4),
-            ),
+            BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(4, 6)),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(13),
           child: FutureBuilder<String>(
             future: ref.read(diaryListProvider.notifier).getCoverPath(entry),
             builder: (context, snapshot) {
-              if (snapshot.hasData &&
+              final hasCover = snapshot.hasData &&
                   snapshot.data!.isNotEmpty &&
-                  File(snapshot.data!).existsSync()) {
+                  File(snapshot.data!).existsSync();
+
+              if (hasCover) {
                 return Image.file(
                   File(snapshot.data!),
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildFallbackCover(entry);
-                  },
+                  errorBuilder: (_, __, ___) => _buildFallbackCover(entry),
                 );
               }
               return _buildFallbackCover(entry);
@@ -252,23 +210,19 @@ class DiaryBookshelfPage extends ConsumerWidget {
   }
 
   Widget _buildFallbackCover(DiaryEntry entry) {
-    // 从十六进制颜色字符串解析为Color
-    Color parseColor(String hexColor) {
-      final hex = hexColor.replaceAll('#', '');
-      return Color(int.parse(hex, radix: 16) | 0xFF000000);
+    Color parseColor(String? hex) {
+      if (hex == null || hex.isEmpty) return const Color(0xFFBAE1FF);
+      final clean = hex.replaceAll('#', '');
+      return Color(int.parse(clean, radix: 16) | 0xFF000000);
     }
 
-    final color1 = entry.coverColor1 != null
-        ? parseColor(entry.coverColor1!)
-        : const Color(0xFFBAE1FF);
-    final color2 = entry.coverColor2 != null
-        ? parseColor(entry.coverColor2!)
-        : const Color(0xFFFFB3BA);
+    final c1 = parseColor(entry.coverColor1);
+    final c2 = parseColor(entry.coverColor2);
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color1, color2],
+          colors: [c1, c2],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -280,26 +234,16 @@ class DiaryBookshelfPage extends ConsumerWidget {
             Text(
               DateFormat('MM.dd').format(entry.createdAt),
               style: const TextStyle(
-                fontSize: 32,
+                fontSize: 36,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    blurRadius: 4,
-                    color: Colors.black26,
-                    offset: Offset(2, 2),
-                  ),
-                ],
+                shadows: [Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(2, 2))],
               ),
             ),
             const SizedBox(height: 8),
             Text(
               DateFormat('yyyy').format(entry.createdAt),
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 18, color: Colors.white70),
             ),
           ],
         ),

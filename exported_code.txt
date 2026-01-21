@@ -3195,9 +3195,9 @@ _buildSettingItem(
 
 File: D:\D\my_new_app\lib\pages\diary\diary_bookshelf_page.dart
 
-Size: 7942 bytes
+Size: 9873 bytes
 
-Modified: 01/22/2026 00:26:05
+Modified: 01/22/2026 01:55:30
 
 ========================================
 
@@ -3206,67 +3206,125 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../providers/diary_provider.dart';  // 这个提供 diaryListProvider
-import '../../models/diary_entry.dart';        // 这个提供 DiaryEntry 类
-import 'diary_editor_page.dart';              // 这个提供 DiaryEditorPage 类
-import 'diary_detail_page.dart';              // 这个提供 DiaryDetailPage 类
+import '../../providers/diary_provider.dart';
+import '../../models/diary_entry.dart';
+import 'diary_editor_page.dart';
+import 'diary_detail_page.dart';
 
 class DiaryBookshelfPage extends ConsumerWidget {
   const DiaryBookshelfPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final diaries = ref.watch(diaryListProvider);
-    final isLoading = ref.watch(diaryListProvider).isEmpty && ref.read(diaryListProvider.notifier).state.isEmpty;
+    print('📖 DiaryBookshelfPage 开始构建...');
+    
+    try {
+      final diaries = ref.watch(diaryListProvider);
+      print('✅ 成功获取日记数据，数量: ${diaries.length}');
+      
+      final isLoading = ref.watch(diaryListProvider).isEmpty && ref.read(diaryListProvider.notifier).state.isEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFF5A7E),
-        title: const Text(
-          '我的日记书架',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => ref.refresh(diaryListProvider.notifier).loadAllDiaries(),
-            tooltip: '刷新',
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFFFF5A7E),
-              ),
-            )
-          : diaries.isEmpty
-              ? _buildEmptyState(context)
-              : _buildBookshelfGrid(context, ref, diaries),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFFF5A7E),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        elevation: 4,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const DiaryEditorPage(),
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFF5A7E),
+          title: const Text(
+            '我的日记书架',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-          );
-        },
-        child: const Icon(Icons.add, size: 28),
-      ),
-    );
+          ),
+          centerTitle: true,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: () => ref.refresh(diaryListProvider.notifier).loadAllDiaries(),
+              tooltip: '刷新',
+            ),
+          ],
+        ),
+        body: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFFFF5A7E),
+                ),
+              )
+            : diaries.isEmpty
+                ? _buildEmptyState(context)
+                : _buildBookshelfGrid(context, ref, diaries),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color(0xFFFF5A7E),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          elevation: 4,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DiaryEditorPage(),
+              ),
+            );
+          },
+          child: const Icon(Icons.add, size: 28),
+        ),
+      );
+      
+    } catch (e, stackTrace) {
+      print('💥 DiaryBookshelfPage 构建时发生严重错误:');
+      print('错误类型: ${e.runtimeType}');
+      print('错误信息: $e');
+      print('堆栈跟踪: $stackTrace');
+      
+      // 返回一个简单的错误页面，而不是崩溃
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('日记本'),
+          backgroundColor: const Color(0xFFFF5A7E),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '日记本加载失败',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  '错误: ${e.toString().split('\n').first}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5A7E),
+                ),
+                child: const Text('返回', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -4825,21 +4883,21 @@ class _PublishMomentPageState extends State<PublishMomentPage> with SingleTicker
 
 File: D:\D\my_new_app\lib\pages\me\me_page.dart
 
-Size: 7886 bytes
+Size: 9419 bytes
 
-Modified: 01/21/2026 22:43:17
+Modified: 01/22/2026 01:40:33
 
 ========================================
 
-// lib/pages/me/me_page.dart - 完整替换
 // lib/pages/me/me_page.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'settings_page.dart';
-import 'profile_settings_page.dart'; // 新增导入
+import 'profile_settings_page.dart';
 import '../../services/storage_service.dart';
+import '../diary/diary_bookshelf_page.dart'; // ✅ 已修正路径
 
 class MePage extends StatefulWidget {
   const MePage({super.key});
@@ -4862,7 +4920,6 @@ class _MePageState extends State<MePage> {
   }
 
   Future<void> _loadUserData() async {
-    // 并行加载头像和用户名
     final avatarPath = await _storage.getUserAvatarPath();
     final name = await _storage.getUserName();
     
@@ -4872,59 +4929,56 @@ class _MePageState extends State<MePage> {
     });
   }
 
- Future<void> _pickUserAvatar() async {
-  try {
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
-    );
-    
-    if (image != null) {
+  Future<void> _pickUserAvatar() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _isLoadingAvatar = true;
+        });
+        
+        final newPath = await _storage.copyUserAvatarToAppDir(image.path);
+        
+        await _storage.saveUserAvatarPath(newPath);
+        
+        setState(() {
+          _userAvatarPath = newPath;
+          _isLoadingAvatar = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('头像已更新'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('选择用户头像失败: $e');
+      }
       setState(() {
-        _isLoadingAvatar = true;
-      });
-      
-      // 简单复制，不裁剪
-      final newPath = await _storage.copyUserAvatarToAppDir(image.path);
-      
-      // 保存新路径
-      await _storage.saveUserAvatarPath(newPath);
-      
-      setState(() {
-        _userAvatarPath = newPath;
         _isLoadingAvatar = false;
       });
       
-      // 显示成功提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('头像已更新'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('选择头像失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }
     }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('选择用户头像失败: $e');
-    }
-    setState(() {
-      _isLoadingAvatar = false;
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('选择头像失败: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -4935,12 +4989,10 @@ class _MePageState extends State<MePage> {
         // 用户信息卡片
         GestureDetector(
           onTap: () {
-            // 点击整个卡片跳转到资料设置页面
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
             ).then((_) {
-              // 返回时刷新数据
               _loadUserData();
             });
           },
@@ -4949,7 +5001,6 @@ class _MePageState extends State<MePage> {
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
             child: Row(
               children: [
-                // 头像部分（可点击更换）
                 GestureDetector(
                   onTap: _pickUserAvatar,
                   child: Stack(
@@ -4996,7 +5047,6 @@ class _MePageState extends State<MePage> {
                     ],
                   ),
                 ),
-                // 右侧箭头
                 Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey),
               ],
             ),
@@ -5046,10 +5096,56 @@ class _MePageState extends State<MePage> {
         title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
         onTap: () {
-          // 这里可以添加对应的功能
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title 功能开发中...')),
-          );
+          // 🎯 只针对"心情不好·日记本"跳转，并添加错误捕获
+          if (title == "心情不好·日记本") {
+            try {
+              // 添加调试输出
+              if (kDebugMode) {
+                print('🎯 正在跳转到日记书架页面...');
+              }
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DiaryBookshelfPage(),
+                ),
+              ).then((_) {
+                if (kDebugMode) {
+                  print('✅ 从日记书架页面返回');
+                }
+              }).catchError((error) {
+                if (kDebugMode) {
+                  print('❌ 跳转过程出错: $error');
+                }
+              });
+              
+            } catch (e, stackTrace) {
+              // 捕获并打印详细错误
+              if (kDebugMode) {
+                print('💥 点击日记本时发生异常:');
+                print('错误类型: ${e.runtimeType}');
+                print('错误信息: $e');
+                print('堆栈跟踪: $stackTrace');
+              }
+              
+              // 在界面上显示错误（红色提示）
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('打开日记本时出错: ${e.toString().split('\n').first}'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
+          } else {
+            // 其他功能保持开发中提示
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$title 功能开发中...'),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          }
         },
       ),
     );
