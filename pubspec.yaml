@@ -16,9 +16,9 @@ dependencies:
   camera: ^0.10.6
   path_provider: ^2.1.5
   path: ^1.9.0
-  intl: ^0.19.0
+  intl: ^0.20.2  # 保持 0.20.2，与 Flutter SDK 一致
   xml: ^6.4.2
-  flutter_foreground_task: ^9.2.0  # ✅ 已升级
+  flutter_foreground_task: ^9.2.0
   flutter_native_splash: ^2.4.1
   extended_image: ^10.0.1
   flutter_staggered_grid_view: ^0.7.0
@@ -26,6 +26,12 @@ dependencies:
   file_picker: ^10.3.8
   share_plus: ^12.0.1
   permission_handler: ^11.3.1
+  # === 日记本依赖 ===
+  flutter_riverpod: ^2.5.1
+  isar: ^3.1.0
+  isar_flutter_libs: ^3.1.0
+  uuid: ^4.3.0
+  flutter_quill: ^11.5.0  # ⬅️ 升级到最新版
 
 dev_dependencies:
   flutter_test:

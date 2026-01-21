@@ -180,7 +180,7 @@ class _MePageState extends State<MePage> {
         Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
         _buildListTile(Icons.credit_card_outlined, "结婚纪念日", Colors.blueAccent, context),
         Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情不好·日记本（心情好也写）", Colors.amber, context),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情不好·日记本", Colors.amber, context),
         
         const SizedBox(height: 10),
       
