@@ -142,7 +142,7 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
         // ✅ 9.x 新API：需要 serviceId + serviceTypes
         final result = await FlutterForegroundTask.startService(
   serviceId: 256,  // 唯一 id，任意正整数
-  notificationTitle: '沃夫朗聊天室',
+  notificationTitle: '小猫',
   notificationText: '在线等待你的消息...',
   // 如果需要自定义图标（9.x 方式，取代旧 iconData）：
   // notificationIcon: const NotificationIcon(

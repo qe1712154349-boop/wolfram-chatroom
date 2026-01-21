@@ -283,8 +283,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Future<void> _startForegroundService() async {
     if (!await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.startService(
-        notificationTitle: '沃夫朗聊天中',
-        notificationText: '随时回复你的消息',
+        notificationTitle: '小猫',
+        notificationText: 'ρ(・ω・、)',
       );
     }
   }

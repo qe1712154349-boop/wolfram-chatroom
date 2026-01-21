@@ -1,9 +1,13 @@
+// lib/services/export_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../models/message.dart';
 import 'storage_service.dart';
+import 'package:permission_handler/permission_handler.dart';  // ← 加这一行
 
 class ExportData {
   final String version = '1.0';
@@ -32,47 +36,143 @@ class ExportData {
 }
 
 class ExportService {
-  // 链接 storage 的默认 roomId（保持一致）
   static const String kDefaultRoomId = StorageService.kDefaultRoomId;
 
-  static Future<void> exportChat({
-    required bool includeCharacter,
-    required String characterName,
-    String roomId = kDefaultRoomId,  // 动态，默认 'default'
-  }) async {
+static Future<ExportResult> exportChat({
+  required bool includeCharacter,
+  required String characterName,
+  String roomId = kDefaultRoomId,
+  bool overwrite = false,
+}) async {
+  try {
+    // 请求存储权限（Android 必要）
+    if (Platform.isAndroid) {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+        if (!status.isGranted) {
+          return ExportResult(success: false, message: '需要存储权限才能保存文件');
+        }
+      }
+    }
+
     final storage = StorageService();
-    final messages = await storage.loadChatHistory(roomId: roomId);  // 确保这个方法支持roomId参数
+    final messages = await storage.loadChatHistory(roomId: roomId);
     if (messages.isEmpty) {
-      debugPrint('无消息可导出 (room: $roomId)');
-      return;
+      return ExportResult(success: false, message: '无消息可导出');
     }
 
     final now = DateTime.now();
-    final formatter = DateFormat('yyyy-MM-dd_HHmm');  // 精确匹配你想要的格式
+    final formatter = DateFormat('yyyy-MM-dd_HHmm');
     final timestamp = formatter.format(now);
 
-    final nickname = await storage.getCharacterNickname();
+    final nicknameRaw = await storage.getCharacterNickname();
+    final nickname = nicknameRaw.isEmpty ? characterName : nicknameRaw;
     final characterData = includeCharacter ? await storage.loadCharacterData() : <String, String>{};
 
     final export = ExportData(
       exportedAt: now.toIso8601String(),
-      roomId: roomId,  // 动态 'default'，无 master
-      nickname: nickname.isEmpty ? characterName : nickname,
+      roomId: roomId,
+      nickname: nickname,
       character: characterData,
       messages: messages,
     );
 
     final jsonString = jsonEncode(export.toJson());
-    final type = includeCharacter ? 'full' : 'messages';
-    final fileName = 'lovme_chat_${nickname}_${roomId}_${type}_$timestamp.json';  // 修复：使用正确的变量名
+    final type = includeCharacter ? '全部配置' : '聊天记录';
+    final baseFileName = 'lovme_chat_${nickname}_${roomId}_${type}_$timestamp';
 
-    // 当前分享逻辑（后续可改成本地保存）
-    await Share.shareXFiles(
-      [XFile.fromData(utf8.encode(jsonString), name: fileName, mimeType: 'application/json')],
-      text: includeCharacter ? '完整聊天备份（人设+消息）' : '仅聊天记录备份',
-      subject: fileName,
+    // 公共 Download 目录（用户可见！）
+    final downloadDir = Directory('/storage/emulated/0/Download');
+    if (!await downloadDir.exists()) {
+      await downloadDir.create(recursive: true);
+    }
+
+    final lovmeDir = Directory(path.join(downloadDir.path, 'lovme'));
+    if (!await lovmeDir.exists()) {
+      await lovmeDir.create(recursive: true);
+    }
+
+    var filePath = path.join(lovmeDir.path, '$baseFileName.json');
+    var file = File(filePath);
+
+    // 防覆盖：序号递增
+    int counter = 1;
+    while (await file.exists() && !overwrite) {
+      filePath = path.join(lovmeDir.path, '${baseFileName}_$counter.json');
+      file = File(filePath);
+      counter++;
+    }
+
+    // 原子写入
+    final tempFile = await File(path.join((await getTemporaryDirectory()).path, 'temp_export.json'))
+        .writeAsString(jsonString);
+    await tempFile.copy(filePath);
+    await tempFile.delete();
+
+    if (kDebugMode) {
+      print('公共保存成功: $filePath');
+      print('大小: ${await file.length()} bytes');
+    }
+
+    return ExportResult(
+      success: true,
+      message: '保存到 Download/lovme',
+      filePath: filePath,
+      file: file,
     );
-
-    if (kDebugMode) print('导出完成: $fileName (room: $roomId, msgs: ${messages.length})');
+  } catch (e) {
+    debugPrint('导出失败: $e');
+    return ExportResult(success: false, message: '导出失败: $e');
   }
+}
+
+  /// 检查文件是否存在
+  static Future<bool> checkFileExists(String characterName, bool includeCharacter) async {
+    try {
+      final type = includeCharacter ? '全部配置' : '聊天记录';
+      final fileName = '$characterName-$type.json';
+      final downloadsDir = await getDownloadsDirectory();
+      if (downloadsDir == null) return false;
+      
+      final lovmeDir = Directory(path.join(downloadsDir.path, 'lovme'));
+      final filePath = path.join(lovmeDir.path, fileName);
+      return await File(filePath).exists();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 获取保存目录的显示路径（用于显示给用户）
+  static Future<String> getDisplayPath() async {
+    final downloadsDir = await getDownloadsDirectory();
+    if (downloadsDir == null) return '下载目录';
+    
+    // 转换路径为可读格式
+    String pathStr = downloadsDir.path;
+    
+    // 如果是Android，转换为用户友好的路径
+    if (pathStr.contains('/storage/emulated/0/')) {
+      pathStr = pathStr.replaceAll('/storage/emulated/0/', '/sdcard/');
+    }
+    
+    return path.join(pathStr, 'lovme');
+  }
+}
+
+/// 导出结果类
+class ExportResult {
+  final bool success;
+  final String message;
+  final String? filePath;
+  final bool fileExists;
+  final File? file;
+
+  ExportResult({
+    required this.success,
+    required this.message,
+    this.filePath,
+    this.fileExists = false,
+    this.file,
+  });
 }
