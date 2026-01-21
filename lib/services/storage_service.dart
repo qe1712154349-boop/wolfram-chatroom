@@ -12,6 +12,10 @@ class StorageService {
   factory StorageService() => _instance;
   StorageService._internal();
 
+  // 🔥 添加这行！
+  static const String kDefaultRoomId = 'default';
+  
+
   Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
 
   // ── 开发者模式相关 ──
@@ -36,35 +40,59 @@ class StorageService {
     return prefs.getString('theme_mode') ?? 'system'; // 默认跟随系统
   }
 
-  // ── 聊天记录相关 ──（必须保留）
-  Future<void> saveChatHistory(List<Message> history) async {
+  // ── 聊天记录相关 ──（必须保留）- 已添加 roomId 参数
+  Future<void> saveChatHistory(List<Message> history, {String roomId = kDefaultRoomId}) async {
     final prefs = await _prefs;
     final List<Map<String, dynamic>> serializableHistory = 
         history.map((msg) => msg.toMap()).toList();
     final jsonString = jsonEncode(serializableHistory);
-    await prefs.setString('chat_history_master', jsonString);
+    final key = 'chat_history_$roomId';  // 使用动态key
+    await prefs.setString(key, jsonString);
+    if (kDebugMode) print('保存聊天历史到 $key，消息数: ${history.length}');
   }
 
-  Future<List<Message>> loadChatHistory() async {
+  Future<List<Message>> loadChatHistory({String roomId = kDefaultRoomId}) async {
     final prefs = await _prefs;
-    final jsonString = prefs.getString('chat_history_master');
-    if (jsonString == null || jsonString.isEmpty) {
-      return [];
+    final key = 'chat_history_$roomId';  // 使用动态key
+    String? jsonString = prefs.getString(key);
+    
+    // 🔥 零感知旧数据迁移（仅执行一次：旧 master → 新 default）
+    if (jsonString == null && roomId == kDefaultRoomId) {
+      final legacyKey = 'chat_history_master';
+      jsonString = prefs.getString(legacyKey);
+      if (jsonString != null && jsonString.isNotEmpty) {
+        try {
+          final List<dynamic> decoded = jsonDecode(jsonString);
+          final count = decoded.length;
+          await prefs.setString(key, jsonString);  // 复制到新 key
+          await prefs.remove(legacyKey);           // 删除旧 key（安全清理）
+          if (kDebugMode) print('✅ 旧数据迁移完成: $count 条消息 from $legacyKey to $key');
+        } catch (e) {
+          if (kDebugMode) print('迁移解析失败: $e，保留原数据');
+        }
+      }
     }
+    
+    if (jsonString == null || jsonString.isEmpty) return [];
+    
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.map((e) {
-        return Message.fromMap(e as Map<String, dynamic>);
-      }).toList();
+      return decoded.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
     } catch (e) {
-      if (kDebugMode) debugPrint('聊天记录解析失败: $e');
+      if (kDebugMode) print('聊天记录解析失败: $e');
       return [];
     }
   }
 
-  Future<void> clearChatHistory() async {
+  Future<void> clearChatHistory({String roomId = kDefaultRoomId}) async {
     final prefs = await _prefs;
-    await prefs.remove('chat_history_master');
+    final key = 'chat_history_$roomId';
+    await prefs.remove(key);
+    // 兼容清理旧 master（仅默认房间）
+    if (roomId == kDefaultRoomId) {
+      await prefs.remove('chat_history_master');
+    }
+    if (kDebugMode) print('清空聊天历史: $key');
   }
 
   // ── 角色编辑相关 ──
@@ -317,7 +345,7 @@ class StorageService {
     
     // 1. 保存聊天历史（如果传入）
     if (messages != null && messages.isNotEmpty) {
-      await saveChatHistory(messages);
+      await saveChatHistory(messages);  // 使用默认roomId
     }
     
     // 2. 保存滚动位置
@@ -353,7 +381,7 @@ class StorageService {
       'scrollOffset': prefs.getDouble('chat_scroll_offset') ?? 0.0,
       'inputText': prefs.getString('chat_input_text') ?? '',
       'lastRoute': prefs.getString('last_route') ?? '/chat',
-      'chatHistory': await loadChatHistory(), // 已有方法
+      'chatHistory': await loadChatHistory(), // 使用默认roomId
     };
   }
 

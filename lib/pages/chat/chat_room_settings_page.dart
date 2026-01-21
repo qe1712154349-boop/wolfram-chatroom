@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../app/theme.dart';  // 导入 AppTheme 以使用暗色常量
 import '../../services/export_service.dart';
+import 'chat_backup_migrate_page.dart';
 
 class ChatRoomSettingsPage extends StatefulWidget {
   final String characterName;
@@ -134,7 +135,7 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
             ),
           ),
 
-          // 设置选项
+          // 设置选项（从这里开始替换为您提供的代码）
           _buildSettingItem(
             icon: Icons.delete_outline,
             title: "清空聊天记录",
@@ -157,28 +158,21 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
             onTap: () {},
           ),
 
-// 在 _buildSettingItem 列表里，加两个新 item（在举报下面）
+// 在 chat_room_settings_page.dart 中，修改这个设置项：
 _buildSettingItem(
-  icon: Icons.file_download,
-  title: "导出全部配置",
-  subtitle: "人设 + 聊天记录 (.json)",
-  color: Colors.blue,
+  icon: Icons.cloud_download,
+  title: "聊天记录迁移与备份",
+  subtitle: "导出/导入人设与消息，防丢失",
+  color: const Color(0xFFFF5A7E),
   onTap: () async {
-    await ExportService.exportChat(
-      includeCharacter: true,
-      characterName: widget.characterName,
-    );
-  },
-),
-_buildSettingItem(
-  icon: Icons.file_download_outlined,
-  title: "仅导出聊天记录",
-  subtitle: "仅消息列表 (.json)",
-  color: Colors.green,
-  onTap: () async {
-    await ExportService.exportChat(
-      includeCharacter: false,
-      characterName: widget.characterName,
+    // 跳转到新的迁移备份页面
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatBackupMigratePage(
+          characterName: widget.characterName,
+        ),
+      ),
     );
   },
 ),

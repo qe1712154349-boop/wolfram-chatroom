@@ -1,4 +1,3 @@
-// lib/services/export_service.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -33,20 +32,23 @@ class ExportData {
 }
 
 class ExportService {
+  // 链接 storage 的默认 roomId（保持一致）
+  static const String kDefaultRoomId = StorageService.kDefaultRoomId;
+
   static Future<void> exportChat({
     required bool includeCharacter,
     required String characterName,
+    String roomId = kDefaultRoomId,  // 动态，默认 'default'
   }) async {
     final storage = StorageService();
-    final messages = await storage.loadChatHistory();
+    final messages = await storage.loadChatHistory(roomId: roomId);  // 确保这个方法支持roomId参数
     if (messages.isEmpty) {
-      // 可加 toast
-      debugPrint('无消息可导出');
+      debugPrint('无消息可导出 (room: $roomId)');
       return;
     }
 
     final now = DateTime.now();
-    final formatter = DateFormat('yyyyMMdd_HHmm');
+    final formatter = DateFormat('yyyy-MM-dd_HHmm');  // 精确匹配你想要的格式
     final timestamp = formatter.format(now);
 
     final nickname = await storage.getCharacterNickname();
@@ -54,22 +56,23 @@ class ExportService {
 
     final export = ExportData(
       exportedAt: now.toIso8601String(),
-      roomId: 'master', // 未来替换为 UUID
+      roomId: roomId,  // 动态 'default'，无 master
       nickname: nickname.isEmpty ? characterName : nickname,
       character: characterData,
       messages: messages,
     );
 
     final jsonString = jsonEncode(export.toJson());
-    final fileName = includeCharacter
-        ? 'wolf_chat_${nickname}_full_$timestamp.json'
-        : 'wolf_chat_${nickname}_messages_$timestamp.json';
+    final type = includeCharacter ? 'full' : 'messages';
+    final fileName = 'lovme_chat_${nickname}_${roomId}_${type}_$timestamp.json';  // 修复：使用正确的变量名
 
-    // 分享（系统面板）
+    // 当前分享逻辑（后续可改成本地保存）
     await Share.shareXFiles(
       [XFile.fromData(utf8.encode(jsonString), name: fileName, mimeType: 'application/json')],
       text: includeCharacter ? '完整聊天备份（人设+消息）' : '仅聊天记录备份',
       subject: fileName,
     );
+
+    if (kDebugMode) print('导出完成: $fileName (room: $roomId, msgs: ${messages.length})');
   }
 }
