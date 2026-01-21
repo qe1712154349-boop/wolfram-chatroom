@@ -1,4 +1,4 @@
-// lib/main.dart - 升级到 flutter_foreground_task 9.2.0 兼容版
+// lib/main.dart - 升级到 flutter_foreground_task 9.2.0 兼容版 + ProviderScope
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -9,6 +9,7 @@ import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';  // 新增
 
 // ✅ 前台任务入口（9.x 必须 top-level + @pragma）
 @pragma('vm:entry-point')
@@ -26,7 +27,11 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(const MyBunnyApp());
+  runApp(
+    ProviderScope(  // 🎯 包裹整个应用，就加这一行！
+      child: const MyBunnyApp(),
+    ),
+  );
 }
 
 Future<void> _initForegroundTask() async {
@@ -141,18 +146,18 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
       if (!await FlutterForegroundTask.isRunningService) {
         // ✅ 9.x 新API：需要 serviceId + serviceTypes
         final result = await FlutterForegroundTask.startService(
-  serviceId: 256,  // 唯一 id，任意正整数
-  notificationTitle: '小猫',
-  notificationText: '在线等待你的消息...',
-  // 如果需要自定义图标（9.x 方式，取代旧 iconData）：
-  // notificationIcon: const NotificationIcon(
-  //   resType: ResourceType.mipmap,
-  //   resPrefix: ResourcePrefix.ic_launcher,
-  //   name: 'launcher',
-  // ),
-  callback: startCallback,
-  serviceTypes: [ForegroundServiceTypes.dataSync],  // ← 关键修正
-);
+          serviceId: 256,  // 唯一 id，任意正整数
+          notificationTitle: '小猫',
+          notificationText: '在线等待你的消息...',
+          // 如果需要自定义图标（9.x 方式，取代旧 iconData）：
+          // notificationIcon: const NotificationIcon(
+          //   resType: ResourceType.mipmap,
+          //   resPrefix: ResourcePrefix.ic_launcher,
+          //   name: 'launcher',
+          // ),
+          callback: startCallback,
+          serviceTypes: [ForegroundServiceTypes.dataSync],  // ← 关键修正
+        );
 
         if (kDebugMode) {
           print('前台服务启动结果: $result');

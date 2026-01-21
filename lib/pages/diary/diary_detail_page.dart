@@ -1,11 +1,12 @@
 //lib/pages/diary/diary_detail_page.dart
 import 'dart:io';
-import 'dart:json';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/diary_provider.dart';
 import 'diary_editor_page.dart';
+import '../../models/diary_entry.dart';  // 确保这行存在且正确
 
 class DiaryDetailPage extends ConsumerWidget {
   final DiaryEntry entry;

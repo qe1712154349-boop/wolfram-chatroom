@@ -1,12 +1,12 @@
-// lib/pages/me/me_page.dart - 完整替换
 // lib/pages/me/me_page.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'settings_page.dart';
-import 'profile_settings_page.dart'; // 新增导入
+import 'profile_settings_page.dart';
 import '../../services/storage_service.dart';
+import '../diary/diary_bookshelf_page.dart'; // ✅ 已修正路径
 
 class MePage extends StatefulWidget {
   const MePage({super.key});
@@ -29,7 +29,6 @@ class _MePageState extends State<MePage> {
   }
 
   Future<void> _loadUserData() async {
-    // 并行加载头像和用户名
     final avatarPath = await _storage.getUserAvatarPath();
     final name = await _storage.getUserName();
     
@@ -39,59 +38,56 @@ class _MePageState extends State<MePage> {
     });
   }
 
- Future<void> _pickUserAvatar() async {
-  try {
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
-    );
-    
-    if (image != null) {
+  Future<void> _pickUserAvatar() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _isLoadingAvatar = true;
+        });
+        
+        final newPath = await _storage.copyUserAvatarToAppDir(image.path);
+        
+        await _storage.saveUserAvatarPath(newPath);
+        
+        setState(() {
+          _userAvatarPath = newPath;
+          _isLoadingAvatar = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('头像已更新'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('选择用户头像失败: $e');
+      }
       setState(() {
-        _isLoadingAvatar = true;
-      });
-      
-      // 简单复制，不裁剪
-      final newPath = await _storage.copyUserAvatarToAppDir(image.path);
-      
-      // 保存新路径
-      await _storage.saveUserAvatarPath(newPath);
-      
-      setState(() {
-        _userAvatarPath = newPath;
         _isLoadingAvatar = false;
       });
       
-      // 显示成功提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('头像已更新'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('选择头像失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }
     }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('选择用户头像失败: $e');
-    }
-    setState(() {
-      _isLoadingAvatar = false;
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('选择头像失败: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -102,12 +98,10 @@ class _MePageState extends State<MePage> {
         // 用户信息卡片
         GestureDetector(
           onTap: () {
-            // 点击整个卡片跳转到资料设置页面
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
             ).then((_) {
-              // 返回时刷新数据
               _loadUserData();
             });
           },
@@ -116,7 +110,6 @@ class _MePageState extends State<MePage> {
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
             child: Row(
               children: [
-                // 头像部分（可点击更换）
                 GestureDetector(
                   onTap: _pickUserAvatar,
                   child: Stack(
@@ -163,7 +156,6 @@ class _MePageState extends State<MePage> {
                     ],
                   ),
                 ),
-                // 右侧箭头
                 Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey),
               ],
             ),
@@ -213,10 +205,20 @@ class _MePageState extends State<MePage> {
         title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
         onTap: () {
-          // 这里可以添加对应的功能
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title 功能开发中...')),
-          );
+          // 只针对“心情不好·日记本”跳转到日记书架
+          if (title == "心情不好·日记本") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DiaryBookshelfPage(),
+              ),
+            );
+          } else {
+            // 其他功能保持开发中提示
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$title 功能开发中...')),
+            );
+          }
         },
       ),
     );

@@ -1,1245 +1,6 @@
 ﻿
 ========================================
 
-File: D:\D\my_new_app\lib\main.dart
-
-Size: 6609 bytes
-
-Modified: 01/21/2026 20:21:36
-
-========================================
-
-// lib/main.dart - 升级到 flutter_foreground_task 9.2.0 兼容版
-import 'dart:isolate';
-import 'package:flutter/material.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'app/theme.dart';
-import 'pages/main_screen.dart';
-import 'pages/chat/chat_character_edit_page.dart';
-import 'pages/me/profile_settings_page.dart';
-import 'services/storage_service.dart';
-
-// ✅ 前台任务入口（9.x 必须 top-level + @pragma）
-@pragma('vm:entry-point')
-void startCallback() {
-  FlutterForegroundTask.setTaskHandler(MyForegroundTaskHandler());
-}
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await _initForegroundTask();  // ✅ 9.x 推荐 await
-
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  runApp(const MyBunnyApp());
-}
-
-Future<void> _initForegroundTask() async {
-  try {
-    // ✅ 9.x 不再需要 init() 方法，但为了兼容性可以保留空调用
-    // 或者完全移除这行代码
-    if (kDebugMode) {
-      print('✅ 前台服务初始化成功（9.2.0）');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ 前台服务初始化失败: $e');
-    }
-  }
-}
-
-// ✅ 9.x TaskHandler：必须返回 Future<void> + 新增参数
-class MyForegroundTaskHandler extends TaskHandler {
-  @override
-  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    if (kDebugMode) {
-      print('Foreground service started at $timestamp by ${starter.name}');
-    }
-    // 可添加初始化逻辑
-  }
-
-  @override
-  Future<void> onRepeatEvent(DateTime timestamp) async {
-    if (kDebugMode) {
-      print('Heartbeat at $timestamp');
-    }
-    // ✅ 移除了 SendPort 参数（如果你不需要通信）
-    // 心跳逻辑
-  }
-
-  @override
-  Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
-    if (kDebugMode) {
-      print('Foreground service destroyed at $timestamp, timeout: $isTimeout');
-    }
-    // ✅ 新增 isTimeout 参数
-    // 清理资源
-  }
-}
-
-class MyBunnyApp extends StatefulWidget {
-  const MyBunnyApp({super.key});
-
-  @override
-  State<MyBunnyApp> createState() => _MyBunnyAppState();
-}
-
-class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
-  ThemeMode _themeMode = ThemeMode.system;
-  final StorageService _storage = StorageService();
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadThemeMode();
-    _startForegroundService();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _startForegroundService();
-        _storage.saveAppState();
-        break;
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-        _storage.saveAppState();
-        break;
-      case AppLifecycleState.detached:
-        FlutterForegroundTask.stopService();
-        break;
-      default:
-        break;
-    }
-  }
-
-  Future<void> _loadThemeMode() async {
-    final savedMode = await _storage.getThemeMode();
-    _updateThemeMode(savedMode);
-  }
-
-  void _updateThemeMode(String savedMode) {
-    setState(() {
-      if (savedMode == 'dark') _themeMode = ThemeMode.dark;
-      else if (savedMode == 'light') _themeMode = ThemeMode.light;
-      else _themeMode = ThemeMode.system;
-    });
-  }
-
-  void changeTheme(String mode) => _updateThemeMode(mode);
-
-  Future<String> getCurrentTheme() async => await _storage.getThemeMode();
-
-  Future<void> _startForegroundService() async {
-    try {
-      if (!await FlutterForegroundTask.isRunningService) {
-        // ✅ 9.x 新API：需要 serviceId + serviceTypes
-        final result = await FlutterForegroundTask.startService(
-  serviceId: 256,  // 唯一 id，任意正整数
-  notificationTitle: '小猫',
-  notificationText: '在线等待你的消息...',
-  // 如果需要自定义图标（9.x 方式，取代旧 iconData）：
-  // notificationIcon: const NotificationIcon(
-  //   resType: ResourceType.mipmap,
-  //   resPrefix: ResourcePrefix.ic_launcher,
-  //   name: 'launcher',
-  // ),
-  callback: startCallback,
-  serviceTypes: [ForegroundServiceTypes.dataSync],  // ← 关键修正
-);
-
-        if (kDebugMode) {
-          print('前台服务启动结果: $result');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('启动前台服务失败: $e');
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return WithForegroundTask(
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        
-        // 🎨 主题设置
-        theme: AppTheme.lightTheme.copyWith(
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              shadowColor: Colors.transparent,
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              elevation: 0,
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              elevation: 0,
-            ),
-          ),
-        ),
-        
-        darkTheme: AppTheme.darkTheme.copyWith(
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              shadowColor: Colors.transparent,
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              elevation: 0,
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              elevation: 0,
-            ),
-          ),
-        ),
-        
-        themeMode: _themeMode,
-        navigatorKey: _navigatorKey,
-        home: const MainScreen(),
-        routes: {
-          '/character-edit': (context) => const ChatCharacterEditPage(),
-          '/profile-settings': (context) => const ProfileSettingsPage(),
-        },
-      ),
-    );
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\app\theme.dart
-
-Size: 14694 bytes
-
-Modified: 01/21/2026 16:08:14
-
-========================================
-
-// lib/app/theme.dart - 完整修复版本
-import 'package:flutter/material.dart';
-
-class AppTheme {
-  // ========== 主色 ==========
-  static const Color primaryLight = Color(0xFFFF5A7E);
-  static const Color primaryDark = Color(0xFFF95685);
-  
-  // ========== 背景色 ==========
-  static const Color backgroundLight = Color(0xFFFDF7F7);
-  static const Color backgroundDark = Color(0xFF060405);
-  static const Color surfaceLight = Color(0xFFFDF7F7);
-  static const Color surfaceDark = Color(0xFF060405);
-  static const Color surfaceVariantLight = Color(0xFFF5F5F5);
-  static const Color surfaceVariantDark = Color(0xFF1E1E1E);
-  
-  // ========== 文字色 ==========
-  static const Color onSurfaceLight = Color(0xFF1D1D1F);
-  static const Color onSurfaceDark = Color(0xFFFFFFFF);
-  static const Color onSurfaceVariantLight = Color(0xFF6D6D6F);
-  static const Color onSurfaceVariantDark = Color(0xFFAAAAAA);
-  
-  // ========== 边框/轮廓色（关键！解决 Switch 边缘黑色问题） ==========
-  static const Color outlineLight = Color(0xFFE0E0E0);      // 浅灰色
-  static const Color outlineDark = Color(0xFF424242);       // 深灰色
-  static const Color outlineVariantLight = Color(0xFFC7C7CC); // 中灰色
-  static const Color outlineVariantDark = Color(0xFF303030);  // 更深灰
-  
-  // ========== 卡片/容器色 ==========
-  static const Color cardColorLight = Colors.white;
-  static const Color cardColorDark = Color(0xFF1A1A1A);
-  
-  // ========== 其他功能色 ==========
-  static const Color secondaryContainerLight = Color(0xFFFFE4E9);
-  static const Color secondaryContainerDark = Color(0xFF3A1F25);
-  static const Color errorLight = Color(0xFFBA1A1A);
-  static const Color errorDark = Color(0xFFFFB4AB);
-  
-  // ========== Switch 专用颜色（方便修改） ==========
-  static const Color switchActiveThumb = Color(0xFFFF5A7E);      // 开启小球颜色
-  static final Color switchActiveTrack = Color(0xFFFF5A7E).withValues(alpha: 0x80); // 50%透明度
-  static const Color switchInactiveThumb = Color(0xFF757575);   // 关闭小球颜色 ← 这里可以修改按钮off小球的颜色
-  static const Color switchInactiveTrack = Color(0xFFE0E0E0);   // 关闭轨道颜色
-  static const Color switchTrackOutline = Color(0xFFBDBDBD);    // 轨道边框颜色
-
-  // ========== 文字颜色（与按钮分开） ==========
-  static const Color textPrimaryLight = Color(0xFF1D1D1F);  // 主要文字
-  static const Color textPrimaryDark = Color(0xFFFFFFFF);
-  static const Color textSecondaryLight = Color(0xFF6D6D6F); // 次要文字
-  static const Color textSecondaryDark = Color(0xFFAAAAAA);
-  
-  // ========== 气泡颜色 ==========
-  static const Color aiBubbleColorLight = Color(0xFFFFFFFF);
-  static const Color aiBubbleBorderLight = Color(0xFFF1DCDE);
-  static const Color userBubbleColorLight = Color(0xFFFFEAEF);
-  static const Color userBubbleBorderLight = Color(0xFFEDD8DD);
-  
-  static const Color aiBubbleColorDark = Color(0xFF1A1A1A);
-  static const Color aiBubbleBorderDark = Color(0xFF333333);
-  static const Color userBubbleColorDark = Color(0xFFF95685);
-  static const Color userBubbleBorderDark = Color(0xFFD6406E);
-  
-  // ========== 页面特定颜色 ==========
-  static const Color chatRoomTopLight = Color(0xFFFCECEF);
-  static const Color chatRoomTopDark = Color(0xFF0A0A0A);
-  
-  static const Color messageInputBackgroundLight = Color(0xFFFBDCE1);
-  static const Color messageInputBackgroundDark = Color(0xFF121212);
-  
-  static const Color messageFieldBackgroundLight = Color(0xFFFFFFFF);
-  static const Color messageFieldBackgroundDark = Color(0xFF252525);
-  
-  static const Color messageFieldBorderLight = Color(0xFFB1A9AB);
-  static const Color messageFieldBorderDark = Color(0xFF444444);
-  
-  // ========== 文字颜色（兼容旧代码） ==========
-  static const Color primaryTextLight = Color(0xFF1D1D1F);
-  static const Color primaryTextDark = Color(0xFFFFFFFF);
-  static const Color secondaryTextLight = Color(0xFF8E8E93);
-  static const Color secondaryTextDark = Color(0xFF9E9E9E);
-  static const Color narrationTextLight = Color(0xFF6D6D6F);
-  static const Color narrationTextDark = Color(0xFFAAAAAA);
-  static const Color userTextColorLight = Color(0xFFBB2D71);
-  static const Color userTextColorDark = Color(0xFFFFFFFF);
-  
-  // ========== 尺寸/圆角 ==========
-  static const double bubbleBorderRadius = 18.0;
-
-  // ========== 主题定义 ==========
-  static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    
-    // 1. colorScheme - 基础颜色系统（不影响Switch）
-    colorScheme: ColorScheme.light(
-      primary: primaryLight,    // 主色
-      surface: surfaceLight,    // 表面色
-      onSurface: textPrimaryLight,         // 表面文字色
-      // outline 保持Flutter默认，不影响Switch
-    ),
-    
-    // 2. 文字主题 - 使用专门的文字颜色
-    textTheme: TextTheme(
-      bodyLarge: TextStyle(color: textPrimaryLight),
-      bodyMedium: TextStyle(
-        fontFamily: 'System',
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        height: 1.4,
-        color: textPrimaryLight,  // 使用文字专用颜色
-      ),
-      bodySmall: TextStyle(color: textSecondaryLight),
-      titleMedium: TextStyle(color: textPrimaryLight),
-      labelLarge: TextStyle(color: textPrimaryLight),
-    ),
-    
-    // 3. Switch主题 - 独立配置，不影响文字
-    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
-    switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith<Color?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.selected)) {
-            return switchActiveThumb;        // 开启状态
-          }
-          return switchInactiveThumb;        // 关闭状态 - 深灰色小球
-        },
-      ),
-      trackColor: WidgetStateProperty.resolveWith<Color?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.selected)) {
-            return switchActiveTrack;        // 开启轨道
-          }
-          return switchInactiveTrack;        // 关闭轨道
-        },
-      ),
-      // 边框颜色
-      trackOutlineColor: WidgetStateProperty.all(switchTrackOutline),
-      // 边框宽度：开启时0，关闭时1px
-      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.selected)) {
-            return 0.0;  // 开启时不要边框
-          }
-          return 1.0;    // 关闭时1px边框
-        },
-      ),
-    ),
-    
-    // 4. 其他主题配置保持不变...
-    scaffoldBackgroundColor: backgroundLight,
-    primaryColor: primaryLight,
-    cardColor: cardColorLight,
-    appBarTheme: AppBarTheme(
-      backgroundColor: surfaceLight,
-      elevation: 0,
-      foregroundColor: textPrimaryLight,
-    ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryLight,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-    ),
-    iconTheme: IconThemeData(color: textPrimaryLight),
-    dividerColor: Colors.grey[300],
-    inputDecorationTheme: InputDecorationTheme(
-      fillColor: Colors.white,
-      filled: true,
-      border: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey[400]!),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey[400]!),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: primaryLight),
-      ),
-    ),
-  );
-
-  // 暗色主题类似配置...
-  static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    
-    // colorScheme - 暗色版本
-    colorScheme: ColorScheme.dark(
-      primary: primaryDark,
-      surface: surfaceDark,
-      onSurface: textPrimaryDark,
-    ),
-    
-    // 文字主题
-    textTheme: TextTheme(
-      bodyLarge: TextStyle(color: textPrimaryDark),
-      bodyMedium: TextStyle(
-        color: Colors.grey[200], 
-        fontSize: 16, 
-        height: 1.4
-      ),
-      bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
-      titleMedium: TextStyle(color: textPrimaryDark),
-      labelLarge: TextStyle(color: textPrimaryDark),
-    ),
-    
-    // Switch主题 - 暗色版本
-    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
-    switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith<Color?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.selected)) {
-            return primaryDark;    // 暗色主色
-          }
-          return const Color(0xFF9E9E9E);      // 暗色关闭小球
-        },
-      ),
-      trackColor: WidgetStateProperty.resolveWith<Color?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.selected)) {
-            return primaryDark.withValues(alpha: 0x80);  // 50%透明度
-          }
-          return const Color(0xFF424242);      // 暗色关闭轨道
-        },
-      ),
-      // 边框颜色
-      trackOutlineColor: WidgetStateProperty.all(const Color(0xFF616161)),
-      // 边框宽度：开启时0，关闭时1px
-      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
-        (Set<WidgetState> states) {
-          if (states.contains(WidgetState.selected)) {
-            return 0.0;  // 开启时不要边框
-          }
-          return 1.0;    // 关闭时1px边框
-        },
-      ),
-    ),
-    
-    // ... 其他暗色主题配置
-    scaffoldBackgroundColor: backgroundDark,
-    primaryColor: primaryDark,
-    cardColor: cardColorDark,
-    appBarTheme: AppBarTheme(
-      backgroundColor: chatRoomTopDark,
-      foregroundColor: Colors.white,
-      elevation: 0,
-    ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: chatRoomTopDark,
-      selectedItemColor: primaryDark,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-    ),
-    iconTheme: IconThemeData(color: Colors.grey[300]),
-    dividerColor: Colors.grey[800],
-    inputDecorationTheme: InputDecorationTheme(
-      fillColor: messageFieldBackgroundDark,
-      filled: true,
-      border: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey[700]!),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey[700]!),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: primaryDark),
-      ),
-    ),
-  );
-
-  // ========== 兼容性方法（保持现有代码不变） ==========
-  
-  // 旧常量别名（兼容现有代码）
-  static const Color appBackgroundLight = backgroundLight;
-  static const Color appBackgroundDark = backgroundDark;
-  static const Color pinkAccent = primaryLight;
-  static const Color pinkAccentDark = primaryDark;
-  
-  static Color get darkBackground => appBackgroundDark;
-  
-  // ========== 样式方法 ==========
-  
-  // 旁白样式
-  static TextStyle narrationStyle(BuildContext context) => TextStyle(
-    fontSize: 13,
-    color: Theme.of(context).brightness == Brightness.dark 
-        ? narrationTextDark 
-        : narrationTextLight,
-    fontStyle: FontStyle.italic,
-    height: 1.35,
-    fontWeight: FontWeight.w400,
-  );
-  
-  // 对话样式
-  static TextStyle dialogueStyle(BuildContext context) => TextStyle(
-    fontSize: 16,
-    color: Theme.of(context).brightness == Brightness.dark 
-        ? primaryTextDark 
-        : primaryTextLight,
-    height: 1.4,
-    fontWeight: FontWeight.normal,
-  );
-  
-  // 系统时间样式
-  static TextStyle systemTimeStyle(BuildContext context) => TextStyle(
-    fontSize: 12,
-    color: Theme.of(context).brightness == Brightness.dark 
-        ? secondaryTextDark 
-        : secondaryTextLight,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.3,
-  );
-  
-  // ========== 颜色获取方法 ==========
-  
-  static Color getAppBackground(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? appBackgroundDark 
-        : appBackgroundLight;
-  }
-  
-  static Color getAiBubbleColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? aiBubbleColorDark 
-        : aiBubbleColorLight;
-  }
-  
-  static Color getAiBubbleBorder(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? aiBubbleBorderDark 
-        : aiBubbleBorderLight;
-  }
-  
-  static Color getUserBubbleColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? userBubbleColorDark 
-        : userBubbleColorLight;
-  }
-  
-  static Color getUserBubbleBorder(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? userBubbleBorderDark 
-        : userBubbleBorderLight;
-  }
-  
-  static Color getChatRoomTop(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? chatRoomTopDark 
-        : chatRoomTopLight;
-  }
-  
-  static Color getMessageInputBackground(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? messageInputBackgroundDark 
-        : messageInputBackgroundLight;
-  }
-  
-  static Color getMessageFieldBackground(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? messageFieldBackgroundDark 
-        : messageFieldBackgroundLight;
-  }
-  
-  static Color getMessageFieldBorder(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? messageFieldBorderDark 
-        : messageFieldBorderLight;
-  }
-  
-  static Color getUserTextColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? userTextColorDark 
-        : userTextColorLight;
-  }
-  
-  // ========== 新增：获取边框颜色方法 ==========
-  
-  static Color getOutlineColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? outlineDark 
-        : outlineLight;
-  }
-  
-  static Color getOutlineVariantColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark 
-        ? outlineVariantDark 
-        : outlineVariantLight;
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\app\ui_theme_manager.dart
-
-Size: 8733 bytes
-
-Modified: 01/21/2026 16:08:14
-
-========================================
-
-// lib/app/ui_theme_manager.dart - 完整修复版本
-import 'package:flutter/material.dart';
-
-// 主题枚举
-enum UITheme {
-  strawberryCandy,  // 草莓糖心🍓（基于版本B）
-  pickleMilk,       // 酸菜牛奶🥛（基于版本A）
-  system            // 跟随系统（默认）
-}
-
-// 草莓糖心主题颜色配置（基于版本B）
-class StrawberryCandyTheme {
-  // 亮色模式
-  static const Color lightBackground = Color(0xFFFFF8FA);
-  static const Color lightPrimary = Color(0xFFFF5A7E);
-  static const Color lightPrimaryLight = Color(0xFFFFB6C1);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightText = Color(0xFF1D1D1F);
-  static const Color lightHintText = Color(0xFF6D6D6F);
-  static const Color lightBorder = Color(0xFFF1DCDE);
-  
-  // 暗色模式
-  static const Color darkBackground = Color(0xFF060405);
-  static const Color darkPrimary = Color(0xFFF95685);
-  static const Color darkPrimaryLight = Color(0xFFF95685);
-  static const Color darkCard = Color(0xFF1A1A1A);
-  static const Color darkText = Color(0xFFFFFFFF);
-  static const Color darkHintText = Color(0xFF9E9E9E);
-  static const Color darkBorder = Color(0xFF333333);
-}
-
-// 酸菜牛奶主题颜色配置（基于版本A）
-class PickleMilkTheme {
-  // 亮色模式
-  static const Color lightBackground = Color(0xFFFDF7F7);
-  static const Color lightPrimary = Color(0xFFFF5A7E);
-  static const Color lightPrimaryLight = Color(0xFFFFB6C1);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightText = Color(0xFF1D1D1F);
-  static const Color lightHintText = Color(0xFF8E8E93);
-  static const Color lightBorder = Color(0xFFD8D8D8);
-  
-  // 暗色模式
-  static const Color darkBackground = Color(0xFF121212);
-  static const Color darkPrimary = Color(0xFFF95685);
-  static const Color darkPrimaryLight = Color(0xFFF95685);
-  static const Color darkCard = Color(0xFF1E1E1E);
-  static const Color darkText = Color(0xFFFFFFFF);
-  static const Color darkHintText = Color(0xFFA0A0A0);
-  static const Color darkBorder = Color(0xFF444444);
-}
-
-// 主题管理器
-class UIThemeManager {
-  // 获取当前主题的显示名称
-  static String getThemeName(UITheme theme) {
-    switch (theme) {
-      case UITheme.strawberryCandy:
-        return '草莓糖心🍓';
-      case UITheme.pickleMilk:
-        return '酸菜牛奶🥛';
-      case UITheme.system:
-        return '跟随系统';
-    }
-  }
-
-  // 获取主题图标
-  static IconData getThemeIcon(UITheme theme) {
-    switch (theme) {
-      case UITheme.strawberryCandy:
-        return Icons.cake;
-      case UITheme.pickleMilk:
-        return Icons.local_cafe;
-      case UITheme.system:
-        return Icons.settings;
-    }
-  }
-
-  // 获取主题描述
-  static String getThemeDescription(UITheme theme) {
-    switch (theme) {
-      case UITheme.strawberryCandy:
-        return '清爽简洁的无边框设计，少女心配色';
-      case UITheme.pickleMilk:
-        return '优雅的边框设计，舒适的视觉层次';
-      case UITheme.system:
-        return '跟随系统外观设置';
-    }
-  }
-
-  // 根据当前主题获取颜色（用于动态切换）
-  static Color getBackgroundColor(BuildContext context, UITheme uiTheme) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (uiTheme == UITheme.strawberryCandy) {
-      return isDark ? StrawberryCandyTheme.darkBackground : StrawberryCandyTheme.lightBackground;
-    } else {
-      return isDark ? PickleMilkTheme.darkBackground : PickleMilkTheme.lightBackground;
-    }
-  }
-
-  static Color getPrimaryColor(BuildContext context, UITheme uiTheme) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (uiTheme == UITheme.strawberryCandy) {
-      return isDark ? StrawberryCandyTheme.darkPrimary : StrawberryCandyTheme.lightPrimary;
-    } else {
-      return isDark ? PickleMilkTheme.darkPrimary : PickleMilkTheme.lightPrimary;
-    }
-  }
-
-  static Color getTextColor(BuildContext context, UITheme uiTheme) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (uiTheme == UITheme.strawberryCandy) {
-      return isDark ? StrawberryCandyTheme.darkText : StrawberryCandyTheme.lightText;
-    } else {
-      return isDark ? PickleMilkTheme.darkText : PickleMilkTheme.lightText;
-    }
-  }
-
-  // 构建输入框边框（草莓糖心主题 - 无边框）
-  static InputBorder buildTextFieldBorderStrawberryCandy(BuildContext context) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    );
-  }
-
-  // 构建输入框边框（酸菜牛奶主题 - 有边框）
-  static InputBorder buildTextFieldBorderPickleMilk(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: isDark ? PickleMilkTheme.darkBorder : PickleMilkTheme.lightBorder,
-        width: 1,
-      ),
-    );
-  }
-
-  // 构建焦点边框（草莓糖心主题）
-  static InputBorder buildTextFieldFocusedBorderStrawberryCandy(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? StrawberryCandyTheme.darkPrimary : StrawberryCandyTheme.lightPrimary;
-    
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: primaryColor,
-        width: 2,
-      ),
-    );
-  }
-
-  // 构建焦点边框（酸菜牛奶主题）
-  static InputBorder buildTextFieldFocusedBorderPickleMilk(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? PickleMilkTheme.darkPrimary : PickleMilkTheme.lightPrimary;
-    
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: primaryColor,
-        width: 2,
-      ),
-    );
-  }
-
-  // 根据主题获取按钮样式
-  static ButtonStyle getButtonStyle(BuildContext context, UITheme uiTheme) {
-    final primaryColor = getPrimaryColor(context, uiTheme);
-    
-    if (uiTheme == UITheme.strawberryCandy) {
-      // 草莓糖心主题按钮：无阴影，圆角
-      return ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      );
-    } else {
-      // 酸菜牛奶主题按钮：轻微阴影，圆角
-      return ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        elevation: 0,
-        shadowColor: Colors.transparent, // 添加这行确保阴影完全透明
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      );
-    }
-  }
-
-  // 获取卡片颜色
-  static Color getCardColor(BuildContext context, UITheme uiTheme) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (uiTheme == UITheme.strawberryCandy) {
-      return isDark ? StrawberryCandyTheme.darkCard : StrawberryCandyTheme.lightCard;
-    } else {
-      return isDark ? PickleMilkTheme.darkCard : PickleMilkTheme.lightCard;
-    }
-  }
-
-  // 获取提示文本颜色
-  static Color getHintTextColor(BuildContext context, UITheme uiTheme) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (uiTheme == UITheme.strawberryCandy) {
-      return isDark ? StrawberryCandyTheme.darkHintText : StrawberryCandyTheme.lightHintText;
-    } else {
-      return isDark ? PickleMilkTheme.darkHintText : PickleMilkTheme.lightHintText;
-    }
-  }
-
-  // 从字符串转换为UITheme枚举
-  static UITheme fromString(String value) {
-    switch (value) {
-      case 'strawberryCandy':
-        return UITheme.strawberryCandy;
-      case 'pickleMilk':
-        return UITheme.pickleMilk;
-      default:
-        return UITheme.system;
-    }
-  }
-
-  // 将UITheme枚举转换为字符串
-  static String themeToString(UITheme theme) {  // 改名避免冲突
-    switch (theme) {
-      case UITheme.strawberryCandy:
-        return 'strawberryCandy';
-      case UITheme.pickleMilk:
-        return 'pickleMilk';
-      case UITheme.system:
-        return 'system';
-    }
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\components\custom_list_tile.dart
-
-Size: 0 bytes
-
-Modified: 01/02/2026 16:37:05
-
-========================================
-
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\components\image_placeholder.dart
-
-Size: 1024 bytes
-
-Modified: 01/02/2026 21:38:39
-
-========================================
-
-import 'package:flutter/material.dart';
-
-class ImagePlaceholder extends StatelessWidget {
-  final double size;
-  final Color color;
-  final IconData? icon;
-  final String? text;
-
-  const ImagePlaceholder({
-    super.key,
-    this.size = 40,
-    this.color = const Color(0xFFFF5A7E),
-    this.icon = Icons.person,
-    this.text,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: text != null
-            ? Text(
-                text!,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: size * 0.4,
-                  fontWeight: FontWeight.bold,
-                ),
-              )
-            : Icon(
-                icon,
-                color: Colors.white,
-                size: size * 0.6,
-              ),
-      ),
-    );
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\components\mood_day.dart
-
-Size: 888 bytes
-
-Modified: 01/02/2026 17:42:57
-
-========================================
-
-import 'package:flutter/material.dart';
-
-class MoodDay extends StatelessWidget {
-  const MoodDay({  // 确保有 const 关键字
-    super.key,
-    required this.day,
-    required this.emoji,
-    required this.hasMood,
-  });
-
-  final String day;
-  final String emoji;
-  final bool hasMood;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(day, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: hasMood ? const Color(0xFFFFD1DC) : Colors.grey[200],
-            shape: BoxShape.circle,
-          ),
-          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
-        ),
-      ],
-    );
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\components\order_card.dart
-
-Size: 1652 bytes
-
-Modified: 01/02/2026 17:42:57
-
-========================================
-
-import 'package:flutter/material.dart';
-
-class OrderCard extends StatelessWidget {
-  const OrderCard({  // 确保有 const 关键字
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.isLocked,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool isLocked;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isLocked ? Colors.white : Colors.white.withValues(alpha:0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white),
-      ),
-      child: Row(
-        children: [
-          Icon(isLocked ? Icons.lock_outline : Icons.check_circle, color: const Color(0xFFFFD1DC)),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    decoration: isLocked ? null : TextDecoration.lineThrough,
-                    color: isLocked ? Colors.black87 : Colors.grey,
-                  )),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
-              ],
-            ),
-          ),
-          const Icon(Icons.radio_button_unchecked, color: Color(0xFFF2F2F2)),
-        ],
-      ),
-    );
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\models\message.dart
-
-Size: 4676 bytes
-
-Modified: 01/21/2026 16:08:14
-
-========================================
-
-// lib/models/message.dart
-
-// 1. 使用 lowerCamelCase（Dart 官方推荐，解决所有 constant_identifier_names 警告）
-enum MessageType {
-  userNarration,     // 用户旁白
-  userDialogue,      // 用户对话
-  aiNarration,       // AI旁白
-  aiDialogue,        // AI对话
-  systemTime,        // 系统时间
-  systemState,       // 系统状态
-}
-
-// 2. 桥接 extension：处理 snake_case <-> camelCase 的兼容
-extension MessageTypeX on MessageType {
-  // 用于保存：新数据直接用 name（camelCase）
-  // 但我们不额外存 legacyName，因为我们想让新数据彻底现代化
-
-  // 用于读取：兼容旧的 snake_case 字符串
-  static MessageType fromStoredString(String? stored) {
-    if (stored == null) {
-      return MessageType.aiDialogue; // 默认 fallback
-    }
-
-    // 先尝试直接匹配 camelCase（新数据）
-    try {
-      return MessageType.values.byName(stored);
-    } on ArgumentError {
-      // 匹配失败 → 尝试 snake_case 兼容映射
-      switch (stored) {
-        case 'user_narration':
-          return MessageType.userNarration;
-        case 'user_dialogue':
-          return MessageType.userDialogue;
-        case 'ai_narration':
-          return MessageType.aiNarration;
-        case 'ai_dialogue':
-          return MessageType.aiDialogue;
-        case 'system_time':
-          return MessageType.systemTime;
-        case 'system_state':
-          return MessageType.systemState;
-        default:
-          // 未知格式 → fallback（可加日志）
-          return MessageType.aiDialogue;
-      }
-    }
-  }
-}
-
-class Message {
-  final String id;
-  final String role; // 'user' 或 'assistant'
-  final String timestamp;
-  final MessageType messageType;
-
-  final String rawContent;     // 原始完整字符串，带XML标签，用于发送给AI
-  final String displayContent; // 纯文本，用于UI显示和搜索
-
-  Message({
-    required this.id,
-    required this.role,
-    required this.timestamp,
-    required this.messageType,
-    required this.rawContent,
-    String? displayContent,
-  }) : displayContent = displayContent ?? _extractDisplayContent(rawContent);
-
-  static String _extractDisplayContent(String raw) {
-    // ... 原有提取逻辑不变 ...
-    final startResponse = raw.indexOf('<response>');
-    final endResponse = raw.lastIndexOf('</response>');
-    
-    if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
-      final responseInner = raw.substring(
-        startResponse + '<response>'.length,
-        endResponse,
-      ).trim();
-      
-      String extractedText = '';
-      
-      final envStart = responseInner.indexOf('<environment>');
-      final envEnd = responseInner.indexOf('</environment>');
-      if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
-        extractedText += responseInner
-            .substring(envStart + '<environment>'.length, envEnd)
-            .trim();
-      }
-      
-      final diaStart = responseInner.indexOf('<dialogue>');
-      final diaEnd = responseInner.indexOf('</dialogue>');
-      if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
-        if (extractedText.isNotEmpty) extractedText += ' ';
-        extractedText += responseInner
-            .substring(diaStart + '<dialogue>'.length, diaEnd)
-            .trim();
-      }
-      
-      if (extractedText.isNotEmpty) return extractedText;
-    }
-    
-    return raw.replaceAll(RegExp(r'<[^>]*>'), '').trim();
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'role': role,
-      'raw_content': rawContent,
-      'display_content': displayContent,
-      'timestamp': timestamp,
-      // 关键：新数据统一存 camelCase name
-      'message_type': messageType.name,
-    };
-  }
-
-factory Message.fromMap(Map<String, dynamic> map) {
-  final rawContent = map['raw_content'] ?? map['content'] ?? '';
-  final displayContent = map['display_content'] ?? '';
-
-  // 核心兼容逻辑：使用 fromStoredString 处理 snake_case 和 camelCase
-  final storedType = map['message_type'] as String?;
-  final messageType = MessageTypeX.fromStoredString(storedType); // 直接调用，移除 ??
-
-  return Message(
-    id: map['id'] as String,
-    role: map['role'] as String,
-    timestamp: map['timestamp'] as String,
-    messageType: messageType,
-    rawContent: rawContent,
-    displayContent: displayContent,
-  );
-}
-
-  @override
-  String toString() {
-    return 'Message(id: $id, role: $role, type: $messageType, raw: ${rawContent.length} chars, display: $displayContent)';
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\models\mood.dart
-
-Size: 0 bytes
-
-Modified: 01/02/2026 16:38:14
-
-========================================
-
-
-
-
-========================================
-
 File: D:\D\my_new_app\lib\pages\main_screen.dart
 
 Size: 1670 bytes
@@ -4432,6 +3193,767 @@ _buildSettingItem(
 
 ========================================
 
+File: D:\D\my_new_app\lib\pages\diary\diary_bookshelf_page.dart
+
+Size: 7942 bytes
+
+Modified: 01/22/2026 00:26:05
+
+========================================
+
+// lib/pages/diary/diary_bookshelf_page.dart
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../providers/diary_provider.dart';  // 这个提供 diaryListProvider
+import '../../models/diary_entry.dart';        // 这个提供 DiaryEntry 类
+import 'diary_editor_page.dart';              // 这个提供 DiaryEditorPage 类
+import 'diary_detail_page.dart';              // 这个提供 DiaryDetailPage 类
+
+class DiaryBookshelfPage extends ConsumerWidget {
+  const DiaryBookshelfPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final diaries = ref.watch(diaryListProvider);
+    final isLoading = ref.watch(diaryListProvider).isEmpty && ref.read(diaryListProvider.notifier).state.isEmpty;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFF5A7E),
+        title: const Text(
+          '我的日记书架',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => ref.refresh(diaryListProvider.notifier).loadAllDiaries(),
+            tooltip: '刷新',
+          ),
+        ],
+      ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFFFF5A7E),
+              ),
+            )
+          : diaries.isEmpty
+              ? _buildEmptyState(context)
+              : _buildBookshelfGrid(context, ref, diaries),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFFFF5A7E),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        elevation: 4,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DiaryEditorPage(),
+            ),
+          );
+        },
+        child: const Icon(Icons.add, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.menu_book_outlined,
+            size: 100,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '日记书架空空如也',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '点击右下角 + 写下第一篇日记吧',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5A7E),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DiaryEditorPage(),
+                ),
+              );
+            },
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.edit, size: 18),
+                SizedBox(width: 8),
+                Text('开始写日记'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookshelfGrid(
+      BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(20),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.67,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+      ),
+      itemCount: diaries.length,
+      itemBuilder: (ctx, index) {
+        final entry = diaries[index];
+        return _buildDiaryCard(context, ref, entry);
+      },
+    );
+  }
+
+  Widget _buildDiaryCard(
+      BuildContext context, WidgetRef ref, DiaryEntry entry) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DiaryDetailPage(entry: entry),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Colors.black,
+            width: 3,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 8,
+              offset: Offset(4, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: FutureBuilder<String>(
+            future: ref.read(diaryListProvider.notifier).getCoverPath(entry),
+            builder: (context, snapshot) {
+              if (snapshot.hasData &&
+                  snapshot.data!.isNotEmpty &&
+                  File(snapshot.data!).existsSync()) {
+                return Image.file(
+                  File(snapshot.data!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildFallbackCover(entry);
+                  },
+                );
+              }
+              return _buildFallbackCover(entry);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackCover(DiaryEntry entry) {
+    // 从十六进制颜色字符串解析为Color
+    Color parseColor(String hexColor) {
+      final hex = hexColor.replaceAll('#', '');
+      return Color(int.parse(hex, radix: 16) | 0xFF000000);
+    }
+
+    final color1 = entry.coverColor1 != null
+        ? parseColor(entry.coverColor1!)
+        : const Color(0xFFBAE1FF);
+    final color2 = entry.coverColor2 != null
+        ? parseColor(entry.coverColor2!)
+        : const Color(0xFFFFB3BA);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color1, color2],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              DateFormat('MM.dd').format(entry.createdAt),
+              style: const TextStyle(
+                fontSize: 32,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    blurRadius: 4,
+                    color: Colors.black26,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              DateFormat('yyyy').format(entry.createdAt),
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\diary\diary_detail_page.dart
+
+Size: 7549 bytes
+
+Modified: 01/22/2026 00:59:08
+
+========================================
+
+//lib/pages/diary/diary_detail_page.dart
+import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../providers/diary_provider.dart';
+import 'diary_editor_page.dart';
+import '../../models/diary_entry.dart';  // 确保这行存在且正确
+
+class DiaryDetailPage extends ConsumerWidget {
+  final DiaryEntry entry;
+  const DiaryDetailPage({super.key, required this.entry});
+
+  Future<void> _showDeleteDialog(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除日记'),
+        content: const Text('确定要删除这篇日记吗？删除后无法恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              '删除',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      await ref.read(diaryListProvider.notifier).deleteDiary(entry);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFF5A7E),
+        title: Text(
+          DateFormat('yyyy年MM月dd日').format(entry.createdAt),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DiaryEditorPage(entry: entry),
+                ),
+              );
+            },
+            tooltip: '编辑',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            onPressed: () => _showDeleteDialog(context, ref),
+            tooltip: '删除',
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 封面预览
+            _buildCoverPreview(context, ref),
+            const SizedBox(height: 30),
+            // 日期和时间
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: Colors.grey,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('yyyy年MM月dd日 EEEE', 'zh_CN')
+                      .format(entry.createdAt),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.access_time_outlined,
+                  color: Colors.grey,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('HH:mm').format(entry.createdAt),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 30),
+            // 日记内容
+            _buildDiaryContent(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverPreview(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<String>(
+      future: ref.read(diaryListProvider.notifier).getCoverPath(entry),
+      builder: (context, snapshot) {
+        final hasCoverImage = snapshot.hasData &&
+            snapshot.data!.isNotEmpty &&
+            File(snapshot.data!).existsSync();
+
+        Color parseColor(String hexColor) {
+          final hex = hexColor.replaceAll('#', '');
+          return Color(int.parse(hex, radix: 16) | 0xFF000000);
+        }
+
+        final color1 = entry.coverColor1 != null
+            ? parseColor(entry.coverColor1!)
+            : const Color(0xFFBAE1FF);
+        final color2 = entry.coverColor2 != null
+            ? parseColor(entry.coverColor2!)
+            : const Color(0xFFFFB3BA);
+
+        return Container(
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: hasCoverImage
+                ? Image.file(
+                    File(snapshot.data!),
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color1, color2],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        DateFormat('MM.dd').format(entry.createdAt),
+                        style: const TextStyle(
+                          fontSize: 48,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 6,
+                              color: Colors.black38,
+                              offset: Offset(2, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDiaryContent() {
+    try {
+      final contentJson = json.decode(entry.content);
+      if (contentJson is List && contentJson.isNotEmpty) {
+        // 提取文本内容
+        String text = '';
+        for (var element in contentJson) {
+          if (element is Map && element.containsKey('insert')) {
+            final insert = element['insert'];
+            if (insert is String) {
+              text += insert;
+            }
+          }
+        }
+        
+        return Text(
+          text.trim(),
+          style: const TextStyle(
+            fontSize: 16,
+            height: 1.6,
+          ),
+        );
+      }
+    } catch (e) {
+      // 如果解析失败，显示纯文本
+    }
+    
+    return Text(
+      entry.content,
+      style: const TextStyle(
+        fontSize: 16,
+        height: 1.6,
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\pages\diary\diary_editor_page.dart
+
+Size: 7353 bytes
+
+Modified: 01/22/2026 00:59:08
+
+========================================
+
+//lib/pages/diary/diary_editor_page.dart
+import 'dart:convert';  // 修复1：改为 dart:convert
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/diary_provider.dart';
+import '../../models/diary_entry.dart';  // 修复2：添加 DiaryEntry 的导入
+
+class DiaryEditorPage extends ConsumerStatefulWidget {
+  const DiaryEditorPage({this.entry, super.key});
+  final DiaryEntry? entry;
+
+  @override
+  ConsumerState<DiaryEditorPage> createState() => _DiaryEditorPageState();
+}
+
+class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // 如果是编辑模式，加载现有内容
+    if (widget.entry != null && widget.entry!.content.isNotEmpty) {
+      try {
+        // 尝试解析 JSON 内容
+        final contentJson = json.decode(widget.entry!.content);
+        if (contentJson is List && contentJson.isNotEmpty) {
+          // 提取文本内容
+          final text = _extractTextFromDelta(contentJson);
+          _textController.text = text;
+        } else {
+          _textController.text = widget.entry!.content;
+        }
+      } catch (e) {
+        // 如果解析失败，直接显示原始内容
+        _textController.text = widget.entry!.content;
+      }
+    }
+  }
+
+  String _extractTextFromDelta(List<dynamic> delta) {
+    String text = '';
+    for (var element in delta) {
+      if (element is Map && element.containsKey('insert')) {
+        final insert = element['insert'];
+        if (insert is String) {
+          text += insert;
+        }
+      }
+    }
+    return text.trim();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveDiary() async {
+    if (_isSaving) return;
+    
+    final text = _textController.text.trim();
+    
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('日记内容不能为空'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // 创建一个简单的 Delta JSON
+      final deltaJson = [
+        {'insert': '$text\n'}
+      ];
+      final contentStr = json.encode(deltaJson);
+
+      if (widget.entry != null) {
+        // 更新现有日记
+        await ref.read(diaryListProvider.notifier).updateDiary(
+              widget.entry!,
+              contentStr,
+            );
+      } else {
+        // 创建新日记
+        await ref.read(diaryListProvider.notifier).addDiary(contentStr);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                widget.entry != null ? '日记已更新' : '日记已保存'),
+            backgroundColor: const Color(0xFF4CAF50),
+          ),
+        );
+        
+        // 保存成功后返回
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存失败: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFF5A7E),
+        title: Text(
+          widget.entry != null ? '编辑日记' : '写日记',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.save, color: Colors.white),
+              onPressed: _saveDiary,
+              tooltip: '保存',
+            ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    controller: _textController,
+                    focusNode: _focusNode,
+                    maxLines: null,
+                    expands: true,
+                    keyboardType: TextInputType.multiline,
+                    textAlignVertical: TextAlignVertical.top,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '今天发生了什么？写下你的心情...',
+                      hintStyle: TextStyle(color: Colors.grey),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5A7E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _saveDiary,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        '保存日记',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
 File: D:\D\my_new_app\lib\pages\entrance\entrance_main_page.dart
 
 Size: 2347 bytes
@@ -6754,996 +6276,6 @@ Modified: 01/21/2026 16:08:14
       );
     }
   }
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\services\api_config.dart
-
-Size: 9428 bytes
-
-Modified: 01/18/2026 15:43:26
-
-========================================
-
-// lib/services/api_config.dart
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-
-class ApiProvider {
-  final String id;                // 唯一标识，如 'deepseek', 'groq', 'custom_1'
-  final String name;              // 显示名
-  final String baseUrl;           // 基础 URL
-  final String apiKey;            // 密钥（保存时加密更好，但先明文）
-  final List<String> models;      // 可用模型列表
-  final bool isOpenAiCompatible;  // 是否 OpenAI 格式（header Bearer, /chat/completions）
-  final bool isCustom;            // 是否用户自定义
-  final bool requiresProxy;       // 仅用于提示用户，App不控制代理
-  final String setupGuide;        // 设置指南
-
-  ApiProvider({
-    required this.id,
-    required this.name,
-    required this.baseUrl,
-    required this.apiKey,
-    this.models = const [],
-    this.isOpenAiCompatible = true,
-    this.isCustom = false,
-    this.requiresProxy = false,
-    this.setupGuide = '',
-  });
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'name': name,
-        'baseUrl': baseUrl,
-        'apiKey': apiKey,
-        'models': models,
-        'isOpenAiCompatible': isOpenAiCompatible,
-        'isCustom': isCustom,
-        'requiresProxy': requiresProxy,
-        'setupGuide': setupGuide,
-      };
-
-  factory ApiProvider.fromMap(Map<String, dynamic> map) => ApiProvider(
-        id: map['id'] as String,
-        name: map['name'] as String,
-        baseUrl: map['baseUrl'] as String,
-        apiKey: map['apiKey'] as String,
-        models: List<String>.from(map['models'] ?? []),
-        isOpenAiCompatible: map['isOpenAiCompatible'] ?? true,
-        isCustom: map['isCustom'] ?? false,
-        requiresProxy: map['requiresProxy'] ?? false,
-        setupGuide: map['setupGuide'] ?? '',
-      );
-}
-
-class ApiConfig {
-  static const String _providersKey = 'api_providers';
-  static const String _currentProviderIdKey = 'current_provider_id';
-  static const String _currentModelKey = 'current_model';
-
-  // 预设模板（硬编码）- 基于你原有的provider信息改进
-  static final List<ApiProvider> defaultProviders = [
-    ApiProvider(
-      id: 'deepseek',
-      name: 'DeepSeek',
-      baseUrl: 'https://api.deepseek.com',
-      apiKey: '', // 用户必须自己填
-      models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
-      isOpenAiCompatible: true,
-      requiresProxy: false,
-      setupGuide: '1. 访问 https://platform.deepseek.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方',
-    ),
-    ApiProvider(
-      id: 'ohmygpt',
-      name: 'OhMyGPT',
-      baseUrl: 'https://api.ohmygpt.com/v1',
-      apiKey: '',
-      models: ['claude-3-5-haiku-20241022', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus'],
-      isOpenAiCompatible: true,
-      requiresProxy: true,
-      setupGuide: '1. 访问 https://www.ohmygpt.com/dashboard\n2. 确保账户有余额\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
-    ),
-    ApiProvider(
-      id: 'openai',
-      name: 'OpenAI',
-      baseUrl: 'https://api.openai.com/v1',
-      apiKey: '',
-      models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-      isOpenAiCompatible: true,
-      requiresProxy: true,
-      setupGuide: '1. 访问 https://platform.openai.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
-    ),
-    ApiProvider(
-      id: 'nvidia',
-      name: 'NVIDIA API',
-      baseUrl: 'https://integrate.api.nvidia.com/v1',
-      apiKey: '',
-      models: ['meta/llama-3.1-405b-instruct', 'meta/llama-3.1-70b-instruct', 'z-ai/glm-4', 'minimaxai/minimax-m2.1'],
-      isOpenAiCompatible: true,
-      requiresProxy: true,
-      setupGuide: '1. 访问 https://build.nvidia.com\n2. 获取 API Key\n3. 可能需要 VPN/代理',
-    ),
-    // 新增预设
-    ApiProvider(
-      id: 'groq',
-      name: 'Groq',
-      baseUrl: 'https://api.groq.com/openai/v1',
-      apiKey: '',
-      models: ['llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it', 'llama-3.1-70b-versatile'],
-      isOpenAiCompatible: true,
-      requiresProxy: false,
-      setupGuide: '1. 访问 https://console.groq.com\n2. 注册并获取API Key',
-    ),
-    ApiProvider(
-      id: 'anthropic',
-      name: 'Anthropic (Claude)',
-      baseUrl: 'https://api.anthropic.com/v1',
-      apiKey: '',
-      models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
-      isOpenAiCompatible: false,
-      requiresProxy: true,
-      setupGuide: '1. 访问 https://console.anthropic.com\n2. 获取 API Key\n3. 需要特殊格式请求',
-    ),
-  ];
-
-  // 加载所有 provider（预设 + 自定义）
-  static Future<List<ApiProvider>> loadProviders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_providersKey);
-    
-    if (jsonStr == null || jsonStr.isEmpty) {
-      // 第一次：返回预设
-      return List.from(defaultProviders);
-    }
-    
-    try {
-      final List<dynamic> list = jsonDecode(jsonStr);
-      return list.map((e) => ApiProvider.fromMap(e)).toList();
-    } catch (e) {
-      print('加载服务商失败: $e');
-      return List.from(defaultProviders);
-    }
-  }
-
-  // 保存所有 provider
-  static Future<void> saveProviders(List<ApiProvider> providers) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = jsonEncode(providers.map((p) => p.toMap()).toList());
-    await prefs.setString(_providersKey, json);
-  }
-
-  // 获取当前 provider ID 和 model
-  static Future<String> getCurrentProviderId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_currentProviderIdKey) ?? 'deepseek';
-  }
-
-  static Future<String> getCurrentModel() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_currentModelKey) ?? 'deepseek-chat';
-  }
-
-  // 设置当前
-  static Future<void> setCurrent(String providerId, String model) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_currentProviderIdKey, providerId);
-    await prefs.setString(_currentModelKey, model);
-  }
-
-  // 获取当前完整 provider
-  static Future<ApiProvider?> getCurrentProvider() async {
-    final id = await getCurrentProviderId();
-    final all = await loadProviders();
-    try {
-      return all.firstWhere((p) => p.id == id);
-    } catch (e) {
-      return defaultProviders.first;
-    }
-  }
-
-  // 尝试从 /models 拉取模型列表（OpenAI 兼容的才有效）
-  static Future<List<String>> tryFetchModels(ApiProvider provider) async {
-    if (!provider.isOpenAiCompatible) return provider.models; // 非兼容的跳过
-    if (provider.apiKey.isEmpty) return provider.models; // 没有API Key不尝试
-
-    try {
-      final response = await http.get(
-        Uri.parse('${provider.baseUrl}/models'),
-        headers: {'Authorization': 'Bearer ${provider.apiKey}'},
-      );
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> modelList = data['data'] ?? [];
-        return modelList.map((m) => m['id'].toString()).toList();
-      } else {
-        print('拉取模型失败: ${response.statusCode}');
-        return provider.models;
-      }
-    } catch (e) {
-      print('拉取模型异常: $e');
-      return provider.models;
-    }
-  }
-
-  // 添加自定义provider
-  static Future<void> addCustomProvider({
-    required String name,
-    required String baseUrl,
-    required String apiKey,
-    bool isOpenAiCompatible = true,
-    bool requiresProxy = false,
-  }) async {
-    final all = await loadProviders();
-    
-    // 生成唯一ID
-    final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
-    
-    final newProvider = ApiProvider(
-      id: id,
-      name: name,
-      baseUrl: baseUrl,
-      apiKey: apiKey,
-      models: [], // 初始为空，后续可以拉取
-      isOpenAiCompatible: isOpenAiCompatible,
-      isCustom: true,
-      requiresProxy: requiresProxy,
-      setupGuide: '自定义服务商',
-    );
-    
-    all.add(newProvider);
-    await saveProviders(all);
-  }
-
-  // 删除provider
-  static Future<void> deleteProvider(String id) async {
-    final all = await loadProviders();
-    all.removeWhere((p) => p.id == id);
-    await saveProviders(all);
-  }
-
-  // 更新provider的API Key和模型
-  static Future<void> updateProvider({
-    required String id,
-    String? apiKey,
-    List<String>? models,
-  }) async {
-    final all = await loadProviders();
-    final index = all.indexWhere((p) => p.id == id);
-    
-    if (index != -1) {
-      final provider = all[index];
-      all[index] = ApiProvider(
-        id: provider.id,
-        name: provider.name,
-        baseUrl: provider.baseUrl,
-        apiKey: apiKey ?? provider.apiKey,
-        models: models ?? provider.models,
-        isOpenAiCompatible: provider.isOpenAiCompatible,
-        isCustom: provider.isCustom,
-        requiresProxy: provider.requiresProxy,
-        setupGuide: provider.setupGuide,
-      );
-      await saveProviders(all);
-    }
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\services\api_service.dart
-
-Size: 2603 bytes
-
-Modified: 01/18/2026 15:43:26
-
-========================================
-
-// lib/services/api_service.dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'api_config.dart';
-
-class ApiService {
-  Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
-    final provider = await ApiConfig.getCurrentProvider();
-    if (provider == null) {
-      throw Exception('没有选择服务商');
-    }
-
-    final modelName = model ?? await ApiConfig.getCurrentModel();
-
-    if (provider.apiKey.isEmpty) {
-      throw Exception('请先在设置中配置 ${provider.name} 的 API Key');
-    }
-
-    if (!provider.isOpenAiCompatible) {
-      throw Exception('当前服务商 ${provider.name} 不支持 OpenAI 格式，请切换其他服务商');
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse('${provider.baseUrl}/chat/completions'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${provider.apiKey}',
-        },
-        body: jsonEncode({
-          'model': modelName,
-          'messages': messages,
-          'temperature': 0.9,
-          'stream': false,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['choices'][0]['message']['content'] as String?;
-      } else {
-        throw Exception('API 错误: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('网络请求失败: $e');
-    }
-  }
-
-  // 新增：获取当前服务商的可用模型
-  Future<List<String>> getAvailableModels() async {
-    final provider = await ApiConfig.getCurrentProvider();
-    if (provider == null) return [];
-    return provider.models;
-  }
-
-  // 测试连接（兼容原有）
-  Future<bool> testConnection({
-    String? baseUrl,
-    String? apiKey,
-    String? model,
-  }) async {
-    final provider = await ApiConfig.getCurrentProvider();
-    if (provider == null) return false;
-
-    final testBaseUrl = baseUrl ?? provider.baseUrl;
-    final testApiKey = apiKey ?? provider.apiKey;
-    
-    if (testApiKey.isEmpty) {
-      throw Exception('API Key 为空');
-    }
-
-    if (!provider.isOpenAiCompatible) {
-      throw Exception('当前服务商不支持 OpenAI 格式');
-    }
-
-    try {
-      final response = await http.get(
-        Uri.parse('$testBaseUrl/models'),
-        headers: {'Authorization': 'Bearer $testApiKey'},
-      );
-
-      return response.statusCode == 200;
-    } catch (e) {
-      throw Exception('连接失败: $e');
-    }
-  }
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\services\constants.dart
-
-Size: 0 bytes
-
-Modified: 01/02/2026 16:37:48
-
-========================================
-
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\services\export_service.dart
-
-Size: 5567 bytes
-
-Modified: 01/21/2026 19:12:53
-
-========================================
-
-// lib/services/export_service.dart
-import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
-import '../models/message.dart';
-import 'storage_service.dart';
-import 'package:permission_handler/permission_handler.dart';  // ← 加这一行
-
-class ExportData {
-  final String version = '1.0';
-  final String exportedAt;
-  final String roomId;
-  final String nickname;
-  final Map<String, String> character;
-  final List<Message> messages;
-
-  ExportData({
-    required this.exportedAt,
-    required this.roomId,
-    required this.nickname,
-    required this.character,
-    required this.messages,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'version': version,
-        'exported_at': exportedAt,
-        'room_id': roomId,
-        'nickname': nickname,
-        'character': character,
-        'messages': messages.map((m) => m.toMap()).toList(),
-      };
-}
-
-class ExportService {
-  static const String kDefaultRoomId = StorageService.kDefaultRoomId;
-
-static Future<ExportResult> exportChat({
-  required bool includeCharacter,
-  required String characterName,
-  String roomId = kDefaultRoomId,
-  bool overwrite = false,
-}) async {
-  try {
-    // 请求存储权限（Android 必要）
-    if (Platform.isAndroid) {
-      var status = await Permission.storage.status;
-      if (!status.isGranted) {
-        status = await Permission.storage.request();
-        if (!status.isGranted) {
-          return ExportResult(success: false, message: '需要存储权限才能保存文件');
-        }
-      }
-    }
-
-    final storage = StorageService();
-    final messages = await storage.loadChatHistory(roomId: roomId);
-    if (messages.isEmpty) {
-      return ExportResult(success: false, message: '无消息可导出');
-    }
-
-    final now = DateTime.now();
-    final formatter = DateFormat('yyyy-MM-dd_HHmm');
-    final timestamp = formatter.format(now);
-
-    final nicknameRaw = await storage.getCharacterNickname();
-    final nickname = nicknameRaw.isEmpty ? characterName : nicknameRaw;
-    final characterData = includeCharacter ? await storage.loadCharacterData() : <String, String>{};
-
-    final export = ExportData(
-      exportedAt: now.toIso8601String(),
-      roomId: roomId,
-      nickname: nickname,
-      character: characterData,
-      messages: messages,
-    );
-
-    final jsonString = jsonEncode(export.toJson());
-    final type = includeCharacter ? '全部配置' : '聊天记录';
-    final baseFileName = 'lovme_chat_${nickname}_${roomId}_${type}_$timestamp';
-
-    // 公共 Download 目录（用户可见！）
-    final downloadDir = Directory('/storage/emulated/0/Download');
-    if (!await downloadDir.exists()) {
-      await downloadDir.create(recursive: true);
-    }
-
-    final lovmeDir = Directory(path.join(downloadDir.path, 'lovme'));
-    if (!await lovmeDir.exists()) {
-      await lovmeDir.create(recursive: true);
-    }
-
-    var filePath = path.join(lovmeDir.path, '$baseFileName.json');
-    var file = File(filePath);
-
-    // 防覆盖：序号递增
-    int counter = 1;
-    while (await file.exists() && !overwrite) {
-      filePath = path.join(lovmeDir.path, '${baseFileName}_$counter.json');
-      file = File(filePath);
-      counter++;
-    }
-
-    // 原子写入
-    final tempFile = await File(path.join((await getTemporaryDirectory()).path, 'temp_export.json'))
-        .writeAsString(jsonString);
-    await tempFile.copy(filePath);
-    await tempFile.delete();
-
-    if (kDebugMode) {
-      print('公共保存成功: $filePath');
-      print('大小: ${await file.length()} bytes');
-    }
-
-    return ExportResult(
-      success: true,
-      message: '保存到 Download/lovme',
-      filePath: filePath,
-      file: file,
-    );
-  } catch (e) {
-    debugPrint('导出失败: $e');
-    return ExportResult(success: false, message: '导出失败: $e');
-  }
-}
-
-  /// 检查文件是否存在
-  static Future<bool> checkFileExists(String characterName, bool includeCharacter) async {
-    try {
-      final type = includeCharacter ? '全部配置' : '聊天记录';
-      final fileName = '$characterName-$type.json';
-      final downloadsDir = await getDownloadsDirectory();
-      if (downloadsDir == null) return false;
-      
-      final lovmeDir = Directory(path.join(downloadsDir.path, 'lovme'));
-      final filePath = path.join(lovmeDir.path, fileName);
-      return await File(filePath).exists();
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// 获取保存目录的显示路径（用于显示给用户）
-  static Future<String> getDisplayPath() async {
-    final downloadsDir = await getDownloadsDirectory();
-    if (downloadsDir == null) return '下载目录';
-    
-    // 转换路径为可读格式
-    String pathStr = downloadsDir.path;
-    
-    // 如果是Android，转换为用户友好的路径
-    if (pathStr.contains('/storage/emulated/0/')) {
-      pathStr = pathStr.replaceAll('/storage/emulated/0/', '/sdcard/');
-    }
-    
-    return path.join(pathStr, 'lovme');
-  }
-}
-
-/// 导出结果类
-class ExportResult {
-  final bool success;
-  final String message;
-  final String? filePath;
-  final bool fileExists;
-  final File? file;
-
-  ExportResult({
-    required this.success,
-    required this.message,
-    this.filePath,
-    this.fileExists = false,
-    this.file,
-  });
-}
-
-
-
-========================================
-
-File: D:\D\my_new_app\lib\services\storage_service.dart
-
-Size: 13485 bytes
-
-Modified: 01/21/2026 17:20:19
-
-========================================
-
-// lib/services/storage_service.dart
-import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path_lib;
-import 'package:flutter/foundation.dart';
-import '../models/message.dart';
-import 'dart:convert';
-
-class StorageService {
-  static final StorageService _instance = StorageService._internal();
-  factory StorageService() => _instance;
-  StorageService._internal();
-
-  // 🔥 添加这行！
-  static const String kDefaultRoomId = 'default';
-  
-
-  Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
-
-  // ── 开发者模式相关 ──
-  Future<void> saveDeveloperMode(bool enabled) async {
-    final prefs = await _prefs;
-    await prefs.setBool('developer_mode', enabled);
-  }
-
-  Future<bool> getDeveloperMode() async {
-    final prefs = await _prefs;
-    return prefs.getBool('developer_mode') ?? false;
-  }
-
-  // ── 新增：夜间模式相关 ──
-  Future<void> saveThemeMode(String mode) async {
-    final prefs = await _prefs;
-    await prefs.setString('theme_mode', mode); // 'light', 'dark', 'system'
-  }
-
-  Future<String> getThemeMode() async {
-    final prefs = await _prefs;
-    return prefs.getString('theme_mode') ?? 'system'; // 默认跟随系统
-  }
-
-  // ── 聊天记录相关 ──（必须保留）- 已添加 roomId 参数
-  Future<void> saveChatHistory(List<Message> history, {String roomId = kDefaultRoomId}) async {
-    final prefs = await _prefs;
-    final List<Map<String, dynamic>> serializableHistory = 
-        history.map((msg) => msg.toMap()).toList();
-    final jsonString = jsonEncode(serializableHistory);
-    final key = 'chat_history_$roomId';  // 使用动态key
-    await prefs.setString(key, jsonString);
-    if (kDebugMode) print('保存聊天历史到 $key，消息数: ${history.length}');
-  }
-
-  Future<List<Message>> loadChatHistory({String roomId = kDefaultRoomId}) async {
-    final prefs = await _prefs;
-    final key = 'chat_history_$roomId';  // 使用动态key
-    String? jsonString = prefs.getString(key);
-    
-    // 🔥 零感知旧数据迁移（仅执行一次：旧 master → 新 default）
-    if (jsonString == null && roomId == kDefaultRoomId) {
-      final legacyKey = 'chat_history_master';
-      jsonString = prefs.getString(legacyKey);
-      if (jsonString != null && jsonString.isNotEmpty) {
-        try {
-          final List<dynamic> decoded = jsonDecode(jsonString);
-          final count = decoded.length;
-          await prefs.setString(key, jsonString);  // 复制到新 key
-          await prefs.remove(legacyKey);           // 删除旧 key（安全清理）
-          if (kDebugMode) print('✅ 旧数据迁移完成: $count 条消息 from $legacyKey to $key');
-        } catch (e) {
-          if (kDebugMode) print('迁移解析失败: $e，保留原数据');
-        }
-      }
-    }
-    
-    if (jsonString == null || jsonString.isEmpty) return [];
-    
-    try {
-      final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
-    } catch (e) {
-      if (kDebugMode) print('聊天记录解析失败: $e');
-      return [];
-    }
-  }
-
-  Future<void> clearChatHistory({String roomId = kDefaultRoomId}) async {
-    final prefs = await _prefs;
-    final key = 'chat_history_$roomId';
-    await prefs.remove(key);
-    // 兼容清理旧 master（仅默认房间）
-    if (roomId == kDefaultRoomId) {
-      await prefs.remove('chat_history_master');
-    }
-    if (kDebugMode) print('清空聊天历史: $key');
-  }
-
-  // ── 角色编辑相关 ──
-  Future<void> saveCharacterData(Map<String, String> data) async {
-    final prefs = await _prefs;
-    final jsonString = jsonEncode(data);
-    await prefs.setString('character_data', jsonString);
-  }
-
-  Future<Map<String, String>> loadCharacterData() async {
-    final prefs = await _prefs;
-    final jsonString = prefs.getString('character_data');
-    if (jsonString == null || jsonString.isEmpty) {
-      return {};
-    }
-    try {
-      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
-      return decoded.map((key, value) => MapEntry(key, value as String));
-    } catch (e) {
-      if (kDebugMode) debugPrint('角色数据解析失败: $e');
-      return {};
-    }
-  }
-
-  Future<String> getCharacterSystemPrompt({String? currentTime}) async {
-    final data = await loadCharacterData();
-    
-    // 读取基础字段
-    final nickname = data['nickname'] ?? 'Master';
-    final intro = data['intro'] ?? '';
-    final privateSetting = data['private_setting'] ?? '';
-    final opening = data['opening'] ?? '';
-    
-    // 读取自定义格式相关字段
-    final enableCustomFormat = data['enable_custom_format'] == 'true';
-    final customFormat = data['custom_format'] ?? '';
-    
-    String prompt = '';
-    
-    // 1. 拼接基础设定
-    if (nickname.isNotEmpty) {
-      prompt += '角色名称：$nickname\n\n';
-    }
-    
-    if (intro.isNotEmpty) {
-      prompt += '角色设定：$intro\n\n';
-    }
-    
-    if (privateSetting.isNotEmpty) {
-      prompt += '附加设定（私密，不对外展示）：$privateSetting\n\n';
-    }
-    
-    if (opening.isNotEmpty) {
-      prompt += '开场白示例：$opening\n\n';
-    }
-    
-    // 2. 如果启用自定义格式且有内容，作为单独段落追加
-    if (enableCustomFormat && customFormat.isNotEmpty) {
-      prompt += '\n=== 以下为格式要求 ===\n';
-      prompt += '$customFormat\n';
-    }
-    
-    return prompt.trim();
-  }
-
-  Future<void> saveLastStatus(String status) async {
-    final prefs = await _prefs;
-    await prefs.setString('last_valid_status', status.trim());
-  }
-
-  Future<String> getLastStatus() async {
-    final prefs = await _prefs;
-    return prefs.getString('last_valid_status') ?? '空白';
-  }
-  
-  Future<String> getCharacterNickname() async {
-    final data = await loadCharacterData();
-    return data['nickname'] ?? '';
-  }
-
-  Future<String> getCharacterIntro() async {
-    final data = await loadCharacterData();
-    return data['intro'] ?? '';
-  }
-
-  Future<String> getCharacterOpening() async {
-    final data = await loadCharacterData();
-    return data['opening'] ?? '';
-  }
-
-  // ── 角色头像路径相关 ──
-  Future<void> saveCharacterAvatarPath(String path) async {
-    final prefs = await _prefs;
-    await prefs.setString('character_avatar_path', path);
-  }
-
-  Future<String?> getCharacterAvatarPath() async {
-    final prefs = await _prefs;
-    return prefs.getString('character_avatar_path');
-  }
-
-  Future<bool> hasCustomAvatar() async {
-    final avatarPath = await getCharacterAvatarPath();
-    if (avatarPath == null || avatarPath.isEmpty) return false;
-    final file = File(avatarPath);
-    return await file.exists();
-  }
-
-  Future<File?> getAvatarFile() async {
-    final avatarPath = await getCharacterAvatarPath();
-    if (avatarPath == null || avatarPath.isEmpty) return null;
-    final file = File(avatarPath);
-    if (await file.exists()) return file;
-    return null;
-  }
-
-  Future<void> clearAllCharacterData() async {
-    final prefs = await _prefs;
-    await prefs.remove('character_avatar_path');
-    await prefs.remove('character_data');
-  }
-
-  // ── 用户头像和资料相关 ──
-  Future<void> saveUserAvatarPath(String path) async {
-    final prefs = await _prefs;
-    await prefs.setString('user_avatar_path', path);
-  }
-
-  Future<String?> getUserAvatarPath() async {
-    final prefs = await _prefs;
-    return prefs.getString('user_avatar_path');
-  }
-
-  Future<String> copyUserAvatarToAppDir(String sourcePath) async {
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
-      final newPath = '${appDir.path}/$fileName';
-      final sourceFile = File(sourcePath);
-      if (await sourceFile.exists()) {
-        await sourceFile.copy(newPath);
-        return newPath;
-      } else {
-        throw Exception('源文件不存在: $sourcePath');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('复制用户头像失败: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> saveUserName(String userName) async {
-    final prefs = await _prefs;
-    await prefs.setString('user_name', userName);
-  }
-
-  Future<String> getUserName() async {
-    final prefs = await _prefs;
-    return prefs.getString('user_name') ?? '';
-  }
-
-  Future<void> saveShowUserAvatar(bool show) async {
-    final prefs = await _prefs;
-    await prefs.setBool('show_user_avatar', show);
-  }
-
-  Future<bool> getShowUserAvatar() async {
-    final prefs = await _prefs;
-    return prefs.getBool('show_user_avatar') ?? true;
-  }
-
-  Future<Map<String, dynamic>> getUserProfile() async {
-    final name = await getUserName();
-    final avatarPath = await getUserAvatarPath();
-    final showAvatar = await getShowUserAvatar();
-    
-    return {
-      'name': name,
-      'avatarPath': avatarPath,
-      'showAvatar': showAvatar,
-    };
-  }
-
-  Future<void> saveUserProfile(Map<String, dynamic> profile) async {
-    if (profile['name'] != null) await saveUserName(profile['name'] as String);
-    if (profile['avatarPath'] != null) await saveUserAvatarPath(profile['avatarPath'] as String);
-    if (profile['showAvatar'] != null) await saveShowUserAvatar(profile['showAvatar'] as bool);
-  }
-
-  Future<String> copyFileToAppDir(String sourcePath) async {
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
-      final newPath = '${appDir.path}/$fileName';
-      final sourceFile = File(sourcePath);
-      if (await sourceFile.exists()) {
-        await sourceFile.copy(newPath);
-        return newPath;
-      } else {
-        throw Exception('源文件不存在: $sourcePath');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('复制文件失败: $e');
-      rethrow;
-    }
-  }
-  
-  // 保存旁白居中设置（使用 SharedPreferences）
-  Future<void> saveNarrationCentered(bool centered) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('narration_centered', centered);
-  }
-
-  // 读取旁白居中设置
-  Future<bool> getNarrationCentered() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
-  }
-
-  // ── 新增：UI主题相关 ──
-  Future<void> saveUITheme(String theme) async {
-    final prefs = await _prefs;
-    await prefs.setString('ui_theme', theme);
-  }
-
-  Future<String> getUITheme() async {
-    final prefs = await _prefs;
-    return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
-  }
-
-  // 获取边框样式（兼容旧版本）
-  Future<String> getBorderStyle() async {
-    final prefs = await _prefs;
-    return prefs.getString('border_style') ?? '无边框';
-  }
-
-  Future<void> saveBorderStyle(String style) async {
-    final prefs = await _prefs;
-    await prefs.setString('border_style', style);
-  }
-
-  // ── 新增：App 状态快照（防进程杀） ──
-  Future<void> saveAppState({
-    List<Message>? messages,  // 聊天历史
-    double? scrollOffset,     // 滚动位置
-    String? inputText,        // 输入框内容
-    String? currentRoute,     // 当前页面
-  }) async {
-    final prefs = await _prefs;
-    
-    // 1. 保存聊天历史（如果传入）
-    if (messages != null && messages.isNotEmpty) {
-      await saveChatHistory(messages);  // 使用默认roomId
-    }
-    
-    // 2. 保存滚动位置
-    if (scrollOffset != null) {
-      await prefs.setDouble('chat_scroll_offset', scrollOffset);
-    }
-    
-    // 3. 保存输入框内容
-    if (inputText != null) {
-      await prefs.setString('chat_input_text', inputText);
-    }
-    
-    // 4. 保存当前路由（快速恢复页面）
-    if (currentRoute != null) {
-      await prefs.setString('last_route', currentRoute);
-    }
-    
-    // 5. 时间戳（判断是否过期）
-    await prefs.setInt('last_state_time', DateTime.now().millisecondsSinceEpoch);
-  }
-
-  Future<Map<String, dynamic>> loadAppState() async {
-    final prefs = await _prefs;
-    final lastTime = prefs.getInt('last_state_time') ?? 0;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    
-    // 状态过期阈值：30分钟
-    if (now - lastTime > 30 * 60 * 1000) {
-      return {}; // 过期，返回空
-    }
-    
-    return {
-      'scrollOffset': prefs.getDouble('chat_scroll_offset') ?? 0.0,
-      'inputText': prefs.getString('chat_input_text') ?? '',
-      'lastRoute': prefs.getString('last_route') ?? '/chat',
-      'chatHistory': await loadChatHistory(), // 使用默认roomId
-    };
-  }
-
-  Future<void> clearAppState() async {
-    final prefs = await _prefs;
-    await prefs.remove('chat_scroll_offset');
-    await prefs.remove('chat_input_text');
-    await prefs.remove('last_route');
-    await prefs.remove('last_state_time');
-  }
-}
 
 
 
