@@ -205,18 +205,54 @@ class _MePageState extends State<MePage> {
         title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
         onTap: () {
-          // 只针对“心情不好·日记本”跳转到日记书架
+          // 🎯 只针对"心情不好·日记本"跳转，并添加错误捕获
           if (title == "心情不好·日记本") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DiaryBookshelfPage(),
-              ),
-            );
+            try {
+              // 添加调试输出
+              if (kDebugMode) {
+                print('🎯 正在跳转到日记书架页面...');
+              }
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DiaryBookshelfPage(),
+                ),
+              ).then((_) {
+                if (kDebugMode) {
+                  print('✅ 从日记书架页面返回');
+                }
+              }).catchError((error) {
+                if (kDebugMode) {
+                  print('❌ 跳转过程出错: $error');
+                }
+              });
+              
+            } catch (e, stackTrace) {
+              // 捕获并打印详细错误
+              if (kDebugMode) {
+                print('💥 点击日记本时发生异常:');
+                print('错误类型: ${e.runtimeType}');
+                print('错误信息: $e');
+                print('堆栈跟踪: $stackTrace');
+              }
+              
+              // 在界面上显示错误（红色提示）
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('打开日记本时出错: ${e.toString().split('\n').first}'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
           } else {
             // 其他功能保持开发中提示
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('$title 功能开发中...')),
+              SnackBar(
+                content: Text('$title 功能开发中...'),
+                duration: const Duration(seconds: 1),
+              ),
             );
           }
         },
