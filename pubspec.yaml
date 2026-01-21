@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.0
+  sdk: ^3.0.0
 
 dependencies:
   flutter:
@@ -16,7 +16,7 @@ dependencies:
   camera: ^0.10.6
   path_provider: ^2.1.5
   path: ^1.9.0
-  intl: ^0.20.2  # 保持 0.20.2，与 Flutter SDK 一致
+  intl: ^0.20.2
   xml: ^6.4.2
   flutter_foreground_task: ^9.2.0
   flutter_native_splash: ^2.4.1
@@ -26,17 +26,23 @@ dependencies:
   file_picker: ^10.3.8
   share_plus: ^12.0.1
   permission_handler: ^11.3.1
+  
   # === 日记本依赖 ===
   flutter_riverpod: ^2.5.1
-  isar: ^3.1.0
-  isar_flutter_libs: ^3.1.0
+  # 切换到社区维护版（2025-2026活跃更新）
+  isar_community: ^3.3.0
+  isar_community_flutter_libs: ^3.3.0
   uuid: ^4.3.0
-  flutter_quill: ^11.5.0  # ⬅️ 升级到最新版
+  flutter_quill: ^11.5.0
+  flutter_quill_extensions: ^11.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  build_runner: ^2.4.12
+  # 切换到社区版生成器
+  isar_community_generator: ^3.3.0
 
 flutter:
   uses-material-design: true
