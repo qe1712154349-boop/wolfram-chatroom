@@ -1,6 +1,2696 @@
 ﻿
 ========================================
 
+File: D:\D\my_new_app\lib\main.dart
+
+Size: 7631 bytes
+
+Modified: 01/22/2026 19:38:25
+
+========================================
+
+// lib/main.dart
+// 完全適配 flutter_foreground_task 9.2.0 的版本
+// 沒有任何舊版參數、舊版方法、舊版返回值判斷
+
+import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+import 'app/theme.dart';
+import 'pages/main_screen.dart';
+import 'pages/chat/chat_character_edit_page.dart';
+import 'pages/me/profile_settings_page.dart';
+import 'services/storage_service.dart';
+import 'services/isar_service.dart';
+import 'services/foreground_task_handler.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化 intl（日期格式化）
+  await initializeDateFormatting('zh_CN', null);
+
+  // 初始化前台服務（9.2.0 寫法）
+  await _initForegroundTask();
+
+  // Isar 初始化交給 provider 處理
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  runApp(
+    const ProviderScope(
+      child: MyBunnyApp(),
+    ),
+  );
+}
+
+// 9.2.0 正確的初始化方式
+Future<void> _initForegroundTask() async {
+  try {
+    FlutterForegroundTask.init(  // ← 去掉 await
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'chat_foreground_channel',
+        channelName: '聊天保活通知',
+        channelDescription: '保持聊天後台運行與訊息接收',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: true,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(  // 已經去掉 const，正確
+        eventAction: ForegroundTaskEventAction.repeat(5000),
+        autoRunOnBoot: true,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+
+    FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
+
+    if (kDebugMode) {
+      print('✅ 前台服務初始化完成 (9.2.0)');
+    }
+  } catch (e, stack) {
+    if (kDebugMode) {
+      print('❌ 前台服務初始化失敗: $e');
+      print(stack);
+    }
+  }
+}
+
+// 監聽前台服務發來的資料（callback 方式）
+void _onForegroundTaskData(Object? data) {
+  if (kDebugMode) {
+    print('收到前台服務資料: $data');
+  }
+
+  if (data is Map<String, dynamic>) {
+    final type = data['type'] as String?;
+    switch (type) {
+      case 'heartbeat':
+        // 心跳，可以在這裡更新 UI 或記錄
+        break;
+      case 'service_stopped':
+        // 服務被停止，可選擇重啟
+        _startForegroundService();
+        break;
+      case 'notification_clicked':
+        // 用戶點擊通知，可以導航到聊天頁面
+        break;
+    }
+  }
+}
+
+// 啟動前台服務（9.2.0 寫法）
+Future<void> _startForegroundService() async {
+  try {
+    // 先檢查是否已經在運行
+    if (await FlutterForegroundTask.isRunningService) {
+      if (kDebugMode) print('前台服務已在運行');
+      return;
+    }
+
+    // 啟動服務
+    final ServiceRequestResult result = await FlutterForegroundTask.startService(
+  notificationTitle: '小猫',
+  notificationText: '在线等待你的消息...',
+  notificationIcon: const NotificationIcon(
+    metaDataName: 'foreground_icon',
+  ),
+  notificationInitialRoute: '/chat_room',
+);
+
+if (result == ServiceRequestResult.success) {  // 使用靜態常量比較
+  if (kDebugMode) {
+    print('前台服務啟動成功 - 通知應該出現了');
+  }
+  FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
+} else {
+  if (kDebugMode) {
+    print('前台服務啟動失敗: $result');
+  }
+}
+  } catch (e) {
+    if (kDebugMode) {
+      print('啟動前台服務異常: $e');
+    }
+  }
+}
+
+class MyBunnyApp extends StatefulWidget {
+  const MyBunnyApp({super.key});
+
+  @override
+  State<MyBunnyApp> createState() => _MyBunnyAppState();
+}
+
+class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
+  ThemeMode _themeMode = ThemeMode.system;
+  final StorageService _storage = StorageService();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadThemeMode();
+
+    // 啟動前台服務
+    _startForegroundService();
+
+    // 註冊監聽（確保每次 initState 都註冊）
+    FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
+  }
+
+  @override
+  void dispose() {
+    // 移除監聽（避免記憶體洩漏）
+    FlutterForegroundTask.removeTaskDataCallback(_onForegroundTaskData);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _startForegroundService();
+        _storage.saveAppState();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _storage.saveAppState();
+        break;
+      case AppLifecycleState.detached:
+        FlutterForegroundTask.stopService();
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _loadThemeMode() async {
+    final savedMode = await _storage.getThemeMode();
+    _updateThemeMode(savedMode);
+  }
+
+  void _updateThemeMode(String savedMode) {
+    setState(() {
+      if (savedMode == 'dark') _themeMode = ThemeMode.dark;
+      else if (savedMode == 'light') _themeMode = ThemeMode.light;
+      else _themeMode = ThemeMode.system;
+    });
+  }
+
+  void changeTheme(String mode) => _updateThemeMode(mode);
+
+  Future<String> getCurrentTheme() async => await _storage.getThemeMode();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme.copyWith(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
+      ),
+      darkTheme: AppTheme.darkTheme.copyWith(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
+      ),
+      themeMode: _themeMode,
+      navigatorKey: _navigatorKey,
+      home: const MainScreen(),
+      routes: {
+        '/character-edit': (context) => const ChatCharacterEditPage(),
+        '/profile-settings': (context) => const ProfileSettingsPage(),
+      },
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\app\theme.dart
+
+Size: 14694 bytes
+
+Modified: 01/21/2026 16:08:14
+
+========================================
+
+// lib/app/theme.dart - 完整修复版本
+import 'package:flutter/material.dart';
+
+class AppTheme {
+  // ========== 主色 ==========
+  static const Color primaryLight = Color(0xFFFF5A7E);
+  static const Color primaryDark = Color(0xFFF95685);
+  
+  // ========== 背景色 ==========
+  static const Color backgroundLight = Color(0xFFFDF7F7);
+  static const Color backgroundDark = Color(0xFF060405);
+  static const Color surfaceLight = Color(0xFFFDF7F7);
+  static const Color surfaceDark = Color(0xFF060405);
+  static const Color surfaceVariantLight = Color(0xFFF5F5F5);
+  static const Color surfaceVariantDark = Color(0xFF1E1E1E);
+  
+  // ========== 文字色 ==========
+  static const Color onSurfaceLight = Color(0xFF1D1D1F);
+  static const Color onSurfaceDark = Color(0xFFFFFFFF);
+  static const Color onSurfaceVariantLight = Color(0xFF6D6D6F);
+  static const Color onSurfaceVariantDark = Color(0xFFAAAAAA);
+  
+  // ========== 边框/轮廓色（关键！解决 Switch 边缘黑色问题） ==========
+  static const Color outlineLight = Color(0xFFE0E0E0);      // 浅灰色
+  static const Color outlineDark = Color(0xFF424242);       // 深灰色
+  static const Color outlineVariantLight = Color(0xFFC7C7CC); // 中灰色
+  static const Color outlineVariantDark = Color(0xFF303030);  // 更深灰
+  
+  // ========== 卡片/容器色 ==========
+  static const Color cardColorLight = Colors.white;
+  static const Color cardColorDark = Color(0xFF1A1A1A);
+  
+  // ========== 其他功能色 ==========
+  static const Color secondaryContainerLight = Color(0xFFFFE4E9);
+  static const Color secondaryContainerDark = Color(0xFF3A1F25);
+  static const Color errorLight = Color(0xFFBA1A1A);
+  static const Color errorDark = Color(0xFFFFB4AB);
+  
+  // ========== Switch 专用颜色（方便修改） ==========
+  static const Color switchActiveThumb = Color(0xFFFF5A7E);      // 开启小球颜色
+  static final Color switchActiveTrack = Color(0xFFFF5A7E).withValues(alpha: 0x80); // 50%透明度
+  static const Color switchInactiveThumb = Color(0xFF757575);   // 关闭小球颜色 ← 这里可以修改按钮off小球的颜色
+  static const Color switchInactiveTrack = Color(0xFFE0E0E0);   // 关闭轨道颜色
+  static const Color switchTrackOutline = Color(0xFFBDBDBD);    // 轨道边框颜色
+
+  // ========== 文字颜色（与按钮分开） ==========
+  static const Color textPrimaryLight = Color(0xFF1D1D1F);  // 主要文字
+  static const Color textPrimaryDark = Color(0xFFFFFFFF);
+  static const Color textSecondaryLight = Color(0xFF6D6D6F); // 次要文字
+  static const Color textSecondaryDark = Color(0xFFAAAAAA);
+  
+  // ========== 气泡颜色 ==========
+  static const Color aiBubbleColorLight = Color(0xFFFFFFFF);
+  static const Color aiBubbleBorderLight = Color(0xFFF1DCDE);
+  static const Color userBubbleColorLight = Color(0xFFFFEAEF);
+  static const Color userBubbleBorderLight = Color(0xFFEDD8DD);
+  
+  static const Color aiBubbleColorDark = Color(0xFF1A1A1A);
+  static const Color aiBubbleBorderDark = Color(0xFF333333);
+  static const Color userBubbleColorDark = Color(0xFFF95685);
+  static const Color userBubbleBorderDark = Color(0xFFD6406E);
+  
+  // ========== 页面特定颜色 ==========
+  static const Color chatRoomTopLight = Color(0xFFFCECEF);
+  static const Color chatRoomTopDark = Color(0xFF0A0A0A);
+  
+  static const Color messageInputBackgroundLight = Color(0xFFFBDCE1);
+  static const Color messageInputBackgroundDark = Color(0xFF121212);
+  
+  static const Color messageFieldBackgroundLight = Color(0xFFFFFFFF);
+  static const Color messageFieldBackgroundDark = Color(0xFF252525);
+  
+  static const Color messageFieldBorderLight = Color(0xFFB1A9AB);
+  static const Color messageFieldBorderDark = Color(0xFF444444);
+  
+  // ========== 文字颜色（兼容旧代码） ==========
+  static const Color primaryTextLight = Color(0xFF1D1D1F);
+  static const Color primaryTextDark = Color(0xFFFFFFFF);
+  static const Color secondaryTextLight = Color(0xFF8E8E93);
+  static const Color secondaryTextDark = Color(0xFF9E9E9E);
+  static const Color narrationTextLight = Color(0xFF6D6D6F);
+  static const Color narrationTextDark = Color(0xFFAAAAAA);
+  static const Color userTextColorLight = Color(0xFFBB2D71);
+  static const Color userTextColorDark = Color(0xFFFFFFFF);
+  
+  // ========== 尺寸/圆角 ==========
+  static const double bubbleBorderRadius = 18.0;
+
+  // ========== 主题定义 ==========
+  static ThemeData get lightTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    
+    // 1. colorScheme - 基础颜色系统（不影响Switch）
+    colorScheme: ColorScheme.light(
+      primary: primaryLight,    // 主色
+      surface: surfaceLight,    // 表面色
+      onSurface: textPrimaryLight,         // 表面文字色
+      // outline 保持Flutter默认，不影响Switch
+    ),
+    
+    // 2. 文字主题 - 使用专门的文字颜色
+    textTheme: TextTheme(
+      bodyLarge: TextStyle(color: textPrimaryLight),
+      bodyMedium: TextStyle(
+        fontFamily: 'System',
+        fontSize: 16,
+        fontWeight: FontWeight.normal,
+        height: 1.4,
+        color: textPrimaryLight,  // 使用文字专用颜色
+      ),
+      bodySmall: TextStyle(color: textSecondaryLight),
+      titleMedium: TextStyle(color: textPrimaryLight),
+      labelLarge: TextStyle(color: textPrimaryLight),
+    ),
+    
+    // 3. Switch主题 - 独立配置，不影响文字
+    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchActiveThumb;        // 开启状态
+          }
+          return switchInactiveThumb;        // 关闭状态 - 深灰色小球
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchActiveTrack;        // 开启轨道
+          }
+          return switchInactiveTrack;        // 关闭轨道
+        },
+      ),
+      // 边框颜色
+      trackOutlineColor: WidgetStateProperty.all(switchTrackOutline),
+      // 边框宽度：开启时0，关闭时1px
+      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0.0;  // 开启时不要边框
+          }
+          return 1.0;    // 关闭时1px边框
+        },
+      ),
+    ),
+    
+    // 4. 其他主题配置保持不变...
+    scaffoldBackgroundColor: backgroundLight,
+    primaryColor: primaryLight,
+    cardColor: cardColorLight,
+    appBarTheme: AppBarTheme(
+      backgroundColor: surfaceLight,
+      elevation: 0,
+      foregroundColor: textPrimaryLight,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: Colors.white,
+      selectedItemColor: primaryLight,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+    ),
+    iconTheme: IconThemeData(color: textPrimaryLight),
+    dividerColor: Colors.grey[300],
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: Colors.white,
+      filled: true,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[400]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[400]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primaryLight),
+      ),
+    ),
+  );
+
+  // 暗色主题类似配置...
+  static ThemeData get darkTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    
+    // colorScheme - 暗色版本
+    colorScheme: ColorScheme.dark(
+      primary: primaryDark,
+      surface: surfaceDark,
+      onSurface: textPrimaryDark,
+    ),
+    
+    // 文字主题
+    textTheme: TextTheme(
+      bodyLarge: TextStyle(color: textPrimaryDark),
+      bodyMedium: TextStyle(
+        color: Colors.grey[200], 
+        fontSize: 16, 
+        height: 1.4
+      ),
+      bodySmall: TextStyle(color: Colors.grey[400], fontSize: 14),
+      titleMedium: TextStyle(color: textPrimaryDark),
+      labelLarge: TextStyle(color: textPrimaryDark),
+    ),
+    
+    // Switch主题 - 暗色版本
+    // 注意：Flutter 3.38.7 使用 WidgetStateProperty 和 WidgetState
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark;    // 暗色主色
+          }
+          return const Color(0xFF9E9E9E);      // 暗色关闭小球
+        },
+      ),
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark.withValues(alpha: 0x80);  // 50%透明度
+          }
+          return const Color(0xFF424242);      // 暗色关闭轨道
+        },
+      ),
+      // 边框颜色
+      trackOutlineColor: WidgetStateProperty.all(const Color(0xFF616161)),
+      // 边框宽度：开启时0，关闭时1px
+      trackOutlineWidth: WidgetStateProperty.resolveWith<double?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return 0.0;  // 开启时不要边框
+          }
+          return 1.0;    // 关闭时1px边框
+        },
+      ),
+    ),
+    
+    // ... 其他暗色主题配置
+    scaffoldBackgroundColor: backgroundDark,
+    primaryColor: primaryDark,
+    cardColor: cardColorDark,
+    appBarTheme: AppBarTheme(
+      backgroundColor: chatRoomTopDark,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: chatRoomTopDark,
+      selectedItemColor: primaryDark,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+    ),
+    iconTheme: IconThemeData(color: Colors.grey[300]),
+    dividerColor: Colors.grey[800],
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: messageFieldBackgroundDark,
+      filled: true,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[700]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[700]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primaryDark),
+      ),
+    ),
+  );
+
+  // ========== 兼容性方法（保持现有代码不变） ==========
+  
+  // 旧常量别名（兼容现有代码）
+  static const Color appBackgroundLight = backgroundLight;
+  static const Color appBackgroundDark = backgroundDark;
+  static const Color pinkAccent = primaryLight;
+  static const Color pinkAccentDark = primaryDark;
+  
+  static Color get darkBackground => appBackgroundDark;
+  
+  // ========== 样式方法 ==========
+  
+  // 旁白样式
+  static TextStyle narrationStyle(BuildContext context) => TextStyle(
+    fontSize: 13,
+    color: Theme.of(context).brightness == Brightness.dark 
+        ? narrationTextDark 
+        : narrationTextLight,
+    fontStyle: FontStyle.italic,
+    height: 1.35,
+    fontWeight: FontWeight.w400,
+  );
+  
+  // 对话样式
+  static TextStyle dialogueStyle(BuildContext context) => TextStyle(
+    fontSize: 16,
+    color: Theme.of(context).brightness == Brightness.dark 
+        ? primaryTextDark 
+        : primaryTextLight,
+    height: 1.4,
+    fontWeight: FontWeight.normal,
+  );
+  
+  // 系统时间样式
+  static TextStyle systemTimeStyle(BuildContext context) => TextStyle(
+    fontSize: 12,
+    color: Theme.of(context).brightness == Brightness.dark 
+        ? secondaryTextDark 
+        : secondaryTextLight,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.3,
+  );
+  
+  // ========== 颜色获取方法 ==========
+  
+  static Color getAppBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? appBackgroundDark 
+        : appBackgroundLight;
+  }
+  
+  static Color getAiBubbleColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? aiBubbleColorDark 
+        : aiBubbleColorLight;
+  }
+  
+  static Color getAiBubbleBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? aiBubbleBorderDark 
+        : aiBubbleBorderLight;
+  }
+  
+  static Color getUserBubbleColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? userBubbleColorDark 
+        : userBubbleColorLight;
+  }
+  
+  static Color getUserBubbleBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? userBubbleBorderDark 
+        : userBubbleBorderLight;
+  }
+  
+  static Color getChatRoomTop(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? chatRoomTopDark 
+        : chatRoomTopLight;
+  }
+  
+  static Color getMessageInputBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? messageInputBackgroundDark 
+        : messageInputBackgroundLight;
+  }
+  
+  static Color getMessageFieldBackground(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? messageFieldBackgroundDark 
+        : messageFieldBackgroundLight;
+  }
+  
+  static Color getMessageFieldBorder(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? messageFieldBorderDark 
+        : messageFieldBorderLight;
+  }
+  
+  static Color getUserTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? userTextColorDark 
+        : userTextColorLight;
+  }
+  
+  // ========== 新增：获取边框颜色方法 ==========
+  
+  static Color getOutlineColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? outlineDark 
+        : outlineLight;
+  }
+  
+  static Color getOutlineVariantColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? outlineVariantDark 
+        : outlineVariantLight;
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\app\ui_theme_manager.dart
+
+Size: 8733 bytes
+
+Modified: 01/21/2026 16:08:14
+
+========================================
+
+// lib/app/ui_theme_manager.dart - 完整修复版本
+import 'package:flutter/material.dart';
+
+// 主题枚举
+enum UITheme {
+  strawberryCandy,  // 草莓糖心🍓（基于版本B）
+  pickleMilk,       // 酸菜牛奶🥛（基于版本A）
+  system            // 跟随系统（默认）
+}
+
+// 草莓糖心主题颜色配置（基于版本B）
+class StrawberryCandyTheme {
+  // 亮色模式
+  static const Color lightBackground = Color(0xFFFFF8FA);
+  static const Color lightPrimary = Color(0xFFFF5A7E);
+  static const Color lightPrimaryLight = Color(0xFFFFB6C1);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightText = Color(0xFF1D1D1F);
+  static const Color lightHintText = Color(0xFF6D6D6F);
+  static const Color lightBorder = Color(0xFFF1DCDE);
+  
+  // 暗色模式
+  static const Color darkBackground = Color(0xFF060405);
+  static const Color darkPrimary = Color(0xFFF95685);
+  static const Color darkPrimaryLight = Color(0xFFF95685);
+  static const Color darkCard = Color(0xFF1A1A1A);
+  static const Color darkText = Color(0xFFFFFFFF);
+  static const Color darkHintText = Color(0xFF9E9E9E);
+  static const Color darkBorder = Color(0xFF333333);
+}
+
+// 酸菜牛奶主题颜色配置（基于版本A）
+class PickleMilkTheme {
+  // 亮色模式
+  static const Color lightBackground = Color(0xFFFDF7F7);
+  static const Color lightPrimary = Color(0xFFFF5A7E);
+  static const Color lightPrimaryLight = Color(0xFFFFB6C1);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightText = Color(0xFF1D1D1F);
+  static const Color lightHintText = Color(0xFF8E8E93);
+  static const Color lightBorder = Color(0xFFD8D8D8);
+  
+  // 暗色模式
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkPrimary = Color(0xFFF95685);
+  static const Color darkPrimaryLight = Color(0xFFF95685);
+  static const Color darkCard = Color(0xFF1E1E1E);
+  static const Color darkText = Color(0xFFFFFFFF);
+  static const Color darkHintText = Color(0xFFA0A0A0);
+  static const Color darkBorder = Color(0xFF444444);
+}
+
+// 主题管理器
+class UIThemeManager {
+  // 获取当前主题的显示名称
+  static String getThemeName(UITheme theme) {
+    switch (theme) {
+      case UITheme.strawberryCandy:
+        return '草莓糖心🍓';
+      case UITheme.pickleMilk:
+        return '酸菜牛奶🥛';
+      case UITheme.system:
+        return '跟随系统';
+    }
+  }
+
+  // 获取主题图标
+  static IconData getThemeIcon(UITheme theme) {
+    switch (theme) {
+      case UITheme.strawberryCandy:
+        return Icons.cake;
+      case UITheme.pickleMilk:
+        return Icons.local_cafe;
+      case UITheme.system:
+        return Icons.settings;
+    }
+  }
+
+  // 获取主题描述
+  static String getThemeDescription(UITheme theme) {
+    switch (theme) {
+      case UITheme.strawberryCandy:
+        return '清爽简洁的无边框设计，少女心配色';
+      case UITheme.pickleMilk:
+        return '优雅的边框设计，舒适的视觉层次';
+      case UITheme.system:
+        return '跟随系统外观设置';
+    }
+  }
+
+  // 根据当前主题获取颜色（用于动态切换）
+  static Color getBackgroundColor(BuildContext context, UITheme uiTheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (uiTheme == UITheme.strawberryCandy) {
+      return isDark ? StrawberryCandyTheme.darkBackground : StrawberryCandyTheme.lightBackground;
+    } else {
+      return isDark ? PickleMilkTheme.darkBackground : PickleMilkTheme.lightBackground;
+    }
+  }
+
+  static Color getPrimaryColor(BuildContext context, UITheme uiTheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (uiTheme == UITheme.strawberryCandy) {
+      return isDark ? StrawberryCandyTheme.darkPrimary : StrawberryCandyTheme.lightPrimary;
+    } else {
+      return isDark ? PickleMilkTheme.darkPrimary : PickleMilkTheme.lightPrimary;
+    }
+  }
+
+  static Color getTextColor(BuildContext context, UITheme uiTheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (uiTheme == UITheme.strawberryCandy) {
+      return isDark ? StrawberryCandyTheme.darkText : StrawberryCandyTheme.lightText;
+    } else {
+      return isDark ? PickleMilkTheme.darkText : PickleMilkTheme.lightText;
+    }
+  }
+
+  // 构建输入框边框（草莓糖心主题 - 无边框）
+  static InputBorder buildTextFieldBorderStrawberryCandy(BuildContext context) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
+    );
+  }
+
+  // 构建输入框边框（酸菜牛奶主题 - 有边框）
+  static InputBorder buildTextFieldBorderPickleMilk(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDark ? PickleMilkTheme.darkBorder : PickleMilkTheme.lightBorder,
+        width: 1,
+      ),
+    );
+  }
+
+  // 构建焦点边框（草莓糖心主题）
+  static InputBorder buildTextFieldFocusedBorderStrawberryCandy(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? StrawberryCandyTheme.darkPrimary : StrawberryCandyTheme.lightPrimary;
+    
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: primaryColor,
+        width: 2,
+      ),
+    );
+  }
+
+  // 构建焦点边框（酸菜牛奶主题）
+  static InputBorder buildTextFieldFocusedBorderPickleMilk(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? PickleMilkTheme.darkPrimary : PickleMilkTheme.lightPrimary;
+    
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: primaryColor,
+        width: 2,
+      ),
+    );
+  }
+
+  // 根据主题获取按钮样式
+  static ButtonStyle getButtonStyle(BuildContext context, UITheme uiTheme) {
+    final primaryColor = getPrimaryColor(context, uiTheme);
+    
+    if (uiTheme == UITheme.strawberryCandy) {
+      // 草莓糖心主题按钮：无阴影，圆角
+      return ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      );
+    } else {
+      // 酸菜牛奶主题按钮：轻微阴影，圆角
+      return ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        elevation: 0,
+        shadowColor: Colors.transparent, // 添加这行确保阴影完全透明
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      );
+    }
+  }
+
+  // 获取卡片颜色
+  static Color getCardColor(BuildContext context, UITheme uiTheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (uiTheme == UITheme.strawberryCandy) {
+      return isDark ? StrawberryCandyTheme.darkCard : StrawberryCandyTheme.lightCard;
+    } else {
+      return isDark ? PickleMilkTheme.darkCard : PickleMilkTheme.lightCard;
+    }
+  }
+
+  // 获取提示文本颜色
+  static Color getHintTextColor(BuildContext context, UITheme uiTheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    if (uiTheme == UITheme.strawberryCandy) {
+      return isDark ? StrawberryCandyTheme.darkHintText : StrawberryCandyTheme.lightHintText;
+    } else {
+      return isDark ? PickleMilkTheme.darkHintText : PickleMilkTheme.lightHintText;
+    }
+  }
+
+  // 从字符串转换为UITheme枚举
+  static UITheme fromString(String value) {
+    switch (value) {
+      case 'strawberryCandy':
+        return UITheme.strawberryCandy;
+      case 'pickleMilk':
+        return UITheme.pickleMilk;
+      default:
+        return UITheme.system;
+    }
+  }
+
+  // 将UITheme枚举转换为字符串
+  static String themeToString(UITheme theme) {  // 改名避免冲突
+    switch (theme) {
+      case UITheme.strawberryCandy:
+        return 'strawberryCandy';
+      case UITheme.pickleMilk:
+        return 'pickleMilk';
+      case UITheme.system:
+        return 'system';
+    }
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\custom_list_tile.dart
+
+Size: 0 bytes
+
+Modified: 01/02/2026 16:37:05
+
+========================================
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\image_placeholder.dart
+
+Size: 1024 bytes
+
+Modified: 01/02/2026 21:38:39
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class ImagePlaceholder extends StatelessWidget {
+  final double size;
+  final Color color;
+  final IconData? icon;
+  final String? text;
+
+  const ImagePlaceholder({
+    super.key,
+    this.size = 40,
+    this.color = const Color(0xFFFF5A7E),
+    this.icon = Icons.person,
+    this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: text != null
+            ? Text(
+                text!,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.4,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
+            : Icon(
+                icon,
+                color: Colors.white,
+                size: size * 0.6,
+              ),
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\mood_day.dart
+
+Size: 888 bytes
+
+Modified: 01/02/2026 17:42:57
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class MoodDay extends StatelessWidget {
+  const MoodDay({  // 确保有 const 关键字
+    super.key,
+    required this.day,
+    required this.emoji,
+    required this.hasMood,
+  });
+
+  final String day;
+  final String emoji;
+  final bool hasMood;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(day, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: hasMood ? const Color(0xFFFFD1DC) : Colors.grey[200],
+            shape: BoxShape.circle,
+          ),
+          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\components\order_card.dart
+
+Size: 1652 bytes
+
+Modified: 01/02/2026 17:42:57
+
+========================================
+
+import 'package:flutter/material.dart';
+
+class OrderCard extends StatelessWidget {
+  const OrderCard({  // 确保有 const 关键字
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.isLocked,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool isLocked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isLocked ? Colors.white : Colors.white.withValues(alpha:0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white),
+      ),
+      child: Row(
+        children: [
+          Icon(isLocked ? Icons.lock_outline : Icons.check_circle, color: const Color(0xFFFFD1DC)),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    decoration: isLocked ? null : TextDecoration.lineThrough,
+                    color: isLocked ? Colors.black87 : Colors.grey,
+                  )),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+              ],
+            ),
+          ),
+          const Icon(Icons.radio_button_unchecked, color: Color(0xFFF2F2F2)),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\models\diary_entry.dart
+
+Size: 690 bytes
+
+Modified: 01/22/2026 00:15:07
+
+========================================
+
+// lib/models/diary_entry.dart
+import 'package:isar_community/isar.dart';
+import 'package:uuid/uuid.dart';
+
+part 'diary_entry.g.dart';
+
+@collection
+class DiaryEntry {
+  Id id = Isar.autoIncrement;
+
+  @Index()
+  late String uuid; // 用于封面文件名
+
+  late DateTime createdAt;
+  late String content; // Quill Delta JSON 字符串
+  String? coverColor1; // 渐变色1 (十六进制，如 #FFB3BA)
+  String? coverColor2; // 渐变色2 (十六进制，如 #BAE1FF)
+
+  DiaryEntry() {
+    uuid = const Uuid().v4();
+    createdAt = DateTime.now();
+  }
+
+  // 封面图片的文件名（不包含完整路径）
+  String get coverFileName => 'diary_cover_$uuid.png';
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\models\diary_entry.g.dart
+
+Size: 39149 bytes
+
+Modified: 01/22/2026 00:51:19
+
+========================================
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'diary_entry.dart';
+
+// **************************************************************************
+// IsarCollectionGenerator
+// **************************************************************************
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetDiaryEntryCollection on Isar {
+  IsarCollection<DiaryEntry> get diaryEntrys => this.collection();
+}
+
+const DiaryEntrySchema = CollectionSchema(
+  name: r'DiaryEntry',
+  id: -1043886744285152801,
+  properties: {
+    r'content': PropertySchema(
+      id: 0,
+      name: r'content',
+      type: IsarType.string,
+    ),
+    r'coverColor1': PropertySchema(
+      id: 1,
+      name: r'coverColor1',
+      type: IsarType.string,
+    ),
+    r'coverColor2': PropertySchema(
+      id: 2,
+      name: r'coverColor2',
+      type: IsarType.string,
+    ),
+    r'coverFileName': PropertySchema(
+      id: 3,
+      name: r'coverFileName',
+      type: IsarType.string,
+    ),
+    r'createdAt': PropertySchema(
+      id: 4,
+      name: r'createdAt',
+      type: IsarType.dateTime,
+    ),
+    r'uuid': PropertySchema(
+      id: 5,
+      name: r'uuid',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _diaryEntryEstimateSize,
+  serialize: _diaryEntrySerialize,
+  deserialize: _diaryEntryDeserialize,
+  deserializeProp: _diaryEntryDeserializeProp,
+  idName: r'id',
+  indexes: {
+    r'uuid': IndexSchema(
+      id: 2134397340427724972,
+      name: r'uuid',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'uuid',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
+  links: {},
+  embeddedSchemas: {},
+  getId: _diaryEntryGetId,
+  getLinks: _diaryEntryGetLinks,
+  attach: _diaryEntryAttach,
+  version: '3.3.0',
+);
+
+int _diaryEntryEstimateSize(
+  DiaryEntry object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.content.length * 3;
+  {
+    final value = object.coverColor1;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.coverColor2;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.coverFileName.length * 3;
+  bytesCount += 3 + object.uuid.length * 3;
+  return bytesCount;
+}
+
+void _diaryEntrySerialize(
+  DiaryEntry object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeString(offsets[0], object.content);
+  writer.writeString(offsets[1], object.coverColor1);
+  writer.writeString(offsets[2], object.coverColor2);
+  writer.writeString(offsets[3], object.coverFileName);
+  writer.writeDateTime(offsets[4], object.createdAt);
+  writer.writeString(offsets[5], object.uuid);
+}
+
+DiaryEntry _diaryEntryDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = DiaryEntry();
+  object.content = reader.readString(offsets[0]);
+  object.coverColor1 = reader.readStringOrNull(offsets[1]);
+  object.coverColor2 = reader.readStringOrNull(offsets[2]);
+  object.createdAt = reader.readDateTime(offsets[4]);
+  object.id = id;
+  object.uuid = reader.readString(offsets[5]);
+  return object;
+}
+
+P _diaryEntryDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readString(offset)) as P;
+    case 1:
+      return (reader.readStringOrNull(offset)) as P;
+    case 2:
+      return (reader.readStringOrNull(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
+      return (reader.readDateTime(offset)) as P;
+    case 5:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _diaryEntryGetId(DiaryEntry object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _diaryEntryGetLinks(DiaryEntry object) {
+  return [];
+}
+
+void _diaryEntryAttach(IsarCollection<dynamic> col, Id id, DiaryEntry object) {
+  object.id = id;
+}
+
+extension DiaryEntryQueryWhereSort
+    on QueryBuilder<DiaryEntry, DiaryEntry, QWhere> {
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension DiaryEntryQueryWhere
+    on QueryBuilder<DiaryEntry, DiaryEntry, QWhereClause> {
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> idEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> idNotEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> idGreaterThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> idLessThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> uuidEqualTo(
+      String uuid) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'uuid',
+        value: [uuid],
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterWhereClause> uuidNotEqualTo(
+      String uuid) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [],
+              upper: [uuid],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [uuid],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [uuid],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [],
+              upper: [uuid],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+}
+
+extension DiaryEntryQueryFilter
+    on QueryBuilder<DiaryEntry, DiaryEntry, QFilterCondition> {
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'content',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      contentGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'content',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'content',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'content',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'content',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'content',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'content',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'content',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> contentIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'content',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      contentIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'content',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'coverColor1',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'coverColor1',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'coverColor1',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'coverColor1',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'coverColor1',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'coverColor1',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'coverColor1',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1EndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'coverColor1',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'coverColor1',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'coverColor1',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'coverColor1',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor1IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'coverColor1',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'coverColor2',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'coverColor2',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'coverColor2',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'coverColor2',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'coverColor2',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'coverColor2',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'coverColor2',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2EndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'coverColor2',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'coverColor2',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'coverColor2',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'coverColor2',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverColor2IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'coverColor2',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'coverFileName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'coverFileName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'coverFileName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'coverFileName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'coverFileName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'coverFileName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'coverFileName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'coverFileName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'coverFileName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      coverFileNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'coverFileName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> createdAtEqualTo(
+      DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition>
+      createdAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> createdAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> createdAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'createdAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> idEqualTo(
+      Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'uuid',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'uuid',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'uuid',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterFilterCondition> uuidIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'uuid',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension DiaryEntryQueryObject
+    on QueryBuilder<DiaryEntry, DiaryEntry, QFilterCondition> {}
+
+extension DiaryEntryQueryLinks
+    on QueryBuilder<DiaryEntry, DiaryEntry, QFilterCondition> {}
+
+extension DiaryEntryQuerySortBy
+    on QueryBuilder<DiaryEntry, DiaryEntry, QSortBy> {
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByContent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'content', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByContentDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'content', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCoverColor1() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor1', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCoverColor1Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor1', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCoverColor2() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor2', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCoverColor2Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor2', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCoverFileName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverFileName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCoverFileNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverFileName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByCreatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByUuid() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> sortByUuidDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.desc);
+    });
+  }
+}
+
+extension DiaryEntryQuerySortThenBy
+    on QueryBuilder<DiaryEntry, DiaryEntry, QSortThenBy> {
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByContent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'content', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByContentDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'content', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCoverColor1() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor1', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCoverColor1Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor1', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCoverColor2() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor2', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCoverColor2Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverColor2', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCoverFileName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverFileName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCoverFileNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'coverFileName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByCreatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByUuid() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QAfterSortBy> thenByUuidDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.desc);
+    });
+  }
+}
+
+extension DiaryEntryQueryWhereDistinct
+    on QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> {
+  QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> distinctByContent(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'content', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> distinctByCoverColor1(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'coverColor1', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> distinctByCoverColor2(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'coverColor2', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> distinctByCoverFileName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'coverFileName',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> distinctByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'createdAt');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DiaryEntry, QDistinct> distinctByUuid(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'uuid', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension DiaryEntryQueryProperty
+    on QueryBuilder<DiaryEntry, DiaryEntry, QQueryProperty> {
+  QueryBuilder<DiaryEntry, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, String, QQueryOperations> contentProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'content');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, String?, QQueryOperations> coverColor1Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'coverColor1');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, String?, QQueryOperations> coverColor2Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'coverColor2');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, String, QQueryOperations> coverFileNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'coverFileName');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, DateTime, QQueryOperations> createdAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<DiaryEntry, String, QQueryOperations> uuidProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'uuid');
+    });
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\models\message.dart
+
+Size: 4676 bytes
+
+Modified: 01/21/2026 16:08:14
+
+========================================
+
+// lib/models/message.dart
+
+// 1. 使用 lowerCamelCase（Dart 官方推荐，解决所有 constant_identifier_names 警告）
+enum MessageType {
+  userNarration,     // 用户旁白
+  userDialogue,      // 用户对话
+  aiNarration,       // AI旁白
+  aiDialogue,        // AI对话
+  systemTime,        // 系统时间
+  systemState,       // 系统状态
+}
+
+// 2. 桥接 extension：处理 snake_case <-> camelCase 的兼容
+extension MessageTypeX on MessageType {
+  // 用于保存：新数据直接用 name（camelCase）
+  // 但我们不额外存 legacyName，因为我们想让新数据彻底现代化
+
+  // 用于读取：兼容旧的 snake_case 字符串
+  static MessageType fromStoredString(String? stored) {
+    if (stored == null) {
+      return MessageType.aiDialogue; // 默认 fallback
+    }
+
+    // 先尝试直接匹配 camelCase（新数据）
+    try {
+      return MessageType.values.byName(stored);
+    } on ArgumentError {
+      // 匹配失败 → 尝试 snake_case 兼容映射
+      switch (stored) {
+        case 'user_narration':
+          return MessageType.userNarration;
+        case 'user_dialogue':
+          return MessageType.userDialogue;
+        case 'ai_narration':
+          return MessageType.aiNarration;
+        case 'ai_dialogue':
+          return MessageType.aiDialogue;
+        case 'system_time':
+          return MessageType.systemTime;
+        case 'system_state':
+          return MessageType.systemState;
+        default:
+          // 未知格式 → fallback（可加日志）
+          return MessageType.aiDialogue;
+      }
+    }
+  }
+}
+
+class Message {
+  final String id;
+  final String role; // 'user' 或 'assistant'
+  final String timestamp;
+  final MessageType messageType;
+
+  final String rawContent;     // 原始完整字符串，带XML标签，用于发送给AI
+  final String displayContent; // 纯文本，用于UI显示和搜索
+
+  Message({
+    required this.id,
+    required this.role,
+    required this.timestamp,
+    required this.messageType,
+    required this.rawContent,
+    String? displayContent,
+  }) : displayContent = displayContent ?? _extractDisplayContent(rawContent);
+
+  static String _extractDisplayContent(String raw) {
+    // ... 原有提取逻辑不变 ...
+    final startResponse = raw.indexOf('<response>');
+    final endResponse = raw.lastIndexOf('</response>');
+    
+    if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
+      final responseInner = raw.substring(
+        startResponse + '<response>'.length,
+        endResponse,
+      ).trim();
+      
+      String extractedText = '';
+      
+      final envStart = responseInner.indexOf('<environment>');
+      final envEnd = responseInner.indexOf('</environment>');
+      if (envStart != -1 && envEnd != -1 && envEnd > envStart) {
+        extractedText += responseInner
+            .substring(envStart + '<environment>'.length, envEnd)
+            .trim();
+      }
+      
+      final diaStart = responseInner.indexOf('<dialogue>');
+      final diaEnd = responseInner.indexOf('</dialogue>');
+      if (diaStart != -1 && diaEnd != -1 && diaEnd > diaStart) {
+        if (extractedText.isNotEmpty) extractedText += ' ';
+        extractedText += responseInner
+            .substring(diaStart + '<dialogue>'.length, diaEnd)
+            .trim();
+      }
+      
+      if (extractedText.isNotEmpty) return extractedText;
+    }
+    
+    return raw.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'role': role,
+      'raw_content': rawContent,
+      'display_content': displayContent,
+      'timestamp': timestamp,
+      // 关键：新数据统一存 camelCase name
+      'message_type': messageType.name,
+    };
+  }
+
+factory Message.fromMap(Map<String, dynamic> map) {
+  final rawContent = map['raw_content'] ?? map['content'] ?? '';
+  final displayContent = map['display_content'] ?? '';
+
+  // 核心兼容逻辑：使用 fromStoredString 处理 snake_case 和 camelCase
+  final storedType = map['message_type'] as String?;
+  final messageType = MessageTypeX.fromStoredString(storedType); // 直接调用，移除 ??
+
+  return Message(
+    id: map['id'] as String,
+    role: map['role'] as String,
+    timestamp: map['timestamp'] as String,
+    messageType: messageType,
+    rawContent: rawContent,
+    displayContent: displayContent,
+  );
+}
+
+  @override
+  String toString() {
+    return 'Message(id: $id, role: $role, type: $messageType, raw: ${rawContent.length} chars, display: $displayContent)';
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\models\mood.dart
+
+Size: 0 bytes
+
+Modified: 01/02/2026 16:38:14
+
+========================================
+
+
+
+
+========================================
+
 File: D:\D\my_new_app\lib\pages\main_screen.dart
 
 Size: 1670 bytes
@@ -1955,13 +4645,22 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 34748 bytes
+Size: 37129 bytes
 
-Modified: 01/21/2026 20:19:38
+Modified: 01/22/2026 17:20:12
 
 ========================================
 
 // lib/pages/chat/chat_room_page.dart
+// 完整替换版：修复前台服务通知不弹 + 提升保活稳定性
+// 改动说明：
+// - 补全 startService 所有关键参数（title/text/icon/type）
+// - 添加通知权限检查 + 引导弹窗（Android 13+ 必须）
+// - 添加电池优化引导（小米/华为必须，否则几分钟被杀）
+// - 服务状态监听 + 自动重启逻辑
+// - 调试日志全面（debugPrint）
+// - 所有地方加 mounted 检查
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -1994,27 +4693,25 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Timer? _scrollButtonTimer;
   final ApiService _apiService = ApiService();
   final StorageService _storage = StorageService();
-  
+
   final FocusNode _focusNode = FocusNode();
-  
+
   String _characterName = 'name';
   String? _avatarPath;
   String? _userAvatarPath;
- 
+
   final String _currentStatus = '空白';
   bool _showUserAvatar = true;
   String _systemPrompt = '';
   bool _narrationCentered = true;
 
   // 新增字段
-  String? _savedInputText;  // 保存输入框
-  double _savedScrollOffset = 0.0;  // 保存滚动位置
-  
+  String? _savedInputText; // 保存输入框
+  double _savedScrollOffset = 0.0; // 保存滚动位置
+
   // 修改：使用枚举值而不是枚举类型本身
   AxisDirection _lastDirection = AxisDirection.down;
 
-  // 新增：判断用户是否在底部附近（用于决定是否自动跟随新消息）
-  // ignore: unused_element
   bool get _isUserAtBottom {
     if (!_scrollController.hasClients) return true;
     final pos = _scrollController.position;
@@ -2028,20 +4725,20 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
-    // 1. 启动前台服务（保活）
+
+    // 1. 启动前台服务（保活） - 最关键
     _startForegroundService();
-    
-    // 2. 快速恢复状态（0.1s 内）
+
+    // 2. 快速恢复状态
     _restoreAppState();
-    
+
     // 3. 原有初始化
     _loadCharacterData();
     _loadNarrationCentered();
     _loadUserSettings();
     _loadHistory();
-    
-    // 4. 原有 scroll listener（不变）
+
+    // 4. scroll listener
     _scrollController.addListener(() {
       if (!mounted) return;
 
@@ -2075,7 +4772,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       }
     });
 
-    // 5. 初始滚动（恢复后自动跳）
+    // 5. 初始滚动恢复
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
         _scrollController.jumpTo(_savedScrollOffset);
@@ -2090,26 +4787,24 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
-    
+
     // 保存最终状态
     _storage.saveAppState(
       messages: _messages,
       scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
       inputText: _controller.text,
     );
-    
+
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
-    final storage = StorageService();
-    
+
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // 切后台：0.1s 内保存状态
-      storage.saveAppState(
+      // 切后台：立即保存
+      _storage.saveAppState(
         messages: _messages,
         scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
         inputText: _controller.text,
@@ -2120,21 +4815,22 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     } else if (state == AppLifecycleState.resumed) {
       // 切回：重启服务 + 恢复
       _startForegroundService();
+      _restoreAppState();
     }
   }
 
   @override
   void didChangeMetrics() {
     if (!mounted) return;
-    
+
     if (_scrollController.hasClients && _messages.isNotEmpty) {
       final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-      
+
       if (keyboardVisible) {
         _scrollToBottom(animate: true);
       }
     }
-    
+
     super.didChangeMetrics();
   }
 
@@ -2158,7 +4854,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Future<void> _loadCharacterData() async {
     final name = await _storage.getCharacterNickname();
     final avatarPath = await _storage.getCharacterAvatarPath();
-    
+
     if (mounted) {
       setState(() {
         _characterName = name;
@@ -2170,7 +4866,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Future<void> _loadUserSettings() async {
     final showAvatar = await _storage.getShowUserAvatar();
     final userAvatarPath = await _storage.getUserAvatarPath();
-    
+
     if (mounted) {
       setState(() {
         _showUserAvatar = showAvatar;
@@ -2196,19 +4892,19 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
     if (opening.isEmpty) return;
-    
+
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
-    
+
     final msg = Message(
       id: 'opening_${now.millisecondsSinceEpoch}',
       role: 'assistant',
       rawContent: opening,
       displayContent: opening,
       timestamp: timestamp,
-      messageType: MessageType.aiDialogue,  // ← 已改
+      messageType: MessageType.aiDialogue,
     );
-    
+
     if (mounted) {
       setState(() {
         _messages.add(msg);
@@ -2235,30 +4931,141 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   Future<void> _clearAllMessages() async {
     if (!mounted) return;
-    
+
     setState(() {
       _messages.clear();
     });
     await _storage.clearChatHistory();
   }
 
-  // 新增方法：启动前台服务
+  // 核心：启动前台服务（完整补全参数 + 权限检查 + 引导）
   Future<void> _startForegroundService() async {
-    if (!await FlutterForegroundTask.isRunningService) {
-      await FlutterForegroundTask.startService(
-        notificationTitle: '小猫',
-        notificationText: 'ρ(・ω・、)',
+    try {
+      // Android 13+ 通知权限检查
+      if (Platform.isAndroid) {
+        final permissionStatus = await FlutterForegroundTask.checkNotificationPermission();
+        if (permissionStatus != ForegroundServicePermissionStatus.granted) {
+          final result = await FlutterForegroundTask.requestNotificationPermission();
+          if (result != ForegroundServicePermissionStatus.granted) {
+            debugPrint('用户拒绝通知权限，前台服务无法稳定运行');
+            if (mounted) {
+              _showNotificationPermissionDialog();
+            }
+            return;
+          }
+        }
+      }
+
+      // 检查是否已在运行
+      if (await FlutterForegroundTask.isRunningService) {
+        debugPrint('前台服务已在运行');
+        return;
+      }
+
+      // 启动服务（补全所有必须参数）
+      final bool started = await FlutterForegroundTask.startService(
+        notificationTitle: '小猫在线',
+        notificationText: '等待你的消息...',
+        callback: startCallback,
+        // 必须声明类型，否则 Android 14+ 不启动
+        serviceTypes: [ForegroundServiceTypes.dataSync],
+        // 自定义图标（使用你的 launcher 图标）
+        notificationIcon: const NotificationIcon(
+          resType: ResourceType.mipmap,
+          resPrefix: ResourcePrefix.ic_launcher,
+          name: 'ic_launcher',
+        ),
+        // 点击通知打开 App（可选）
+        intentAction: 'android.intent.action.MAIN',
+        intentPackage: 'com.example.my_new_app', // 替换成你的包名
+        intentClassName: 'com.example.my_new_app.MainActivity',
       );
+
+      if (started) {
+        debugPrint('前台服务启动成功 - 通知应可见');
+      } else {
+        debugPrint('前台服务启动失败');
+      }
+
+      // 可选：监听服务状态变化
+      FlutterForegroundTask.addTaskDataObserver(_onTaskDataReceived);
+    } catch (e, stack) {
+      debugPrint('启动前台服务异常: $e\n$stack');
     }
   }
 
-  // 新增方法：恢复应用状态
+  // 服务数据监听（心跳/日志/重启）
+  void _onTaskDataReceived(dynamic data) {
+    debugPrint('前台服务心跳数据: $data');
+    // 如果服务掉线，可在这里重启
+    if (data == 'service_destroyed') {
+      _startForegroundService();
+    }
+  }
+
+  // 引导开启通知权限
+  Future<void> _showNotificationPermissionDialog() async {
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('通知权限'),
+        content: const Text('请允许“小猫”显示通知，以便后台保活和接收消息。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await FlutterForegroundTask.openNotificationPermissionSetting();
+              // 设置完权限后重试启动
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) _startForegroundService();
+              });
+            },
+            child: const Text('去开启'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 引导关闭电池优化（小米/华为必须）
+  Future<void> _guideDisableBatteryOptimization() async {
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('电池优化'),
+        content: const Text('请将“小猫”设置为“无限制”或关闭电池优化，否则后台容易被杀。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('稍后'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await FlutterForegroundTask.openIgnoreBatteryOptimizationSetting();
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _restoreAppState() async {
     final state = await StorageService().loadAppState();
     if (state.isNotEmpty) {
       _savedInputText = state['inputText'];
       _savedScrollOffset = state['scrollOffset'] ?? 0.0;
-      _controller.text = _savedInputText ?? '';  // 恢复输入框
+      _controller.text = _savedInputText ?? '';
       if (kDebugMode) print('恢复状态：滚动 ${_savedScrollOffset}px，输入 ${_controller.text}');
     }
   }
@@ -2268,10 +5075,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     final now = DateTime.now();
     final timestamp = DateFormat('HH:mm').format(now);
-    
-    final MessageType messageType = text.trim().startsWith('/') 
-        ? MessageType.userNarration   // ← 已改
-        : MessageType.userDialogue;   // ← 已改
+
+    final MessageType messageType = text.trim().startsWith('/')
+        ? MessageType.userNarration
+        : MessageType.userDialogue;
 
     final processedContent = messageType == MessageType.userNarration
         ? text.trim().substring(1).trim()
@@ -2285,26 +5092,19 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       messageType: messageType,
     );
 
-    // 第一阶段：只添加用户消息
     setState(() {
       _messages.add(userMessage);
-      // 注意：这里**不**设 _isLoading = true，先让用户消息稳定出现
     });
 
-    // 立即强制下一帧滚动 + paint（核心防合并）
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      _scrollController.jumpTo(0.0);
-      _scrollController.position.notifyListeners();  // 强制通知位置变化
-      
-      // 额外强制一帧
-      SchedulerBinding.instance.scheduleFrame();
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(0.0);
+        _scrollController.position.notifyListeners();
+      }
     });
 
-    // 异步保存历史
     unawaited(_saveHistory());
 
-    // 短暂延迟后显示 loading（模拟"思考中"，避免抢用户消息的风头）
     await Future.delayed(const Duration(milliseconds: 150));
 
     if (mounted) {
@@ -2328,20 +5128,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           })));
 
       final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
-      
-      // 调试打印
-      if (kDebugMode) {
-        print('\n=== 发送给 DeepSeek 的完整上下文 ===');
-        print('时间: ${DateTime.now()}');
-        for (var i = 0; i < apiMessages.length; i++) {
-          final msg = apiMessages[i];
-          final short = msg['content']!.length > 80 
-              ? '${msg['content']!.substring(0, 80)}...' 
-              : msg['content'];
-          print('${i.toString().padLeft(2)} | ${msg['role']!.padRight(8)} | $short');
-        }
-        print('=============================\n');
-      }
 
       if (mounted) {
         final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -2354,7 +5140,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
         await _saveHistory();
 
-        // AI 加入后也强制跳一次（以防长回复推高）
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _scrollController.hasClients) {
             _scrollController.jumpTo(0.0);
@@ -2371,7 +5156,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             role: 'assistant',
             rawContent: '出错啦… $e',
             timestamp: errorTimestamp,
-            messageType: MessageType.aiDialogue,  // ← 已改
+            messageType: MessageType.aiDialogue,
           ));
           _isLoading = false;
         });
@@ -2389,7 +5174,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   void _deleteMessage(int index) {
     if (!mounted) return;
-    
+
     setState(() {
       _messages.removeAt(index);
     });
@@ -2424,7 +5209,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   List<Map<String, String>> _buildContextMessages({int maxCount = 20}) {
     if (_messages.isEmpty) return [];
 
-    final candidates = _messages.where((m) => m.messageType != MessageType.systemTime).toList();  // ← 已改
+    final candidates = _messages.where((m) => m.messageType != MessageType.systemTime).toList();
 
     if (candidates.isEmpty) return [];
 
@@ -2435,7 +5220,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     for (final msg in recent) {
       final content = msg.role == 'user'
-          ? msg.displayContent.trim()  // 第477行：去掉 ?.，直接用 .
+          ? msg.displayContent.trim()
           : msg.rawContent.trim();
 
       if (content.isEmpty) continue;
@@ -2448,14 +5233,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     return apiList;
   }
-  
+
   Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
 
     final characterData = await _storage.loadCharacterData();
     final enableCustomFormat = characterData['enable_custom_format'] == 'true';
-    
+
     final String rawContent = aiContent.trim();
 
     if (rawContent.isEmpty) {
@@ -2465,7 +5250,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         rawContent: '（思考中……）',
         displayContent: '（思考中……）',
         timestamp: timestamp,
-        messageType: MessageType.aiDialogue,  // ← 已改
+        messageType: MessageType.aiDialogue,
       ));
       return messages;
     }
@@ -2476,7 +5261,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       final startResponse = rawContent.indexOf('<response>');
       final endResponse = rawContent.lastIndexOf('</response>');
-      
+
       if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
         final responseInner = rawContent.substring(
           startResponse + '<response>'.length,
@@ -2504,12 +5289,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       if (displayEnvironment.isNotEmpty) {
         messages.add(Message(
-          id:'ai_nar_$now',
+          id: 'ai_nar_$now',
           role: 'assistant',
           rawContent: rawContent,
           displayContent: displayEnvironment,
           timestamp: timestamp,
-          messageType: MessageType.aiNarration,  // ← 已改
+          messageType: MessageType.aiNarration,
         ));
       }
 
@@ -2520,7 +5305,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           rawContent: rawContent,
           displayContent: displayDialogue,
           timestamp: timestamp,
-          messageType: MessageType.aiDialogue,  // ← 已改
+          messageType: MessageType.aiDialogue,
         ));
       }
 
@@ -2531,7 +5316,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           rawContent: rawContent,
           displayContent: rawContent,
           timestamp: timestamp,
-          messageType: MessageType.aiDialogue,  // ← 已改
+          messageType: MessageType.aiDialogue,
         ));
       }
     } else {
@@ -2541,7 +5326,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         rawContent: rawContent,
         displayContent: rawContent,
         timestamp: timestamp,
-        messageType: MessageType.aiDialogue,  // ← 已改
+        messageType: MessageType.aiDialogue,
       ));
     }
 
@@ -2550,39 +5335,39 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   Widget _buildMessageWidget(Message msg) {
     final displayText = msg.displayContent;
-    
+
     switch (msg.messageType) {
-      case MessageType.userNarration:  // ← 已改
+      case MessageType.userNarration:
         return NarrationMessage(
           text: displayText,
           isAI: false,
           isCentered: _narrationCentered,
         );
 
-      case MessageType.aiNarration:  // ← 已改
+      case MessageType.aiNarration:
         return NarrationMessage(
           text: displayText,
           isAI: true,
           isCentered: _narrationCentered,
         );
 
-      case MessageType.userDialogue:  // ← 已改
+      case MessageType.userDialogue:
         return SentMessage(
           text: displayText,
           userAvatarPath: _userAvatarPath,
           showUserAvatar: _showUserAvatar,
         );
 
-      case MessageType.aiDialogue:  // ← 已改
+      case MessageType.aiDialogue:
         return ReceivedMessage(
           text: displayText,
           avatarPath: _avatarPath,
         );
 
-      case MessageType.systemTime:  // ← 已改
+      case MessageType.systemTime:
         return SystemTimeMessage(text: displayText);
 
-      case MessageType.systemState:  // ← 已改
+      case MessageType.systemState:
         return Container();
     }
   }
@@ -2590,7 +5375,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: false,
@@ -2678,16 +5463,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                     controller: _scrollController,
                     reverse: true,
                     slivers: [
-                      // 先加一个大的 SliverPadding 让开场白偏上
                       SliverToBoxAdapter(
-                        child: SizedBox(height: 75), // ← 调这个值，越大开场白越靠上
+                        child: SizedBox(height: 75),
                       ),
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            // 处理"正在输入..."（放在视觉最底部，即 index=0）
                             if (_isLoading && index == 0) {
-                              // 只在用户消息后显示
                               return AnimatedSize(
                                 duration: const Duration(milliseconds: 200),
                                 curve: Curves.easeOut,
@@ -2726,14 +5508,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                               );
                             }
 
-                            // 根据是否有loading调整索引
                             final msgIndex = _messages.length - 1 - index + (_isLoading ? 1 : 0);
                             if (msgIndex < 0 || msgIndex >= _messages.length) {
                               return const SizedBox.shrink();
                             }
 
                             final msg = _messages[msgIndex];
-                            // 使用 GlobalKey 确保消息稳定性
                             return Container(
                               key: ValueKey(msg.id),
                               child: GestureDetector(
@@ -3195,13 +5975,12 @@ _buildSettingItem(
 
 File: D:\D\my_new_app\lib\pages\diary\diary_bookshelf_page.dart
 
-Size: 9873 bytes
+Size: 8818 bytes
 
-Modified: 01/22/2026 01:55:30
+Modified: 01/22/2026 02:26:48
 
 ========================================
 
-// lib/pages/diary/diary_bookshelf_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -3216,178 +5995,142 @@ class DiaryBookshelfPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('📖 DiaryBookshelfPage 开始构建...');
-    
-    try {
-      final diaries = ref.watch(diaryListProvider);
-      print('✅ 成功获取日记数据，数量: ${diaries.length}');
-      
-      final isLoading = ref.watch(diaryListProvider).isEmpty && ref.read(diaryListProvider.notifier).state.isEmpty;
+    debugPrint('📖 DiaryBookshelfPage 开始构建...');
 
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFF5A7E),
-          title: const Text(
-            '我的日记书架',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+    final diariesAsync = ref.watch(diaryListProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFF5A7E),
+        title: const Text(
+          '我的日记书架',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => ref.invalidate(diaryListProvider),
+            tooltip: '刷新',
+          ),
+        ],
+      ),
+      body: diariesAsync.when(
+        data: (diaries) {
+          debugPrint('✅ 成功获取日记数据，数量: ${diaries.length}');
+          return diaries.isEmpty
+              ? _buildEmptyState(context, ref)
+              : _buildBookshelfGrid(context, ref, diaries);
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
+        ),
+        error: (error, stackTrace) {
+          debugPrint('日记加载错误: $error\n$stackTrace');
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                const SizedBox(height: 24),
+                const Text(
+                  '加载日记失败',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5A7E),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => ref.invalidate(diaryListProvider),
+                ),
+              ],
             ),
-          ),
-          centerTitle: true,
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: () => ref.refresh(diaryListProvider.notifier).loadAllDiaries(),
-              tooltip: '刷新',
-            ),
-          ],
-        ),
-        body: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFFF5A7E),
-                ),
-              )
-            : diaries.isEmpty
-                ? _buildEmptyState(context)
-                : _buildBookshelfGrid(context, ref, diaries),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: const Color(0xFFFF5A7E),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-          elevation: 4,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DiaryEditorPage(),
-              ),
-            );
-          },
-          child: const Icon(Icons.add, size: 28),
-        ),
-      );
-      
-    } catch (e, stackTrace) {
-      print('💥 DiaryBookshelfPage 构建时发生严重错误:');
-      print('错误类型: ${e.runtimeType}');
-      print('错误信息: $e');
-      print('堆栈跟踪: $stackTrace');
-      
-      // 返回一个简单的错误页面，而不是崩溃
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('日记本'),
-          backgroundColor: const Color(0xFFFF5A7E),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                '日记本加载失败',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '错误: ${e.toString().split('\n').first}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5A7E),
-                ),
-                child: const Text('返回', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFFFF5A7E),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        elevation: 6,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DiaryEditorPage()),
+          ).then((_) {
+            // 修复点1: 使用闭包捕获 ref + mounted 检查
+            if (context.mounted) {
+              ref.invalidate(diaryListProvider);
+            }
+          });
+        },
+        child: const Icon(Icons.add, size: 32),
+      ),
+    );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.menu_book_outlined,
-            size: 100,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 20),
+          Icon(Icons.menu_book_outlined, size: 120, color: Colors.grey[400]),
+          const SizedBox(height: 24),
           Text(
             '日记书架空空如也',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 22, color: Colors.grey[700], fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            '点击右下角 + 写下第一篇日记吧',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
+          const SizedBox(height: 12),
+          Text(
+            '点击右下角 + 开始记录你的心情吧',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 30),
-          ElevatedButton(
+          const SizedBox(height: 40),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.edit),
+            label: const Text('写第一篇日记'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5A7E),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const DiaryEditorPage(),
-                ),
-              );
+                MaterialPageRoute(builder: (_) => const DiaryEditorPage()),
+              ).then((_) {
+                // 修复点2: 同上，捕获 ref + mounted
+                if (context.mounted) {
+                  ref.invalidate(diaryListProvider);
+                }
+              });
             },
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.edit, size: 18),
-                SizedBox(width: 8),
-                Text('开始写日记'),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBookshelfGrid(
-      BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
+  Widget _buildBookshelfGrid(BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
     return GridView.builder(
       padding: const EdgeInsets.all(20),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -3397,53 +6140,48 @@ class DiaryBookshelfPage extends ConsumerWidget {
         mainAxisSpacing: 20,
       ),
       itemCount: diaries.length,
-      itemBuilder: (ctx, index) {
+      itemBuilder: (context, index) {
         final entry = diaries[index];
         return _buildDiaryCard(context, ref, entry);
       },
     );
   }
 
-  Widget _buildDiaryCard(
-      BuildContext context, WidgetRef ref, DiaryEntry entry) {
+  Widget _buildDiaryCard(BuildContext context, WidgetRef ref, DiaryEntry entry) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => DiaryDetailPage(entry: entry),
-          ),
-        );
+          MaterialPageRoute(builder: (_) => DiaryDetailPage(entry: entry)),
+        ).then((_) {
+          // 修复点3: 同上，捕获 ref + mounted
+          if (context.mounted) {
+            ref.invalidate(diaryListProvider);
+          }
+        });
       },
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.black,
-            width: 3,
-          ),
-          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black, width: 3),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(4, 4),
-            ),
+            BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(4, 6)),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(13),
           child: FutureBuilder<String>(
             future: ref.read(diaryListProvider.notifier).getCoverPath(entry),
             builder: (context, snapshot) {
-              if (snapshot.hasData &&
+              final hasCover = snapshot.hasData &&
                   snapshot.data!.isNotEmpty &&
-                  File(snapshot.data!).existsSync()) {
+                  File(snapshot.data!).existsSync();
+
+              if (hasCover) {
                 return Image.file(
                   File(snapshot.data!),
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildFallbackCover(entry);
-                  },
+                  errorBuilder: (_, __, ___) => _buildFallbackCover(entry),
                 );
               }
               return _buildFallbackCover(entry);
@@ -3455,23 +6193,19 @@ class DiaryBookshelfPage extends ConsumerWidget {
   }
 
   Widget _buildFallbackCover(DiaryEntry entry) {
-    // 从十六进制颜色字符串解析为Color
-    Color parseColor(String hexColor) {
-      final hex = hexColor.replaceAll('#', '');
-      return Color(int.parse(hex, radix: 16) | 0xFF000000);
+    Color parseColor(String? hex) {
+      if (hex == null || hex.isEmpty) return const Color(0xFFBAE1FF);
+      final clean = hex.replaceAll('#', '');
+      return Color(int.parse(clean, radix: 16) | 0xFF000000);
     }
 
-    final color1 = entry.coverColor1 != null
-        ? parseColor(entry.coverColor1!)
-        : const Color(0xFFBAE1FF);
-    final color2 = entry.coverColor2 != null
-        ? parseColor(entry.coverColor2!)
-        : const Color(0xFFFFB3BA);
+    final c1 = parseColor(entry.coverColor1);
+    final c2 = parseColor(entry.coverColor2);
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color1, color2],
+          colors: [c1, c2],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -3483,26 +6217,16 @@ class DiaryBookshelfPage extends ConsumerWidget {
             Text(
               DateFormat('MM.dd').format(entry.createdAt),
               style: const TextStyle(
-                fontSize: 32,
+                fontSize: 36,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    blurRadius: 4,
-                    color: Colors.black26,
-                    offset: Offset(2, 2),
-                  ),
-                ],
+                shadows: [Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(2, 2))],
               ),
             ),
             const SizedBox(height: 8),
             Text(
               DateFormat('yyyy').format(entry.createdAt),
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 18, color: Colors.white70),
             ),
           ],
         ),
@@ -6372,6 +9096,1269 @@ Modified: 01/21/2026 16:08:14
       );
     }
   }
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\providers\diary_provider.dart
+
+Size: 4663 bytes
+
+Modified: 01/22/2026 02:57:57
+
+========================================
+
+import 'dart:io';
+import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:isar_community/isar.dart';
+import '../services/isar_service.dart';
+import '../models/diary_entry.dart';
+
+final diaryListProvider = AsyncNotifierProvider<DiaryNotifier, List<DiaryEntry>>(
+  DiaryNotifier.new,
+);
+
+class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
+  @override
+  Future<List<DiaryEntry>> build() async {
+    final Isar isar = await ref.watch(isarProvider.future); // 显式声明 Isar 类型
+    return isar.diaryEntrys
+        .where()
+        .sortByCreatedAtDesc()
+        .findAll();
+  }
+
+  Future<void> addDiary(String content) async {
+    state = const AsyncLoading();
+    try {
+      final Isar isar = await ref.watch(isarProvider.future);
+      final newEntry = DiaryEntry()
+        ..content = content
+        ..coverColor1 = _generateRandomPastelColor()
+        ..coverColor2 = _generateRandomPastelColor();
+
+      await isar.writeTxn(() async {
+        await isar.diaryEntrys.put(newEntry);
+        await _generateAndSaveCover(newEntry);
+      });
+
+      state = AsyncData(await build());
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  Future<void> updateDiary(DiaryEntry entry, String newContent) async {
+    state = const AsyncLoading();
+    try {
+      final Isar isar = await ref.watch(isarProvider.future);
+      entry.content = newContent;
+
+      await isar.writeTxn(() async {
+        await isar.diaryEntrys.put(entry);
+      });
+
+      state = AsyncData(await build());
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  Future<void> deleteDiary(DiaryEntry entry) async {
+    state = const AsyncLoading();
+    try {
+      final Isar isar = await ref.watch(isarProvider.future);
+
+      await isar.writeTxn(() async {
+        await isar.diaryEntrys.delete(entry.id);
+
+        final coverPath = await getCoverFilePath('${entry.id}.png');
+        final file = File(coverPath);
+        if (await file.exists()) await file.delete();
+      });
+
+      state = AsyncData(await build());
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  Future<String> getCoverPath(DiaryEntry entry) async {
+    return await getCoverFilePath('${entry.id}.png');
+  }
+
+  String _generateRandomPastelColor() {
+    final random = Random();
+    final r = 150 + random.nextInt(106);
+    final g = 150 + random.nextInt(106);
+    final b = 150 + random.nextInt(106);
+    return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
+  }
+
+  Future<void> _generateAndSaveCover(DiaryEntry entry) async {
+    const width = 300.0;
+    const height = 450.0;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
+
+    final color1 = _hexToColor(entry.coverColor1 ?? '#BAE1FF');
+    final color2 = _hexToColor(entry.coverColor2 ?? '#FFB3BA');
+
+    final gradient = LinearGradient(
+      colors: [color1, color2],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(Rect.fromLTWH(0, 0, width, height));
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, height), paint);
+
+    final dateStr = DateFormat('yyyy.MM.dd').format(entry.createdAt);
+    final textStyle = const TextStyle(
+      fontSize: 28,
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+      fontFamily: 'sans-serif',
+    );
+
+    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
+      textDirection: ui.TextDirection.ltr,
+    ))
+      ..pushStyle(textStyle.getTextStyle())
+      ..addText(dateStr);
+
+    final paragraph = paragraphBuilder.build()
+      ..layout(const ui.ParagraphConstraints(width: width));
+
+    canvas.drawParagraph(
+      paragraph,
+      Offset((width - paragraph.width) / 2, 180),
+    );
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final pngBytes = byteData!.buffer.asUint8List();
+
+    final coverPath = await getCoverFilePath('${entry.id}.png');
+    final file = File(coverPath);
+    await file.writeAsBytes(pngBytes);
+  }
+
+  Color _hexToColor(String hexCode) {
+    final hex = hexCode.replaceAll('#', '');
+    return Color(int.parse(hex, radix: 16) | 0xFF000000);
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\api_config.dart
+
+Size: 9428 bytes
+
+Modified: 01/18/2026 15:43:26
+
+========================================
+
+// lib/services/api_config.dart
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+
+class ApiProvider {
+  final String id;                // 唯一标识，如 'deepseek', 'groq', 'custom_1'
+  final String name;              // 显示名
+  final String baseUrl;           // 基础 URL
+  final String apiKey;            // 密钥（保存时加密更好，但先明文）
+  final List<String> models;      // 可用模型列表
+  final bool isOpenAiCompatible;  // 是否 OpenAI 格式（header Bearer, /chat/completions）
+  final bool isCustom;            // 是否用户自定义
+  final bool requiresProxy;       // 仅用于提示用户，App不控制代理
+  final String setupGuide;        // 设置指南
+
+  ApiProvider({
+    required this.id,
+    required this.name,
+    required this.baseUrl,
+    required this.apiKey,
+    this.models = const [],
+    this.isOpenAiCompatible = true,
+    this.isCustom = false,
+    this.requiresProxy = false,
+    this.setupGuide = '',
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'name': name,
+        'baseUrl': baseUrl,
+        'apiKey': apiKey,
+        'models': models,
+        'isOpenAiCompatible': isOpenAiCompatible,
+        'isCustom': isCustom,
+        'requiresProxy': requiresProxy,
+        'setupGuide': setupGuide,
+      };
+
+  factory ApiProvider.fromMap(Map<String, dynamic> map) => ApiProvider(
+        id: map['id'] as String,
+        name: map['name'] as String,
+        baseUrl: map['baseUrl'] as String,
+        apiKey: map['apiKey'] as String,
+        models: List<String>.from(map['models'] ?? []),
+        isOpenAiCompatible: map['isOpenAiCompatible'] ?? true,
+        isCustom: map['isCustom'] ?? false,
+        requiresProxy: map['requiresProxy'] ?? false,
+        setupGuide: map['setupGuide'] ?? '',
+      );
+}
+
+class ApiConfig {
+  static const String _providersKey = 'api_providers';
+  static const String _currentProviderIdKey = 'current_provider_id';
+  static const String _currentModelKey = 'current_model';
+
+  // 预设模板（硬编码）- 基于你原有的provider信息改进
+  static final List<ApiProvider> defaultProviders = [
+    ApiProvider(
+      id: 'deepseek',
+      name: 'DeepSeek',
+      baseUrl: 'https://api.deepseek.com',
+      apiKey: '', // 用户必须自己填
+      models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+      isOpenAiCompatible: true,
+      requiresProxy: false,
+      setupGuide: '1. 访问 https://platform.deepseek.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方',
+    ),
+    ApiProvider(
+      id: 'ohmygpt',
+      name: 'OhMyGPT',
+      baseUrl: 'https://api.ohmygpt.com/v1',
+      apiKey: '',
+      models: ['claude-3-5-haiku-20241022', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus'],
+      isOpenAiCompatible: true,
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://www.ohmygpt.com/dashboard\n2. 确保账户有余额\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
+    ),
+    ApiProvider(
+      id: 'openai',
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: '',
+      models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+      isOpenAiCompatible: true,
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://platform.openai.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
+    ),
+    ApiProvider(
+      id: 'nvidia',
+      name: 'NVIDIA API',
+      baseUrl: 'https://integrate.api.nvidia.com/v1',
+      apiKey: '',
+      models: ['meta/llama-3.1-405b-instruct', 'meta/llama-3.1-70b-instruct', 'z-ai/glm-4', 'minimaxai/minimax-m2.1'],
+      isOpenAiCompatible: true,
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://build.nvidia.com\n2. 获取 API Key\n3. 可能需要 VPN/代理',
+    ),
+    // 新增预设
+    ApiProvider(
+      id: 'groq',
+      name: 'Groq',
+      baseUrl: 'https://api.groq.com/openai/v1',
+      apiKey: '',
+      models: ['llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it', 'llama-3.1-70b-versatile'],
+      isOpenAiCompatible: true,
+      requiresProxy: false,
+      setupGuide: '1. 访问 https://console.groq.com\n2. 注册并获取API Key',
+    ),
+    ApiProvider(
+      id: 'anthropic',
+      name: 'Anthropic (Claude)',
+      baseUrl: 'https://api.anthropic.com/v1',
+      apiKey: '',
+      models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
+      isOpenAiCompatible: false,
+      requiresProxy: true,
+      setupGuide: '1. 访问 https://console.anthropic.com\n2. 获取 API Key\n3. 需要特殊格式请求',
+    ),
+  ];
+
+  // 加载所有 provider（预设 + 自定义）
+  static Future<List<ApiProvider>> loadProviders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString(_providersKey);
+    
+    if (jsonStr == null || jsonStr.isEmpty) {
+      // 第一次：返回预设
+      return List.from(defaultProviders);
+    }
+    
+    try {
+      final List<dynamic> list = jsonDecode(jsonStr);
+      return list.map((e) => ApiProvider.fromMap(e)).toList();
+    } catch (e) {
+      print('加载服务商失败: $e');
+      return List.from(defaultProviders);
+    }
+  }
+
+  // 保存所有 provider
+  static Future<void> saveProviders(List<ApiProvider> providers) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = jsonEncode(providers.map((p) => p.toMap()).toList());
+    await prefs.setString(_providersKey, json);
+  }
+
+  // 获取当前 provider ID 和 model
+  static Future<String> getCurrentProviderId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_currentProviderIdKey) ?? 'deepseek';
+  }
+
+  static Future<String> getCurrentModel() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_currentModelKey) ?? 'deepseek-chat';
+  }
+
+  // 设置当前
+  static Future<void> setCurrent(String providerId, String model) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_currentProviderIdKey, providerId);
+    await prefs.setString(_currentModelKey, model);
+  }
+
+  // 获取当前完整 provider
+  static Future<ApiProvider?> getCurrentProvider() async {
+    final id = await getCurrentProviderId();
+    final all = await loadProviders();
+    try {
+      return all.firstWhere((p) => p.id == id);
+    } catch (e) {
+      return defaultProviders.first;
+    }
+  }
+
+  // 尝试从 /models 拉取模型列表（OpenAI 兼容的才有效）
+  static Future<List<String>> tryFetchModels(ApiProvider provider) async {
+    if (!provider.isOpenAiCompatible) return provider.models; // 非兼容的跳过
+    if (provider.apiKey.isEmpty) return provider.models; // 没有API Key不尝试
+
+    try {
+      final response = await http.get(
+        Uri.parse('${provider.baseUrl}/models'),
+        headers: {'Authorization': 'Bearer ${provider.apiKey}'},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> modelList = data['data'] ?? [];
+        return modelList.map((m) => m['id'].toString()).toList();
+      } else {
+        print('拉取模型失败: ${response.statusCode}');
+        return provider.models;
+      }
+    } catch (e) {
+      print('拉取模型异常: $e');
+      return provider.models;
+    }
+  }
+
+  // 添加自定义provider
+  static Future<void> addCustomProvider({
+    required String name,
+    required String baseUrl,
+    required String apiKey,
+    bool isOpenAiCompatible = true,
+    bool requiresProxy = false,
+  }) async {
+    final all = await loadProviders();
+    
+    // 生成唯一ID
+    final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+    
+    final newProvider = ApiProvider(
+      id: id,
+      name: name,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      models: [], // 初始为空，后续可以拉取
+      isOpenAiCompatible: isOpenAiCompatible,
+      isCustom: true,
+      requiresProxy: requiresProxy,
+      setupGuide: '自定义服务商',
+    );
+    
+    all.add(newProvider);
+    await saveProviders(all);
+  }
+
+  // 删除provider
+  static Future<void> deleteProvider(String id) async {
+    final all = await loadProviders();
+    all.removeWhere((p) => p.id == id);
+    await saveProviders(all);
+  }
+
+  // 更新provider的API Key和模型
+  static Future<void> updateProvider({
+    required String id,
+    String? apiKey,
+    List<String>? models,
+  }) async {
+    final all = await loadProviders();
+    final index = all.indexWhere((p) => p.id == id);
+    
+    if (index != -1) {
+      final provider = all[index];
+      all[index] = ApiProvider(
+        id: provider.id,
+        name: provider.name,
+        baseUrl: provider.baseUrl,
+        apiKey: apiKey ?? provider.apiKey,
+        models: models ?? provider.models,
+        isOpenAiCompatible: provider.isOpenAiCompatible,
+        isCustom: provider.isCustom,
+        requiresProxy: provider.requiresProxy,
+        setupGuide: provider.setupGuide,
+      );
+      await saveProviders(all);
+    }
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\api_service.dart
+
+Size: 2603 bytes
+
+Modified: 01/18/2026 15:43:26
+
+========================================
+
+// lib/services/api_service.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'api_config.dart';
+
+class ApiService {
+  Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) {
+      throw Exception('没有选择服务商');
+    }
+
+    final modelName = model ?? await ApiConfig.getCurrentModel();
+
+    if (provider.apiKey.isEmpty) {
+      throw Exception('请先在设置中配置 ${provider.name} 的 API Key');
+    }
+
+    if (!provider.isOpenAiCompatible) {
+      throw Exception('当前服务商 ${provider.name} 不支持 OpenAI 格式，请切换其他服务商');
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('${provider.baseUrl}/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${provider.apiKey}',
+        },
+        body: jsonEncode({
+          'model': modelName,
+          'messages': messages,
+          'temperature': 0.9,
+          'stream': false,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'] as String?;
+      } else {
+        throw Exception('API 错误: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('网络请求失败: $e');
+    }
+  }
+
+  // 新增：获取当前服务商的可用模型
+  Future<List<String>> getAvailableModels() async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) return [];
+    return provider.models;
+  }
+
+  // 测试连接（兼容原有）
+  Future<bool> testConnection({
+    String? baseUrl,
+    String? apiKey,
+    String? model,
+  }) async {
+    final provider = await ApiConfig.getCurrentProvider();
+    if (provider == null) return false;
+
+    final testBaseUrl = baseUrl ?? provider.baseUrl;
+    final testApiKey = apiKey ?? provider.apiKey;
+    
+    if (testApiKey.isEmpty) {
+      throw Exception('API Key 为空');
+    }
+
+    if (!provider.isOpenAiCompatible) {
+      throw Exception('当前服务商不支持 OpenAI 格式');
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$testBaseUrl/models'),
+        headers: {'Authorization': 'Bearer $testApiKey'},
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      throw Exception('连接失败: $e');
+    }
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\constants.dart
+
+Size: 0 bytes
+
+Modified: 01/02/2026 16:37:48
+
+========================================
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\export_service.dart
+
+Size: 5567 bytes
+
+Modified: 01/21/2026 19:12:53
+
+========================================
+
+// lib/services/export_service.dart
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import '../models/message.dart';
+import 'storage_service.dart';
+import 'package:permission_handler/permission_handler.dart';  // ← 加这一行
+
+class ExportData {
+  final String version = '1.0';
+  final String exportedAt;
+  final String roomId;
+  final String nickname;
+  final Map<String, String> character;
+  final List<Message> messages;
+
+  ExportData({
+    required this.exportedAt,
+    required this.roomId,
+    required this.nickname,
+    required this.character,
+    required this.messages,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'version': version,
+        'exported_at': exportedAt,
+        'room_id': roomId,
+        'nickname': nickname,
+        'character': character,
+        'messages': messages.map((m) => m.toMap()).toList(),
+      };
+}
+
+class ExportService {
+  static const String kDefaultRoomId = StorageService.kDefaultRoomId;
+
+static Future<ExportResult> exportChat({
+  required bool includeCharacter,
+  required String characterName,
+  String roomId = kDefaultRoomId,
+  bool overwrite = false,
+}) async {
+  try {
+    // 请求存储权限（Android 必要）
+    if (Platform.isAndroid) {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+        if (!status.isGranted) {
+          return ExportResult(success: false, message: '需要存储权限才能保存文件');
+        }
+      }
+    }
+
+    final storage = StorageService();
+    final messages = await storage.loadChatHistory(roomId: roomId);
+    if (messages.isEmpty) {
+      return ExportResult(success: false, message: '无消息可导出');
+    }
+
+    final now = DateTime.now();
+    final formatter = DateFormat('yyyy-MM-dd_HHmm');
+    final timestamp = formatter.format(now);
+
+    final nicknameRaw = await storage.getCharacterNickname();
+    final nickname = nicknameRaw.isEmpty ? characterName : nicknameRaw;
+    final characterData = includeCharacter ? await storage.loadCharacterData() : <String, String>{};
+
+    final export = ExportData(
+      exportedAt: now.toIso8601String(),
+      roomId: roomId,
+      nickname: nickname,
+      character: characterData,
+      messages: messages,
+    );
+
+    final jsonString = jsonEncode(export.toJson());
+    final type = includeCharacter ? '全部配置' : '聊天记录';
+    final baseFileName = 'lovme_chat_${nickname}_${roomId}_${type}_$timestamp';
+
+    // 公共 Download 目录（用户可见！）
+    final downloadDir = Directory('/storage/emulated/0/Download');
+    if (!await downloadDir.exists()) {
+      await downloadDir.create(recursive: true);
+    }
+
+    final lovmeDir = Directory(path.join(downloadDir.path, 'lovme'));
+    if (!await lovmeDir.exists()) {
+      await lovmeDir.create(recursive: true);
+    }
+
+    var filePath = path.join(lovmeDir.path, '$baseFileName.json');
+    var file = File(filePath);
+
+    // 防覆盖：序号递增
+    int counter = 1;
+    while (await file.exists() && !overwrite) {
+      filePath = path.join(lovmeDir.path, '${baseFileName}_$counter.json');
+      file = File(filePath);
+      counter++;
+    }
+
+    // 原子写入
+    final tempFile = await File(path.join((await getTemporaryDirectory()).path, 'temp_export.json'))
+        .writeAsString(jsonString);
+    await tempFile.copy(filePath);
+    await tempFile.delete();
+
+    if (kDebugMode) {
+      print('公共保存成功: $filePath');
+      print('大小: ${await file.length()} bytes');
+    }
+
+    return ExportResult(
+      success: true,
+      message: '保存到 Download/lovme',
+      filePath: filePath,
+      file: file,
+    );
+  } catch (e) {
+    debugPrint('导出失败: $e');
+    return ExportResult(success: false, message: '导出失败: $e');
+  }
+}
+
+  /// 检查文件是否存在
+  static Future<bool> checkFileExists(String characterName, bool includeCharacter) async {
+    try {
+      final type = includeCharacter ? '全部配置' : '聊天记录';
+      final fileName = '$characterName-$type.json';
+      final downloadsDir = await getDownloadsDirectory();
+      if (downloadsDir == null) return false;
+      
+      final lovmeDir = Directory(path.join(downloadsDir.path, 'lovme'));
+      final filePath = path.join(lovmeDir.path, fileName);
+      return await File(filePath).exists();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 获取保存目录的显示路径（用于显示给用户）
+  static Future<String> getDisplayPath() async {
+    final downloadsDir = await getDownloadsDirectory();
+    if (downloadsDir == null) return '下载目录';
+    
+    // 转换路径为可读格式
+    String pathStr = downloadsDir.path;
+    
+    // 如果是Android，转换为用户友好的路径
+    if (pathStr.contains('/storage/emulated/0/')) {
+      pathStr = pathStr.replaceAll('/storage/emulated/0/', '/sdcard/');
+    }
+    
+    return path.join(pathStr, 'lovme');
+  }
+}
+
+/// 导出结果类
+class ExportResult {
+  final bool success;
+  final String message;
+  final String? filePath;
+  final bool fileExists;
+  final File? file;
+
+  ExportResult({
+    required this.success,
+    required this.message,
+    this.filePath,
+    this.fileExists = false,
+    this.file,
+  });
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\foreground_task_handler.dart
+
+Size: 1747 bytes
+
+Modified: 01/22/2026 18:34:52
+
+========================================
+
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+
+class ChatForegroundTaskHandler extends TaskHandler {
+  Timer? _heartbeatTimer;
+
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    if (kDebugMode) print('前台服務啟動：$timestamp (由 ${starter.name} 啟動)');
+
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      FlutterForegroundTask.sendDataToMain({
+        'type': 'heartbeat',
+        'time': DateTime.now().toIso8601String(),
+      });
+    });
+
+    FlutterForegroundTask.sendDataToMain({
+      'type': 'started',
+      'time': timestamp.toIso8601String(),
+    });
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // 修正：移除了 async、移除了 TaskStarter 参数，改为 void 返回类型
+    if (kDebugMode) print('心跳：$timestamp');
+
+    FlutterForegroundTask.sendDataToMain({
+      'type': 'tick',
+      'time': timestamp.toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp, bool wasForceStopped) async {
+    if (kDebugMode) print('服務銷毀：$timestamp (強制？ $wasForceStopped)');
+
+    _heartbeatTimer?.cancel();
+
+    FlutterForegroundTask.sendDataToMain({
+      'type': 'stopped',
+      'time': timestamp.toIso8601String(),
+      'force': wasForceStopped,
+    });
+  }
+
+  @override
+  void onNotificationPressed() {
+    if (kDebugMode) print('通知被點擊');
+    FlutterForegroundTask.sendDataToMain({'type': 'notification_tapped'});
+  }
+
+  @override
+  void onReceiveData(dynamic data) {
+    if (kDebugMode) print('收到 UI 指令：$data');
+  }
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\isar_service.dart
+
+Size: 938 bytes
+
+Modified: 01/22/2026 02:57:53
+
+========================================
+
+import 'dart:io';
+import 'package:isar_community/isar.dart';
+import 'package:path_provider/path_provider.dart';
+import '../models/diary_entry.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// 全局 FutureProvider：Riverpod 自动 await 初始化 + 缓存 Isar 实例
+final isarProvider = FutureProvider<Isar>((ref) async {
+  final dir = await getApplicationDocumentsDirectory();
+  final isar = await Isar.open(
+    [DiaryEntrySchema],
+    directory: dir.path,
+    inspector: true, // release 版建议改为 false
+  );
+  return isar;
+});
+
+// 独立封面路径工具函数（无需依赖 Isar）
+Future<String> getCoverFilePath(String fileName) async {
+  final dir = await getApplicationDocumentsDirectory();
+  final coversDir = Directory('${dir.path}/diary_covers');
+  if (!await coversDir.exists()) {
+    await coversDir.create(recursive: true);
+  }
+  return '${coversDir.path}/$fileName';
+}
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\services\storage_service.dart
+
+Size: 13485 bytes
+
+Modified: 01/21/2026 17:20:19
+
+========================================
+
+// lib/services/storage_service.dart
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path_lib;
+import 'package:flutter/foundation.dart';
+import '../models/message.dart';
+import 'dart:convert';
+
+class StorageService {
+  static final StorageService _instance = StorageService._internal();
+  factory StorageService() => _instance;
+  StorageService._internal();
+
+  // 🔥 添加这行！
+  static const String kDefaultRoomId = 'default';
+  
+
+  Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
+
+  // ── 开发者模式相关 ──
+  Future<void> saveDeveloperMode(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool('developer_mode', enabled);
+  }
+
+  Future<bool> getDeveloperMode() async {
+    final prefs = await _prefs;
+    return prefs.getBool('developer_mode') ?? false;
+  }
+
+  // ── 新增：夜间模式相关 ──
+  Future<void> saveThemeMode(String mode) async {
+    final prefs = await _prefs;
+    await prefs.setString('theme_mode', mode); // 'light', 'dark', 'system'
+  }
+
+  Future<String> getThemeMode() async {
+    final prefs = await _prefs;
+    return prefs.getString('theme_mode') ?? 'system'; // 默认跟随系统
+  }
+
+  // ── 聊天记录相关 ──（必须保留）- 已添加 roomId 参数
+  Future<void> saveChatHistory(List<Message> history, {String roomId = kDefaultRoomId}) async {
+    final prefs = await _prefs;
+    final List<Map<String, dynamic>> serializableHistory = 
+        history.map((msg) => msg.toMap()).toList();
+    final jsonString = jsonEncode(serializableHistory);
+    final key = 'chat_history_$roomId';  // 使用动态key
+    await prefs.setString(key, jsonString);
+    if (kDebugMode) print('保存聊天历史到 $key，消息数: ${history.length}');
+  }
+
+  Future<List<Message>> loadChatHistory({String roomId = kDefaultRoomId}) async {
+    final prefs = await _prefs;
+    final key = 'chat_history_$roomId';  // 使用动态key
+    String? jsonString = prefs.getString(key);
+    
+    // 🔥 零感知旧数据迁移（仅执行一次：旧 master → 新 default）
+    if (jsonString == null && roomId == kDefaultRoomId) {
+      final legacyKey = 'chat_history_master';
+      jsonString = prefs.getString(legacyKey);
+      if (jsonString != null && jsonString.isNotEmpty) {
+        try {
+          final List<dynamic> decoded = jsonDecode(jsonString);
+          final count = decoded.length;
+          await prefs.setString(key, jsonString);  // 复制到新 key
+          await prefs.remove(legacyKey);           // 删除旧 key（安全清理）
+          if (kDebugMode) print('✅ 旧数据迁移完成: $count 条消息 from $legacyKey to $key');
+        } catch (e) {
+          if (kDebugMode) print('迁移解析失败: $e，保留原数据');
+        }
+      }
+    }
+    
+    if (jsonString == null || jsonString.isEmpty) return [];
+    
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonString);
+      return decoded.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      if (kDebugMode) print('聊天记录解析失败: $e');
+      return [];
+    }
+  }
+
+  Future<void> clearChatHistory({String roomId = kDefaultRoomId}) async {
+    final prefs = await _prefs;
+    final key = 'chat_history_$roomId';
+    await prefs.remove(key);
+    // 兼容清理旧 master（仅默认房间）
+    if (roomId == kDefaultRoomId) {
+      await prefs.remove('chat_history_master');
+    }
+    if (kDebugMode) print('清空聊天历史: $key');
+  }
+
+  // ── 角色编辑相关 ──
+  Future<void> saveCharacterData(Map<String, String> data) async {
+    final prefs = await _prefs;
+    final jsonString = jsonEncode(data);
+    await prefs.setString('character_data', jsonString);
+  }
+
+  Future<Map<String, String>> loadCharacterData() async {
+    final prefs = await _prefs;
+    final jsonString = prefs.getString('character_data');
+    if (jsonString == null || jsonString.isEmpty) {
+      return {};
+    }
+    try {
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      return decoded.map((key, value) => MapEntry(key, value as String));
+    } catch (e) {
+      if (kDebugMode) debugPrint('角色数据解析失败: $e');
+      return {};
+    }
+  }
+
+  Future<String> getCharacterSystemPrompt({String? currentTime}) async {
+    final data = await loadCharacterData();
+    
+    // 读取基础字段
+    final nickname = data['nickname'] ?? 'Master';
+    final intro = data['intro'] ?? '';
+    final privateSetting = data['private_setting'] ?? '';
+    final opening = data['opening'] ?? '';
+    
+    // 读取自定义格式相关字段
+    final enableCustomFormat = data['enable_custom_format'] == 'true';
+    final customFormat = data['custom_format'] ?? '';
+    
+    String prompt = '';
+    
+    // 1. 拼接基础设定
+    if (nickname.isNotEmpty) {
+      prompt += '角色名称：$nickname\n\n';
+    }
+    
+    if (intro.isNotEmpty) {
+      prompt += '角色设定：$intro\n\n';
+    }
+    
+    if (privateSetting.isNotEmpty) {
+      prompt += '附加设定（私密，不对外展示）：$privateSetting\n\n';
+    }
+    
+    if (opening.isNotEmpty) {
+      prompt += '开场白示例：$opening\n\n';
+    }
+    
+    // 2. 如果启用自定义格式且有内容，作为单独段落追加
+    if (enableCustomFormat && customFormat.isNotEmpty) {
+      prompt += '\n=== 以下为格式要求 ===\n';
+      prompt += '$customFormat\n';
+    }
+    
+    return prompt.trim();
+  }
+
+  Future<void> saveLastStatus(String status) async {
+    final prefs = await _prefs;
+    await prefs.setString('last_valid_status', status.trim());
+  }
+
+  Future<String> getLastStatus() async {
+    final prefs = await _prefs;
+    return prefs.getString('last_valid_status') ?? '空白';
+  }
+  
+  Future<String> getCharacterNickname() async {
+    final data = await loadCharacterData();
+    return data['nickname'] ?? '';
+  }
+
+  Future<String> getCharacterIntro() async {
+    final data = await loadCharacterData();
+    return data['intro'] ?? '';
+  }
+
+  Future<String> getCharacterOpening() async {
+    final data = await loadCharacterData();
+    return data['opening'] ?? '';
+  }
+
+  // ── 角色头像路径相关 ──
+  Future<void> saveCharacterAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('character_avatar_path', path);
+  }
+
+  Future<String?> getCharacterAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('character_avatar_path');
+  }
+
+  Future<bool> hasCustomAvatar() async {
+    final avatarPath = await getCharacterAvatarPath();
+    if (avatarPath == null || avatarPath.isEmpty) return false;
+    final file = File(avatarPath);
+    return await file.exists();
+  }
+
+  Future<File?> getAvatarFile() async {
+    final avatarPath = await getCharacterAvatarPath();
+    if (avatarPath == null || avatarPath.isEmpty) return null;
+    final file = File(avatarPath);
+    if (await file.exists()) return file;
+    return null;
+  }
+
+  Future<void> clearAllCharacterData() async {
+    final prefs = await _prefs;
+    await prefs.remove('character_avatar_path');
+    await prefs.remove('character_data');
+  }
+
+  // ── 用户头像和资料相关 ──
+  Future<void> saveUserAvatarPath(String path) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_avatar_path', path);
+  }
+
+  Future<String?> getUserAvatarPath() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_avatar_path');
+  }
+
+  Future<String> copyUserAvatarToAppDir(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final newPath = '${appDir.path}/$fileName';
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) {
+        await sourceFile.copy(newPath);
+        return newPath;
+      } else {
+        throw Exception('源文件不存在: $sourcePath');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('复制用户头像失败: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> saveUserName(String userName) async {
+    final prefs = await _prefs;
+    await prefs.setString('user_name', userName);
+  }
+
+  Future<String> getUserName() async {
+    final prefs = await _prefs;
+    return prefs.getString('user_name') ?? '';
+  }
+
+  Future<void> saveShowUserAvatar(bool show) async {
+    final prefs = await _prefs;
+    await prefs.setBool('show_user_avatar', show);
+  }
+
+  Future<bool> getShowUserAvatar() async {
+    final prefs = await _prefs;
+    return prefs.getBool('show_user_avatar') ?? true;
+  }
+
+  Future<Map<String, dynamic>> getUserProfile() async {
+    final name = await getUserName();
+    final avatarPath = await getUserAvatarPath();
+    final showAvatar = await getShowUserAvatar();
+    
+    return {
+      'name': name,
+      'avatarPath': avatarPath,
+      'showAvatar': showAvatar,
+    };
+  }
+
+  Future<void> saveUserProfile(Map<String, dynamic> profile) async {
+    if (profile['name'] != null) await saveUserName(profile['name'] as String);
+    if (profile['avatarPath'] != null) await saveUserAvatarPath(profile['avatarPath'] as String);
+    if (profile['showAvatar'] != null) await saveShowUserAvatar(profile['showAvatar'] as bool);
+  }
+
+  Future<String> copyFileToAppDir(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final newPath = '${appDir.path}/$fileName';
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) {
+        await sourceFile.copy(newPath);
+        return newPath;
+      } else {
+        throw Exception('源文件不存在: $sourcePath');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('复制文件失败: $e');
+      rethrow;
+    }
+  }
+  
+  // 保存旁白居中设置（使用 SharedPreferences）
+  Future<void> saveNarrationCentered(bool centered) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('narration_centered', centered);
+  }
+
+  // 读取旁白居中设置
+  Future<bool> getNarrationCentered() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
+  }
+
+  // ── 新增：UI主题相关 ──
+  Future<void> saveUITheme(String theme) async {
+    final prefs = await _prefs;
+    await prefs.setString('ui_theme', theme);
+  }
+
+  Future<String> getUITheme() async {
+    final prefs = await _prefs;
+    return prefs.getString('ui_theme') ?? 'system'; // 默认跟随系统
+  }
+
+  // 获取边框样式（兼容旧版本）
+  Future<String> getBorderStyle() async {
+    final prefs = await _prefs;
+    return prefs.getString('border_style') ?? '无边框';
+  }
+
+  Future<void> saveBorderStyle(String style) async {
+    final prefs = await _prefs;
+    await prefs.setString('border_style', style);
+  }
+
+  // ── 新增：App 状态快照（防进程杀） ──
+  Future<void> saveAppState({
+    List<Message>? messages,  // 聊天历史
+    double? scrollOffset,     // 滚动位置
+    String? inputText,        // 输入框内容
+    String? currentRoute,     // 当前页面
+  }) async {
+    final prefs = await _prefs;
+    
+    // 1. 保存聊天历史（如果传入）
+    if (messages != null && messages.isNotEmpty) {
+      await saveChatHistory(messages);  // 使用默认roomId
+    }
+    
+    // 2. 保存滚动位置
+    if (scrollOffset != null) {
+      await prefs.setDouble('chat_scroll_offset', scrollOffset);
+    }
+    
+    // 3. 保存输入框内容
+    if (inputText != null) {
+      await prefs.setString('chat_input_text', inputText);
+    }
+    
+    // 4. 保存当前路由（快速恢复页面）
+    if (currentRoute != null) {
+      await prefs.setString('last_route', currentRoute);
+    }
+    
+    // 5. 时间戳（判断是否过期）
+    await prefs.setInt('last_state_time', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<Map<String, dynamic>> loadAppState() async {
+    final prefs = await _prefs;
+    final lastTime = prefs.getInt('last_state_time') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    // 状态过期阈值：30分钟
+    if (now - lastTime > 30 * 60 * 1000) {
+      return {}; // 过期，返回空
+    }
+    
+    return {
+      'scrollOffset': prefs.getDouble('chat_scroll_offset') ?? 0.0,
+      'inputText': prefs.getString('chat_input_text') ?? '',
+      'lastRoute': prefs.getString('last_route') ?? '/chat',
+      'chatHistory': await loadChatHistory(), // 使用默认roomId
+    };
+  }
+
+  Future<void> clearAppState() async {
+    final prefs = await _prefs;
+    await prefs.remove('chat_scroll_offset');
+    await prefs.remove('chat_input_text');
+    await prefs.remove('last_route');
+    await prefs.remove('last_state_time');
+  }
+}
 
 
 
