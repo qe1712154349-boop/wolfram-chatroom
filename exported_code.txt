@@ -3,9 +3,9 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 7631 bytes
+Size: 7646 bytes
 
-Modified: 01/22/2026 19:38:25
+Modified: 01/22/2026 21:13:34
 
 ========================================
 
@@ -120,7 +120,8 @@ Future<void> _startForegroundService() async {
     }
 
     // 啟動服務
-    final ServiceRequestResult result = await FlutterForegroundTask.startService(
+    // 替换这段：
+final ServiceRequestResult result = await FlutterForegroundTask.startService(
   notificationTitle: '小猫',
   notificationText: '在线等待你的消息...',
   notificationIcon: const NotificationIcon(
@@ -129,14 +130,14 @@ Future<void> _startForegroundService() async {
   notificationInitialRoute: '/chat_room',
 );
 
-if (result == ServiceRequestResult.success) {  // 使用靜態常量比較
+if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   if (kDebugMode) {
-    print('前台服務啟動成功 - 通知應該出現了');
+    print('前台服务启动成功 - 通知应该出现了');
   }
   FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
 } else {
   if (kDebugMode) {
-    print('前台服務啟動失敗: $result');
+    print('前台服务启动失败: $result');
   }
 }
   } catch (e) {
@@ -4645,28 +4646,21 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 37129 bytes
+Size: 37329 bytes
 
-Modified: 01/22/2026 17:20:12
+Modified: 01/22/2026 21:14:22
 
 ========================================
 
 // lib/pages/chat/chat_room_page.dart
-// 完整替换版：修复前台服务通知不弹 + 提升保活稳定性
-// 改动说明：
-// - 补全 startService 所有关键参数（title/text/icon/type）
-// - 添加通知权限检查 + 引导弹窗（Android 13+ 必须）
-// - 添加电池优化引导（小米/华为必须，否则几分钟被杀）
-// - 服务状态监听 + 自动重启逻辑
-// - 调试日志全面（debugPrint）
-// - 所有地方加 mounted 检查
+// 已适配 flutter_foreground_task: ^9.2.0 的完整修复版
+// 修复所有报错 + 保留原有保活引导逻辑
 
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
@@ -4675,6 +4669,7 @@ import '../../models/message.dart';
 import '../../app/theme.dart';
 import 'chat_components.dart';
 import 'chat_room_settings_page.dart';
+import 'package:permission_handler/permission_handler.dart'; // 新增
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -4683,8 +4678,7 @@ class ChatRoomPage extends StatefulWidget {
   State<ChatRoomPage> createState() => _ChatRoomPageState();
 }
 
-class _ChatRoomPageState extends State<ChatRoomPage>
-    with WidgetsBindingObserver {
+class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Message> _messages = [];
@@ -4705,79 +4699,73 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   String _systemPrompt = '';
   bool _narrationCentered = true;
 
-  // 新增字段
-  String? _savedInputText; // 保存输入框
-  double _savedScrollOffset = 0.0; // 保存滚动位置
+  // 前台服务相关
+  StreamSubscription<dynamic>? _foregroundServiceSubscription;
+  Timer? _serviceMonitorTimer;
 
-  // 修改：使用枚举值而不是枚举类型本身
+  String? _savedInputText;
+  double _savedScrollOffset = 0.0;
+
   AxisDirection _lastDirection = AxisDirection.down;
 
-  bool get _isUserAtBottom {
-    if (!_scrollController.hasClients) return true;
-    final pos = _scrollController.position;
-    final distance = pos.maxScrollExtent - pos.pixels;
-    final isAtBottom = distance < 300.0;
-    final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
-    return isAtBottom || (distance < 600 && isScrollingDown);
-  }
-
+  // 新增：记录是否已引导过（防止重复弹窗）
+  bool _hasShownPermissionGuide = false;
+  bool _hasShownBatteryGuide = false;
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // 1. 启动前台服务（保活） - 最关键
-    _startForegroundService();
-
-    // 2. 快速恢复状态
+    _startForegroundServiceWithPermissions(); // 替换原 _startForegroundService
     _restoreAppState();
-
-    // 3. 原有初始化
     _loadCharacterData();
     _loadNarrationCentered();
     _loadUserSettings();
     _loadHistory();
 
-    // 4. scroll listener
-    _scrollController.addListener(() {
-      if (!mounted) return;
+    _scrollController.addListener(_scrollListener);
 
-      final pos = _scrollController.position;
-      final distanceFromBottom = pos.maxScrollExtent - pos.pixels;
-
-      final isScrollingUp = pos.userScrollDirection == ScrollDirection.reverse;
-      final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
-
-      if (isScrollingDown && distanceFromBottom > 100.0) {
-        if (_lastDirection == AxisDirection.up) {
-          setState(() => _showScrollToBottomButton = true);
-          _scrollButtonTimer?.cancel();
-          _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted && _showScrollToBottomButton) {
-              setState(() => _showScrollToBottomButton = false);
-            }
-          });
-        }
-      }
-
-      if (distanceFromBottom < 50.0) {
-        setState(() => _showScrollToBottomButton = false);
-        _scrollButtonTimer?.cancel();
-      }
-
-      if (isScrollingUp) {
-        _lastDirection = AxisDirection.up;
-      } else if (isScrollingDown) {
-        _lastDirection = AxisDirection.down;
-      }
-    });
-
-    // 5. 初始滚动恢复
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
         _scrollController.jumpTo(_savedScrollOffset);
       }
     });
+
+    _startServiceMonitor();
+  }
+
+  void _scrollListener() {
+    if (!mounted) return;
+
+    final pos = _scrollController.position;
+    final distanceFromBottom = pos.maxScrollExtent - pos.pixels;
+
+    final isScrollingUp = pos.userScrollDirection == ScrollDirection.reverse;
+    final isScrollingDown = pos.userScrollDirection == ScrollDirection.forward;
+
+    if (isScrollingDown && distanceFromBottom > 100.0) {
+      if (_lastDirection == AxisDirection.up) {
+        setState(() => _showScrollToBottomButton = true);
+        _scrollButtonTimer?.cancel();
+        _scrollButtonTimer = Timer(const Duration(seconds: 3), () {
+          if (mounted && _showScrollToBottomButton) {
+            setState(() => _showScrollToBottomButton = false);
+          }
+        });
+      }
+    }
+
+    if (distanceFromBottom < 50.0) {
+      setState(() => _showScrollToBottomButton = false);
+      _scrollButtonTimer?.cancel();
+    }
+
+    if (isScrollingUp) {
+      _lastDirection = AxisDirection.up;
+    } else if (isScrollingDown) {
+      _lastDirection = AxisDirection.down;
+    }
   }
 
   @override
@@ -4787,8 +4775,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     _scrollController.dispose();
     _controller.dispose();
     _scrollButtonTimer?.cancel();
+    _foregroundServiceSubscription?.cancel();
+    _serviceMonitorTimer?.cancel();
 
-    // 保存最终状态
     _storage.saveAppState(
       messages: _messages,
       scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
@@ -4803,7 +4792,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // 切后台：立即保存
       _storage.saveAppState(
         messages: _messages,
         scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
@@ -4813,9 +4801,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       _focusNode.unfocus();
       FocusScope.of(context).unfocus();
     } else if (state == AppLifecycleState.resumed) {
-      // 切回：重启服务 + 恢复
-      _startForegroundService();
+      _startForegroundServiceWithPermissions();
       _restoreAppState();
+    } else if (state == AppLifecycleState.detached) {
+      _foregroundServiceSubscription?.cancel();
     }
   }
 
@@ -4825,7 +4814,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
     if (_scrollController.hasClients && _messages.isNotEmpty) {
       final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-
       if (keyboardVisible) {
         _scrollToBottom(animate: true);
       }
@@ -4834,7 +4822,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.didChangeMetrics();
   }
 
-  // 简化版 _scrollToBottom（reverse:true 时目标是 0.0）
+  void _startServiceMonitor() {
+    _serviceMonitorTimer = Timer.periodic(const Duration(minutes: 2), (timer) async {
+      if (!mounted) return;
+      final isRunning = await FlutterForegroundTask.isRunningService;
+      if (!isRunning) {
+        debugPrint('⚠️ 前台服务停止，尝试重启...');
+        _startForegroundServiceWithPermissions();
+      }
+    });
+  }
+
   void _scrollToBottom({bool animate = false}) {
     if (!mounted || !_scrollController.hasClients) return;
 
@@ -4931,127 +4929,120 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   Future<void> _clearAllMessages() async {
     if (!mounted) return;
-
     setState(() {
       _messages.clear();
     });
     await _storage.clearChatHistory();
   }
 
-  // 核心：启动前台服务（完整补全参数 + 权限检查 + 引导）
-  Future<void> _startForegroundService() async {
-    try {
-      // Android 13+ 通知权限检查
-      if (Platform.isAndroid) {
-        final permissionStatus = await FlutterForegroundTask.checkNotificationPermission();
-        if (permissionStatus != ForegroundServicePermissionStatus.granted) {
-          final result = await FlutterForegroundTask.requestNotificationPermission();
-          if (result != ForegroundServicePermissionStatus.granted) {
-            debugPrint('用户拒绝通知权限，前台服务无法稳定运行');
-            if (mounted) {
-              _showNotificationPermissionDialog();
-            }
-            return;
-          }
-        }
-      }
+  /// 最优重构：权限 + 电池优化 + 服务启动 全流程
+  Future<void> _startForegroundServiceWithPermissions() async {
+    if (!Platform.isAndroid || !mounted) return;
 
-      // 检查是否已在运行
+    try {
+      // 1. 处理通知权限（Android 13+ 必须）
+      await _handleNotificationPermission();
+
+      // 2. 检查服务是否运行
       if (await FlutterForegroundTask.isRunningService) {
         debugPrint('前台服务已在运行');
         return;
       }
 
-      // 启动服务（补全所有必须参数）
-      final bool started = await FlutterForegroundTask.startService(
-        notificationTitle: '小猫在线',
-        notificationText: '等待你的消息...',
-        callback: startCallback,
-        // 必须声明类型，否则 Android 14+ 不启动
-        serviceTypes: [ForegroundServiceTypes.dataSync],
-        // 自定义图标（使用你的 launcher 图标）
-        notificationIcon: const NotificationIcon(
-          resType: ResourceType.mipmap,
-          resPrefix: ResourcePrefix.ic_launcher,
-          name: 'ic_launcher',
-        ),
-        // 点击通知打开 App（可选）
-        intentAction: 'android.intent.action.MAIN',
-        intentPackage: 'com.example.my_new_app', // 替换成你的包名
-        intentClassName: 'com.example.my_new_app.MainActivity',
-      );
+// 3. 启动服务（9.2.0 标准写法）
+// 替换这段：
+final result = await FlutterForegroundTask.startService(
+  notificationTitle: '小猫在线',
+  notificationText: '一直陪着你，等你的消息～',
+  notificationIcon: const NotificationIcon(metaDataName: 'foreground_icon'),
+  notificationInitialRoute: '/chat_room',
+);
 
-      if (started) {
-        debugPrint('前台服务启动成功 - 通知应可见');
-      } else {
-        debugPrint('前台服务启动失败');
-      }
+if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
+  debugPrint('前台服务启动成功！通知已显示');
 
-      // 可选：监听服务状态变化
-      FlutterForegroundTask.addTaskDataObserver(_onTaskDataReceived);
-    } catch (e, stack) {
-      debugPrint('启动前台服务异常: $e\n$stack');
-    }
-  }
+  // 监听服务数据
+  _setupReceivePortListener();
 
-  // 服务数据监听（心跳/日志/重启）
-  void _onTaskDataReceived(dynamic data) {
-    debugPrint('前台服务心跳数据: $data');
-    // 如果服务掉线，可在这里重启
-    if (data == 'service_destroyed') {
-      _startForegroundService();
-    }
-  }
-
-  // 引导开启通知权限
-  Future<void> _showNotificationPermissionDialog() async {
-    if (!mounted) return;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('通知权限'),
-        content: const Text('请允许“小猫”显示通知，以便后台保活和接收消息。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await FlutterForegroundTask.openNotificationPermissionSetting();
-              // 设置完权限后重试启动
-              Future.delayed(const Duration(seconds: 2), () {
-                if (mounted) _startForegroundService();
-              });
-            },
-            child: const Text('去开启'),
-          ),
-        ],
-      ),
+  // 延迟引导电池优化
+  Future.delayed(const Duration(seconds: 3), () {
+    if (mounted) _handleBatteryOptimizationGuide();
+  });
+} else {
+  debugPrint('启动失败: $result');
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('服务启动失败 ($result)，请检查通知权限')),
     );
   }
+}
+    } catch (e, st) {
+      debugPrint('前台服务异常: $e\n$st');
+    }
+  }
 
-  // 引导关闭电池优化（小米/华为必须）
-  Future<void> _guideDisableBatteryOptimization() async {
+  /// 通知权限处理（最彻底写法）
+  Future<void> _handleNotificationPermission() async {
+    final status = await FlutterForegroundTask.checkNotificationPermission();
+
+    if (status == NotificationPermission.granted) return;
+
+    final requestResult = await FlutterForegroundTask.requestNotificationPermission();
+
+    if (requestResult == NotificationPermission.granted) return;
+
+    // 永久拒绝或 denied → 引导去系统设置
+    if (!_hasShownPermissionGuide && mounted) {
+      _hasShownPermissionGuide = true;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('小猫需要你的允许～'),
+          content: const Text('请开启通知权限，让小猫能在后台一直陪你哦～'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('稍后'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await openAppSettings(); // permission_handler 打开应用设置页
+              },
+              child: const Text('去开启'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// 电池优化引导（只能跳转，无法查询状态）
+  Future<void> _handleBatteryOptimizationGuide() async {
+    if (_hasShownBatteryGuide) return;
+
+    _hasShownBatteryGuide = true;
+
     if (!mounted) return;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('电池优化'),
-        content: const Text('请将“小猫”设置为“无限制”或关闭电池优化，否则后台容易被杀。'),
+      builder: (ctx) => AlertDialog(
+        title: const Text('让小猫一直在线～'),
+        content: const Text(
+          '请在电池优化中选择“小猫”为“不优化”或“无限制”，否则小猫可能会被系统偷偷杀掉哦～',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('稍后'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
-              await FlutterForegroundTask.openIgnoreBatteryOptimizationSetting();
+              Navigator.pop(ctx);
+              await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+              // 可选：再弹一次确认已设置
             },
             child: const Text('去设置'),
           ),
@@ -5060,13 +5051,41 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     );
   }
 
+  /// 监听服务数据（心跳、停止重启等）
+  void _setupReceivePortListener() {
+    _foregroundServiceSubscription?.cancel();
+    _foregroundServiceSubscription = FlutterForegroundTask.receivePort?.listen((data) {
+      if (!mounted) return;
+
+      debugPrint('收到前台服务数据: $data');
+
+      if (data is Map<String, dynamic>) {
+        final type = data['type'] as String?;
+        switch (type) {
+          case 'heartbeat':
+            // 可用于心跳 UI 更新
+            break;
+          case 'service_stopped':
+            debugPrint('服务被停止，3秒后自动重启');
+            Future.delayed(const Duration(seconds: 3), () {
+              if (mounted) _startForegroundServiceWithPermissions();
+            });
+            break;
+          case 'notification_clicked':
+            debugPrint('用户点击通知，可跳转或刷新');
+            break;
+        }
+      }
+    });
+  }
+
   Future<void> _restoreAppState() async {
-    final state = await StorageService().loadAppState();
-    if (state.isNotEmpty) {
+    final state = await _storage.loadAppState();
+    if (state.isNotEmpty && mounted) {
       _savedInputText = state['inputText'];
       _savedScrollOffset = state['scrollOffset'] ?? 0.0;
       _controller.text = _savedInputText ?? '';
-      if (kDebugMode) print('恢复状态：滚动 ${_savedScrollOffset}px，输入 ${_controller.text}');
+      debugPrint('恢复：滚动 $_savedScrollOffset px，输入 ${_controller.text}');
     }
   }
 

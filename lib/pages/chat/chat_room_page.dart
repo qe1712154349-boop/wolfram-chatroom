@@ -505,6 +505,12 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
 
         await _saveHistory();
 
+        // 在 setState(() { _messages.addAll(aiMessages); ... }) 后添加：
+        FlutterForegroundTask.sendDataToTask({
+          'type': 'new_message',
+          'content': aiReply ?? '（思考中……）',
+        });
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _scrollController.hasClients) {
             _scrollController.jumpTo(0.0);
