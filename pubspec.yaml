@@ -26,7 +26,7 @@ dependencies:
   file_picker: ^10.3.8
   share_plus: ^12.0.1
   permission_handler: ^11.3.1
-  flutter_local_notifications: ^17.2.3  # 新增这一行
+  flutter_local_notifications: ^17.2.3
   
   # === 日记本依赖 ===
   flutter_riverpod: ^2.5.1
@@ -36,6 +36,7 @@ dependencies:
   uuid: ^4.3.0
   flutter_quill: ^11.5.0
   flutter_quill_extensions: ^11.0.0
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -47,3 +48,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # 👇 添加到这里（在 flutter: 部分后面）
+  assets:
+    - assets/splash.png  # 确保这个文件存在
+
+flutter_launcher_icons: # ✅ 新增这个配置块
+  android: true
+  ios: true
+  image_path: "assets/splash.png"
+  adaptive_icon_background: "#FFD2DD"  # 粉色背景
+  adaptive_icon_foreground: "assets/splash.png"
+  min_sdk_android: 21

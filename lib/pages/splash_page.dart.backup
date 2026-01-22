@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
-import 'chat/chat_list_page.dart';  // ← 新增import
+import 'main_screen.dart';  // ✅ 新增这行！导入 MainScreen
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -56,10 +56,12 @@ void _startLoading() async {
   await Future.delayed(const Duration(milliseconds: 100));
   setState(() => _progress = 1.0);
   
-  // 立即跳转到聊天列表页
+  // ✅ 修复：跳转到 MainScreen 并指定初始为 Tab2（聊天）
   if (mounted) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const ChatListPage()),
+      MaterialPageRoute(
+        builder: (_) => const MainScreen(initialIndex: 1), // 索引 1 = Tab2（聊天）
+      ),
     );
   }
 }

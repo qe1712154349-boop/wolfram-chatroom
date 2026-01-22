@@ -798,20 +798,7 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   }
 
   @override
-Widget build(BuildContext context) {
-  // 如果正在初始化前台服务，显示一个轻量提示
-  if (_isInitializingForegroundService) {
-    // 可以在顶部加一个SnackBar或小提示
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('正在连接后台服务...'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: const Color(0xFFFF5A7E),
-        ),
-      );
-    });
-  }
+    Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(

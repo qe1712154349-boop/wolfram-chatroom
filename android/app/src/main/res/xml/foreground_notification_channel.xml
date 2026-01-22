@@ -1,18 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- 保活渠道（低优先级） -->
-    <channel
-        id="chat_foreground_channel"
-        name="聊天保活通知"
-        importance="low"
-        priority="low" />
-    
-    <!-- 新消息渠道（高优先级） -->
-    <channel
-        id="chat_message_channel"
-        name="聊天新消息"
-        importance="high"
-        priority="high"
-        sound="default"
-        vibrate="true" />
-</resources>
+<notification-channel xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="chat_foreground_channel"
+    android:name="聊天保活通知"
+    android:description="保持聊天后台运行"
+    android:importance="1"
+    android:lockScreenVisibility="1"
+    android:showBadge="false" />

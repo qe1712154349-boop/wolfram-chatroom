@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'pages/splash_page.dart';  // ← 新增这一行
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
@@ -17,20 +16,23 @@ import 'services/storage_service.dart';
 import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
 
+// lib/main.dart - 修改 main() 函数
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 intl（日期格式化）
-  await initializeDateFormatting('zh_CN', null);
-
-  // 初始化前台服務（9.2.0 寫法）
-  await _initForegroundTask();
-
-  // Isar 初始化交給 provider 處理
-
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+  // ✅ 并行初始化（不阻塞UI）
+  await Future.wait([
+    // 1. 初始化日期格式化
+    initializeDateFormatting('zh_CN', null),
+    
+    // 2. 初始化前台服务（不阻塞）
+    _initForegroundTaskInBackground(),
+    
+    // 3. 屏幕方向
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]),
   ]);
 
   runApp(
@@ -40,10 +42,10 @@ void main() async {
   );
 }
 
-// 9.2.0 正確的初始化方式
-Future<void> _initForegroundTask() async {
+// ✅ 非阻塞的前台服务初始化
+Future<void> _initForegroundTaskInBackground() async {
   try {
-    FlutterForegroundTask.init(  // ← 去掉 await
+    FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'chat_foreground_channel',
         channelName: '聊天保活通知',
@@ -55,23 +57,19 @@ Future<void> _initForegroundTask() async {
         showNotification: true,
         playSound: false,
       ),
-      foregroundTaskOptions: ForegroundTaskOptions(  // 已經去掉 const，正確
+      foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.repeat(5000),
         autoRunOnBoot: true,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
-
+    
     FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
-
+  } catch (e) {
+    // 静默失败，不影响启动
     if (kDebugMode) {
-      print('✅ 前台服務初始化完成 (9.2.0)');
-    }
-  } catch (e, stack) {
-    if (kDebugMode) {
-      print('❌ 前台服務初始化失敗: $e');
-      print(stack);
+      print('前台服務初始化失敗（不影响启动）: $e');
     }
   }
 }
@@ -249,7 +247,7 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
       ),
       themeMode: _themeMode,
       navigatorKey: _navigatorKey,
-      home: const SplashPage(),  // ✅ 正确的！先显示启动页
+      home: const MainScreen(initialIndex: 1), // ✅ 直接进入聊天页
       routes: {
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.my_new_app">  <!-- 替换成你实际包名（build.gradle 里的 applicationId） -->
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.my_new_app">
 
     <!-- 前台服务必须权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -23,7 +24,7 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
     <application
-        android:label="my_new_app"
+        android:label="lovme"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
@@ -37,7 +38,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
-            android:stopWithTask="false" />  <!-- stopWithTask 保留兼容，但 14+ 系统忽略 -->
+            android:stopWithTask="false" />
 
         <!-- 前台广播接收器（9.x 必须） -->
         <receiver
@@ -45,7 +46,7 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- ★ 新增：前台服务通知图标 meta-data（9.2.0 必须） -->
+        <!-- 前台服务通知图标 meta-data（9.2.0 必须） -->
         <meta-data
             android:name="foreground_icon"
             android:resource="@mipmap/ic_launcher" />
@@ -62,15 +63,15 @@
             android:windowSoftInputMode="adjustResize"
             android:screenOrientation="portrait">
 
+            <!-- 正常运行时使用的主题 -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
-             <!-- ✅ 新增这一行：通知渠道配置 -->
+            <!-- 通知渠道配置 -->
             <meta-data
                 android:name="flutter_foreground_task.notification_channel"
                 android:resource="@xml/foreground_notification_channel" />
-   
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
