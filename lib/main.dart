@@ -1,4 +1,4 @@
-// lib/main.dart - 完整修复版：所有 import + 前台服务 + Riverpod + Isar 兼容
+// lib/main.dart - 完整修复版：适配 flutter_foreground_task 9.2.0 + Riverpod + Isar 兼容
 import 'dart:isolate';
 
 import 'package:flutter/material.dart';
@@ -13,19 +13,16 @@ import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'services/isar_service.dart'; // 必须导入，用于 isarProvider
+import 'services/foreground_task_handler.dart'; // 新增：前台任务处理器
 
-// 前台任务入口（flutter_foreground_task 9.x 必须）
-@pragma('vm:entry-point')
-void startCallback() {
-  FlutterForegroundTask.setTaskHandler(MyForegroundTaskHandler());
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-// ★ 新增：全局初始化 intl locale（必须 await，否则 DateFormat('zh_CN') 会崩溃）
+  // ★ 新增：全局初始化 intl locale（必须 await，否则 DateFormat('zh_CN') 会崩溃）
   await initializeDateFormatting('zh_CN', null);
   
+  // ★ 修改：使用 9.2.0 新版初始化
   await _initForegroundTask();
 
   // Isar 初始化交给 isarProvider 自动 await（无需手动调用）
@@ -42,40 +39,51 @@ void main() async {
   );
 }
 
+// ★ 修改：更新为 9.2.0 新版初始化方法
 Future<void> _initForegroundTask() async {
   try {
+    await FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'chat_foreground_channel',
+        channelName: '聊天保活通知',
+        channelDescription: '保持聊天後台運行與訊息接收',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+        iconData: const NotificationIconData(
+          resType: ResourceType.mipmap,
+          resPrefix: ResourcePrefix.ic,
+          name: 'launcher',  // 對應 android/app/src/main/res/mipmap-*/ic_launcher.png
+        ),
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: true,
+        playSound: false,
+      ),
+      foregroundTaskOptions: const ForegroundTaskOptions(
+        interval: 5000,           // 心跳間隔 5 秒
+        autoRunOnBoot: true,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+
+    // 這行確保 isolate 能找到你的 handler class
+    FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
+
     if (kDebugMode) {
-      print('✅ 前台服务初始化成功（9.2.0）');
+      print('FlutterForegroundTask 初始化完成 (v9.2.0)');
     }
-  } catch (e) {
+  } catch (e, stack) {
     if (kDebugMode) {
-      print('❌ 前台服务初始化失败: $e');
+      print('FlutterForegroundTask 初始化失敗: $e');
+      print(stack);
     }
   }
 }
 
-class MyForegroundTaskHandler extends TaskHandler {
-  @override
-  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    if (kDebugMode) {
-      print('Foreground service started at $timestamp by ${starter.name}');
-    }
-  }
 
-  @override
-  Future<void> onRepeatEvent(DateTime timestamp) async {
-    if (kDebugMode) {
-      print('Heartbeat at $timestamp');
-    }
-  }
-
-  @override
-  Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
-    if (kDebugMode) {
-      print('Foreground service destroyed at $timestamp, timeout: $isTimeout');
-    }
-  }
-}
+// ★ 注意：MyForegroundTaskHandler 类已移动到单独的 handler 文件中
+// 原类的代码已删除，使用 ChatForegroundTaskHandler 替代
 
 class MyBunnyApp extends StatefulWidget {
   const MyBunnyApp({super.key});
@@ -141,19 +149,41 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   Future<String> getCurrentTheme() async => await _storage.getThemeMode();
 
+  // ★ 修改：更新为 9.2.0 新版启动方法
   Future<void> _startForegroundService() async {
     try {
-      if (!await FlutterForegroundTask.isRunningService) {
-        final result = await FlutterForegroundTask.startService(
-          serviceId: 256,
-          notificationTitle: '小猫',
-          notificationText: '在线等待你的消息...',
-          callback: startCallback,
-          serviceTypes: [ForegroundServiceTypes.dataSync],
-        );
-
+      // 检查是否已在运行
+      if (await FlutterForegroundTask.isRunningService) {
         if (kDebugMode) {
-          print('前台服务启动结果: $result');
+          print('前台服务已在运行');
+        }
+        return;
+      }
+
+      // 启动服务（9.2.0 新版参数）
+      final started = await FlutterForegroundTask.startService(
+        notificationTitle: '小猫',
+        notificationText: '在线等待你的消息...',
+        // 使用 metaDataName 指定图标
+        notificationIcon: const NotificationIcon(
+          metaDataName: 'foreground_icon',
+        ),
+      );
+
+      if (started) {
+        if (kDebugMode) {
+          print('前台服务启动成功');
+        }
+        
+        // 开始监听来自服务的数据
+        FlutterForegroundTask.receivePort?.listen((data) {
+          if (kDebugMode) {
+            print('收到前台服务数据: $data');
+          }
+        });
+      } else {
+        if (kDebugMode) {
+          print('前台服务启动失败');
         }
       }
     } catch (e) {
@@ -165,53 +195,52 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return WithForegroundTask(
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme.copyWith(
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              shadowColor: Colors.transparent,
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              elevation: 0,
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              elevation: 0,
-            ),
+    // ★ 修改：WithForegroundTask 组件在 9.x 中不需要了
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme.copyWith(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
           ),
         ),
-        darkTheme: AppTheme.darkTheme.copyWith(
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              shadowColor: Colors.transparent,
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              elevation: 0,
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              elevation: 0,
-            ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            elevation: 0,
           ),
         ),
-        themeMode: _themeMode,
-        navigatorKey: _navigatorKey,
-        home: const MainScreen(),
-        routes: {
-          '/character-edit': (context) => const ChatCharacterEditPage(),
-          '/profile-settings': (context) => const ProfileSettingsPage(),
-        },
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
       ),
+      darkTheme: AppTheme.darkTheme.copyWith(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            elevation: 0,
+          ),
+        ),
+      ),
+      themeMode: _themeMode,
+      navigatorKey: _navigatorKey,
+      home: const MainScreen(),
+      routes: {
+        '/character-edit': (context) => const ChatCharacterEditPage(),
+        '/profile-settings': (context) => const ProfileSettingsPage(),
+      },
     );
   }
 }
