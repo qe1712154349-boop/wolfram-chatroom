@@ -1,135 +1,135 @@
 // lib/main.dart
-// 完全適配 flutter_foreground_task 9.2.0 的版本
-// 沒有任何舊版參數、舊版方法、舊版返回值判斷
-
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
-import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
 
-// lib/main.dart - 修改 main() 函数
-void main() async {
+// top-level entry-point（callback: true 时插件自动调用，确保 Isolate 安全）
+@pragma('vm:entry-point')
+void startCallback() {
+  FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
+}
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ 并行初始化（不阻塞UI）
-  await Future.wait([
-    // 1. 初始化日期格式化
+  // 并行初始化（不阻塞 UI）
+  Future.wait([
     initializeDateFormatting('zh_CN', null),
-    
-    // 2. 初始化前台服务（不阻塞）
-    _initForegroundTaskInBackground(),
-    
-    // 3. 屏幕方向
+    _initForegroundTask(),
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]),
-  ]);
-
-  runApp(
-    const ProviderScope(
-      child: MyBunnyApp(),
-    ),
-  );
+  ]).then((_) {
+    runApp(const ProviderScope(child: MyBunnyApp()));
+  });
 }
 
-// ✅ 非阻塞的前台服务初始化
-Future<void> _initForegroundTaskInBackground() async {
+// 前台服务初始化（只执行一次）
+Future<void> _initForegroundTask() async {
   try {
-    FlutterForegroundTask.init(
+    await FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'chat_foreground_channel',
+        channelId: 'chat_foreground_service',
         channelName: '聊天保活通知',
-        channelDescription: '保持聊天後台運行與訊息接收',
-        channelImportance: NotificationChannelImportance.LOW,
-        priority: NotificationPriority.LOW,
+        channelDescription: '保持聊天后台运行与新消息即时接收',
+        channelImportance: NotificationChannelImportance.DEFAULT, // 平衡可见与低打扰
+        priority: NotificationPriority.DEFAULT,
+        onlyAlertOnce: true, // 通知只首次提醒，避免重复打扰
+        // 图标已移除字段 → 依赖 AndroidManifest meta-data foreground_icon
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: true,
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: ForegroundTaskEventAction.repeat(5000),
+        eventAction: ForegroundTaskEventAction.repeat(5000), // 每5秒心跳
         autoRunOnBoot: true,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
-    
+
     FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
   } catch (e) {
-    // 静默失败，不影响启动
     if (kDebugMode) {
-      print('前台服務初始化失敗（不影响启动）: $e');
+      print('前台服务初始化失败（不阻塞启动）: $e');
     }
   }
 }
 
-// 監聽前台服務發來的資料（callback 方式）
-void _onForegroundTaskData(Object? data) {
-  if (kDebugMode) {
-    print('收到前台服務資料: $data');
+// 全局启动函数（可重复调用，检查运行状态）
+Future<void> startForegroundServiceIfNeeded() async {
+  if (!Platform.isAndroid) return;
+
+  try {
+    if (await FlutterForegroundTask.isRunningService) {
+      if (kDebugMode) print('前台服务已在运行');
+      return;
+    }
+
+    final result = await FlutterForegroundTask.startService(
+      serviceId: 256, // required：唯一标识服务，避免冲突
+      notificationTitle: '小猫在线',
+      notificationText: '一直陪着你，等你的消息～',
+      notificationIcon: null, // null → fallback 到 Manifest foreground_icon
+      notificationInitialRoute: '/chat_room',
+      callback: true, // true → 调用 top-level startCallback()
+    );
+
+    if (result is ServiceRequestSuccess) {
+      if (kDebugMode) print('前台服务启动成功');
+    } else {
+      if (kDebugMode) print('启动失败: $result');
+    }
+  } catch (e) {
+    if (kDebugMode) print('启动前台服务异常: $e');
   }
+}
+
+// 带权限检查的启动封装（聊天页等调用）
+Future<void> startForegroundServiceWithPermissions() async {
+  if (!Platform.isAndroid) return;
+
+  try {
+    var status = await FlutterForegroundTask.checkNotificationPermission();
+    if (status != NotificationPermission.granted) {
+      status = await FlutterForegroundTask.requestNotificationPermission();
+      // 第一次系统弹窗，后续 granted 则跳过
+    }
+    await startForegroundServiceIfNeeded();
+  } catch (e) {
+    if (kDebugMode) print('权限/服务启动异常: $e');
+  }
+}
+
+// 前台服务数据回调（全局统一管理）
+void _onForegroundTaskData(Object? data) {
+  if (kDebugMode) print('收到前台服务数据: $data');
 
   if (data is Map<String, dynamic>) {
     final type = data['type'] as String?;
     switch (type) {
       case 'heartbeat':
-        // 心跳，可以在這裡更新 UI 或記錄
+        // 可用于记录活跃或 UI 刷新
         break;
       case 'service_stopped':
-        // 服務被停止，可選擇重啟
-        _startForegroundService();
+        startForegroundServiceIfNeeded(); // 被杀自动重启
         break;
       case 'notification_clicked':
-        // 用戶點擊通知，可以導航到聊天頁面
+        // 点击通知可导航（需 navigatorKey）
+        // _navigatorKey.currentState?.pushNamed('/chat_room');
         break;
-    }
-  }
-}
-
-// 啟動前台服務（9.2.0 寫法）
-Future<void> _startForegroundService() async {
-  try {
-    // 先檢查是否已經在運行
-    if (await FlutterForegroundTask.isRunningService) {
-      if (kDebugMode) print('前台服務已在運行');
-      return;
-    }
-
-    // 啟動服務
-    // 替换这段：
-final ServiceRequestResult result = await FlutterForegroundTask.startService(
-  notificationTitle: '小猫',
-  notificationText: '在线等待你的消息...',
-  notificationIcon: const NotificationIcon(
-    metaDataName: 'foreground_icon',
-  ),
-  notificationInitialRoute: '/chat_room',
-);
-
-if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
-  if (kDebugMode) {
-    print('前台服务启动成功 - 通知应该出现了');
-  }
-  FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
-} else {
-  if (kDebugMode) {
-    print('前台服务启动失败: $result');
-  }
-}
-  } catch (e) {
-    if (kDebugMode) {
-      print('啟動前台服務異常: $e');
     }
   }
 }
@@ -152,16 +152,13 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadThemeMode();
 
-    // 啟動前台服務
-    _startForegroundService();
-
-    // 註冊監聽（確保每次 initState 都註冊）
+    // 启动服务 + 注册监听
+    startForegroundServiceWithPermissions();
     FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
   }
 
   @override
   void dispose() {
-    // 移除監聽（避免記憶體洩漏）
     FlutterForegroundTask.removeTaskDataCallback(_onForegroundTaskData);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -173,7 +170,7 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
     switch (state) {
       case AppLifecycleState.resumed:
-        _startForegroundService();
+        startForegroundServiceWithPermissions(); // 复活时确保运行
         _storage.saveAppState();
         break;
       case AppLifecycleState.paused:
@@ -217,14 +214,10 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
           ),
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            elevation: 0,
-          ),
+          style: TextButton.styleFrom(elevation: 0),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            elevation: 0,
-          ),
+          style: OutlinedButton.styleFrom(elevation: 0),
         ),
       ),
       darkTheme: AppTheme.darkTheme.copyWith(
@@ -235,19 +228,15 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
           ),
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            elevation: 0,
-          ),
+          style: TextButton.styleFrom(elevation: 0),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            elevation: 0,
-          ),
+          style: OutlinedButton.styleFrom(elevation: 0),
         ),
       ),
       themeMode: _themeMode,
       navigatorKey: _navigatorKey,
-      home: const MainScreen(initialIndex: 1), // ✅ 直接进入聊天页
+      home: const MainScreen(initialIndex: 1),
       routes: {
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),
