@@ -68,11 +68,6 @@
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
-            <!-- 通知渠道配置 -->
-            <meta-data
-                android:name="flutter_foreground_task.notification_channel"
-                android:resource="@xml/foreground_notification_channel" />
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
