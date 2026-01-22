@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
+import 'pages/splash_page.dart';  // ← 新增这一行
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
@@ -249,7 +249,7 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
       ),
       themeMode: _themeMode,
       navigatorKey: _navigatorKey,
-      home: const MainScreen(),
+      home: const SplashPage(),  // ✅ 正确的！先显示启动页
       routes: {
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),

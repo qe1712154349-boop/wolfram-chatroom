@@ -35,6 +35,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   final StorageService _storage = StorageService();
 
   final FocusNode _focusNode = FocusNode();
+ // ✅ 新增：标记前台服务是否正在初始化
+  bool _isInitializingForegroundService = false;
 
   String _characterName = 'name';
   String? _avatarPath;
@@ -63,7 +65,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _startForegroundServiceWithPermissions(); // 替换原 _startForegroundService
+      // ✅ 新的（延迟调用，不阻塞UI）：
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 延迟一点，让UI先完全显示出来
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _initializeForegroundService();
+    });
+  });
     _restoreAppState();
     _loadCharacterData();
     _loadNarrationCentered();
@@ -154,6 +162,21 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     }
   }
 
+/// ✅ 新增：异步初始化前台服务（不阻塞UI）
+Future<void> _initializeForegroundService() async {
+  if (_isInitializingForegroundService) return;
+  
+  _isInitializingForegroundService = true;
+  
+  try {
+    await _startForegroundServiceWithPermissions();
+  } catch (e) {
+    debugPrint('前台服务初始化失败: $e');
+  } finally {
+    _isInitializingForegroundService = false;
+  }
+}
+
   @override
   void didChangeMetrics() {
     if (!mounted) return;
@@ -220,18 +243,49 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   }
 
   Future<void> _loadHistory() async {
-    final history = await _storage.loadChatHistory();
-    if (history.isNotEmpty) {
+  final allHistory = await _storage.loadChatHistory();
+  
+  if (allHistory.isEmpty) {
+    await _loadOpeningMessage();
+    return;
+  }
+  
+  // 1. 先显示一屏能容纳的消息（35条）
+  final screenFullCount = 35;
+  final displayCount = allHistory.length > screenFullCount 
+      ? screenFullCount 
+      : allHistory.length;
+  
+  final recentMessages = allHistory.sublist(allHistory.length - displayCount);
+  
+  if (mounted) {
+    setState(() {
+      _messages.clear();
+      _messages.addAll(recentMessages);
+    });
+    
+    // 滚动到最新消息
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0.0);
+      }
+    });
+  }
+  
+  // 2. 如果有更多历史，后台悄悄添加到顶部
+  if (allHistory.length > displayCount) {
+    final olderMessages = allHistory.sublist(0, allHistory.length - displayCount);
+    
+    // 延迟一点，等用户开始看消息后再添加
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
         setState(() {
-          _messages.clear();
-          _messages.addAll(history);
+          _messages.insertAll(0, olderMessages);
         });
       }
-    } else {
-      await _loadOpeningMessage();
-    }
+    });
   }
+}
 
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
@@ -744,7 +798,20 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   }
 
   @override
-  Widget build(BuildContext context) {
+Widget build(BuildContext context) {
+  // 如果正在初始化前台服务，显示一个轻量提示
+  if (_isInitializingForegroundService) {
+    // 可以在顶部加一个SnackBar或小提示
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('正在连接后台服务...'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFFFF5A7E),
+        ),
+      );
+    });
+  }
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(

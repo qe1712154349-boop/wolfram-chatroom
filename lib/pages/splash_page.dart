@@ -1,0 +1,214 @@
+// lib/pages/splash_page.dart
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../services/storage_service.dart';
+import 'chat/chat_list_page.dart';  // ← 新增import
+
+class SplashPage extends StatefulWidget {
+  const SplashPage({super.key});
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage> {
+  double _progress = 0.0;
+  String _loadingText = '正在初始化...';
+
+  @override
+  void initState() {
+    super.initState();
+    // 开始加载
+    _startLoading();
+  }
+
+  // 简化后的 _startLoading 方法
+void _startLoading() async {
+  final storage = StorageService();
+  
+  // 1. 主题设置 (0-40%)
+  setState(() => _loadingText = '加载主题设置...');
+  await Future.wait([
+    storage.getThemeMode(),
+    storage.getUITheme(),
+    storage.getDeveloperMode(),
+  ]);
+  setState(() => _progress = 0.4);
+  
+  // 2. 用户数据 (40-70%)
+  setState(() => _loadingText = '加载个人资料...');
+  await Future.wait([
+    storage.getUserProfile(),
+    storage.getShowUserAvatar(),
+  ]);
+  setState(() => _progress = 0.7);
+  
+  // 3. 角色数据 (70-95%)
+  setState(() => _loadingText = '加载角色信息...');
+  await Future.wait([
+    storage.getCharacterNickname(),
+    storage.getCharacterAvatarPath(),
+  ]);
+  setState(() => _progress = 0.95);
+  
+  // 4. 完成 (95-100%)
+  setState(() => _loadingText = '准备完成！');
+  await Future.delayed(const Duration(milliseconds: 100));
+  setState(() => _progress = 1.0);
+  
+  // 立即跳转到聊天列表页
+  if (mounted) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const ChatListPage()),
+    );
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 猫咪图标
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFFFD2DD),  // 浅粉色
+                      Color(0xFFFFB6C1),  // 稍深粉色
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFB6C1).withOpacity(0.4),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.pets,
+                  color: Colors.white,
+                  size: 70,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(1, 1),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 40),
+              
+              // App名称
+              Text(
+                '小猫助手',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF333333),
+                ),
+              ),
+              
+              const SizedBox(height: 8),
+              
+              Text(
+                '一个懂你的AI伙伴',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.grey[400] : const Color(0xFF666666),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              
+              const SizedBox(height: 50),
+              
+              // 进度条
+              Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark ? Colors.grey[700]! : const Color(0xFFE0E0E0),
+                    width: 1,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // 进度条填充
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                      width: (MediaQuery.of(context).size.width * 0.8) * _progress,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFFFD2DD),
+                            Color(0xFFFFB6C1),
+                            Color(0xFFFF5A7E),
+                          ],
+                          stops: [0.0, 0.5, 1.0],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // 百分比和加载文本
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${(_progress * 100).toInt()}%',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? const Color(0xFFFFB6C1) : const Color(0xFFFF5A7E),
+                    ),
+                  ),
+                  
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        _loadingText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.grey[400] : const Color(0xFF888888),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -45,6 +45,11 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- ★ 新增：前台服务通知图标 meta-data（9.2.0 必须） -->
+        <meta-data
+            android:name="foreground_icon"
+            android:resource="@mipmap/ic_launcher" />
+
         <!-- 主 Activity -->
         <activity
             android:name=".MainActivity"
@@ -60,6 +65,12 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
+
+             <!-- ✅ 新增这一行：通知渠道配置 -->
+            <meta-data
+                android:name="flutter_foreground_task.notification_channel"
+                android:resource="@xml/foreground_notification_channel" />
+   
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
