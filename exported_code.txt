@@ -3,23 +3,19 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 7646 bytes
+Size: 7383 bytes
 
-Modified: 01/22/2026 21:13:34
+Modified: 01/23/2026 03:47:05
 
 ========================================
 
-// lib/main.dart
-// 完全適配 flutter_foreground_task 9.2.0 的版本
-// 沒有任何舊版參數、舊版方法、舊版返回值判斷
-
+// lib/main.dart - 最终优化版
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
@@ -31,17 +27,19 @@ import 'services/foreground_task_handler.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 intl（日期格式化）
-  await initializeDateFormatting('zh_CN', null);
-
-  // 初始化前台服務（9.2.0 寫法）
-  await _initForegroundTask();
-
-  // Isar 初始化交給 provider 處理
-
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+  // ✅ 并行初始化（不阻塞UI）
+  await Future.wait([
+    // 1. 初始化日期格式化
+    initializeDateFormatting('zh_CN', null),
+    
+    // 2. 初始化前台服务（静默）
+    _initForegroundTaskInBackground(),
+    
+    // 3. 屏幕方向
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]),
   ]);
 
   runApp(
@@ -51,10 +49,10 @@ void main() async {
   );
 }
 
-// 9.2.0 正確的初始化方式
-Future<void> _initForegroundTask() async {
+// ✅ 静默的前台服务初始化
+Future<void> _initForegroundTaskInBackground() async {
   try {
-    FlutterForegroundTask.init(  // ← 去掉 await
+    FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'chat_foreground_channel',
         channelName: '聊天保活通知',
@@ -66,83 +64,77 @@ Future<void> _initForegroundTask() async {
         showNotification: true,
         playSound: false,
       ),
-      foregroundTaskOptions: ForegroundTaskOptions(  // 已經去掉 const，正確
+      foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.repeat(5000),
         autoRunOnBoot: true,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
-
+    
     FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
-
+    
     if (kDebugMode) {
-      print('✅ 前台服務初始化完成 (9.2.0)');
+      print('✅ 前台服务初始化完成');
     }
-  } catch (e, stack) {
+  } catch (e) {
+    // 静默失败，不影响启动
     if (kDebugMode) {
-      print('❌ 前台服務初始化失敗: $e');
-      print(stack);
+      print('❌ 前台服务初始化失败（不影响启动）: $e');
     }
   }
 }
 
-// 監聽前台服務發來的資料（callback 方式）
+// 监听前台服务数据
 void _onForegroundTaskData(Object? data) {
   if (kDebugMode) {
-    print('收到前台服務資料: $data');
+    print('收到前台服务数据: $data');
   }
 
   if (data is Map<String, dynamic>) {
     final type = data['type'] as String?;
     switch (type) {
       case 'heartbeat':
-        // 心跳，可以在這裡更新 UI 或記錄
         break;
       case 'service_stopped':
-        // 服務被停止，可選擇重啟
         _startForegroundService();
         break;
       case 'notification_clicked':
-        // 用戶點擊通知，可以導航到聊天頁面
         break;
     }
   }
 }
 
-// 啟動前台服務（9.2.0 寫法）
+// 启动前台服务
 Future<void> _startForegroundService() async {
   try {
-    // 先檢查是否已經在運行
     if (await FlutterForegroundTask.isRunningService) {
-      if (kDebugMode) print('前台服務已在運行');
+      if (kDebugMode) print('前台服务已在运行');
       return;
     }
 
-    // 啟動服務
-    // 替换这段：
-final ServiceRequestResult result = await FlutterForegroundTask.startService(
-  notificationTitle: '小猫',
-  notificationText: '在线等待你的消息...',
-  notificationIcon: const NotificationIcon(
-    metaDataName: 'foreground_icon',
-  ),
-  notificationInitialRoute: '/chat_room',
-);
+    final ServiceRequestResult result = await FlutterForegroundTask.startService(
+      notificationTitle: '小猫',
+      notificationText: '在线等待你的消息...',
+      notificationIcon: const NotificationIcon(
+        metaDataName: 'foreground_icon',
+      ),
+      notificationInitialRoute: '/chat_room',
+    );
 
-if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
-  if (kDebugMode) {
-    print('前台服务启动成功 - 通知应该出现了');
-  }
-  FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
-} else {
-  if (kDebugMode) {
-    print('前台服务启动失败: $result');
-  }
-}
+    if (result is ServiceRequestSuccess) {
+      if (kDebugMode) {
+        print('前台服务启动成功 - 通知应该出现了');
+      }
+      FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
+    } else {
+      if (kDebugMode) {
+        print('前台服务启动失败: $result');
+      }
+    }
   } catch (e) {
     if (kDebugMode) {
-      print('啟動前台服務異常: $e');
+      print('启动前台服务异常: $e');
     }
   }
 }
@@ -165,16 +157,17 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadThemeMode();
 
-    // 啟動前台服務
-    _startForegroundService();
+    // 延迟启动前台服务（让UI先出来）
+    Future.delayed(const Duration(seconds: 2), () {
+      _startForegroundService();
+    });
 
-    // 註冊監聽（確保每次 initState 都註冊）
+    // 注册监听
     FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
   }
 
   @override
   void dispose() {
-    // 移除監聽（避免記憶體洩漏）
     FlutterForegroundTask.removeTaskDataCallback(_onForegroundTaskData);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -260,7 +253,7 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
       ),
       themeMode: _themeMode,
       navigatorKey: _navigatorKey,
-      home: const MainScreen(),
+      home: const MainScreen(initialIndex: 1), // ✅ 直接进入聊天页
       routes: {
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),
@@ -2694,28 +2687,37 @@ Modified: 01/02/2026 16:38:14
 
 File: D:\D\my_new_app\lib\pages\main_screen.dart
 
-Size: 1670 bytes
+Size: 4426 bytes
 
-Modified: 01/21/2026 16:08:14
+Modified: 01/23/2026 03:22:48
 
 ========================================
 
-// lib/pages/main_screen.dart - 完整替换
+// lib/pages/main_screen.dart - 完整版本
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
 import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
+import '../services/storage_service.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialIndex;
+  
+  const MainScreen({
+    super.key,
+    this.initialIndex = 0,
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+  bool _isLoadingData = true;
+  final StorageService _storage = StorageService();
 
   final List<Widget> _pages = const [
     VowPage(),
@@ -2725,9 +2727,92 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    try {
+      // 并行加载必要数据
+      await Future.wait([
+        _storage.getThemeMode(),
+        _storage.getCharacterNickname(),
+        _storage.getCharacterAvatarPath(),
+        _storage.getUserProfile(),
+        _storage.getShowUserAvatar(),
+        _storage.getCharacterOpening(),
+        _storage.getCharacterSystemPrompt(),
+      ]);
+    } catch (e) {
+      // 静默失败，不影响启动
+      debugPrint('数据加载失败: $e');
+    }
+
+    // 延迟启动前台服务（让UI先出来）
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _startForegroundService();
+    });
+
+    if (mounted) {
+      setState(() => _isLoadingData = false);
+    }
+  }
+
+  Future<void> _startForegroundService() async {
+    try {
+      if (!await FlutterForegroundTask.isRunningService) {
+        final result = await FlutterForegroundTask.startService(
+          notificationTitle: '小猫',
+          notificationText: '在线等待你的消息...',
+          notificationIcon: const NotificationIcon(metaDataName: 'foreground_icon'),
+          notificationInitialRoute: '/chat_room',
+        );
+        if (result is ServiceRequestSuccess) {
+          debugPrint('前台服务启动成功');
+        }
+      }
+    } catch (e) {
+      debugPrint('前台服务启动失败: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // 显示极简的加载指示器（如果数据还在加载）
+    if (_isLoadingData) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 简单的猫咪图标
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD2DD), Color(0xFFFFB6C1)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.pets,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 正常显示主界面
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -2893,7 +2978,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_backup_migrate_page.dart
 
 Size: 16167 bytes
 
-Modified: 01/21/2026 19:09:21
+Modified: 01/22/2026 23:05:45
 
 ========================================
 
@@ -4646,9 +4731,9 @@ class _ChatListPageState extends State<ChatListPage> {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_room_page.dart
 
-Size: 37329 bytes
+Size: 39198 bytes
 
-Modified: 01/22/2026 21:14:22
+Modified: 01/23/2026 03:22:48
 
 ========================================
 
@@ -4689,6 +4774,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   final StorageService _storage = StorageService();
 
   final FocusNode _focusNode = FocusNode();
+ // ✅ 新增：标记前台服务是否正在初始化
+  bool _isInitializingForegroundService = false;
 
   String _characterName = 'name';
   String? _avatarPath;
@@ -4717,7 +4804,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _startForegroundServiceWithPermissions(); // 替换原 _startForegroundService
+      // ✅ 新的（延迟调用，不阻塞UI）：
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 延迟一点，让UI先完全显示出来
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _initializeForegroundService();
+    });
+  });
     _restoreAppState();
     _loadCharacterData();
     _loadNarrationCentered();
@@ -4808,6 +4901,21 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     }
   }
 
+/// ✅ 新增：异步初始化前台服务（不阻塞UI）
+Future<void> _initializeForegroundService() async {
+  if (_isInitializingForegroundService) return;
+  
+  _isInitializingForegroundService = true;
+  
+  try {
+    await _startForegroundServiceWithPermissions();
+  } catch (e) {
+    debugPrint('前台服务初始化失败: $e');
+  } finally {
+    _isInitializingForegroundService = false;
+  }
+}
+
   @override
   void didChangeMetrics() {
     if (!mounted) return;
@@ -4874,18 +4982,49 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   }
 
   Future<void> _loadHistory() async {
-    final history = await _storage.loadChatHistory();
-    if (history.isNotEmpty) {
+  final allHistory = await _storage.loadChatHistory();
+  
+  if (allHistory.isEmpty) {
+    await _loadOpeningMessage();
+    return;
+  }
+  
+  // 1. 先显示一屏能容纳的消息（35条）
+  final screenFullCount = 35;
+  final displayCount = allHistory.length > screenFullCount 
+      ? screenFullCount 
+      : allHistory.length;
+  
+  final recentMessages = allHistory.sublist(allHistory.length - displayCount);
+  
+  if (mounted) {
+    setState(() {
+      _messages.clear();
+      _messages.addAll(recentMessages);
+    });
+    
+    // 滚动到最新消息
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0.0);
+      }
+    });
+  }
+  
+  // 2. 如果有更多历史，后台悄悄添加到顶部
+  if (allHistory.length > displayCount) {
+    final olderMessages = allHistory.sublist(0, allHistory.length - displayCount);
+    
+    // 延迟一点，等用户开始看消息后再添加
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
         setState(() {
-          _messages.clear();
-          _messages.addAll(history);
+          _messages.insertAll(0, olderMessages);
         });
       }
-    } else {
-      await _loadOpeningMessage();
-    }
+    });
   }
+}
 
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
@@ -5159,6 +5298,12 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
 
         await _saveHistory();
 
+        // 在 setState(() { _messages.addAll(aiMessages); ... }) 后添加：
+        FlutterForegroundTask.sendDataToTask({
+          'type': 'new_message',
+          'content': aiReply ?? '（思考中……）',
+        });
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _scrollController.hasClients) {
             _scrollController.jumpTo(0.0);
@@ -5392,7 +5537,7 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   }
 
   @override
-  Widget build(BuildContext context) {
+    Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -9866,69 +10011,87 @@ class ExportResult {
 
 File: D:\D\my_new_app\lib\services\foreground_task_handler.dart
 
-Size: 1747 bytes
+Size: 2735 bytes
 
-Modified: 01/22/2026 18:34:52
+Modified: 01/23/2026 03:22:48
 
 ========================================
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // 新增依赖
 
 class ChatForegroundTaskHandler extends TaskHandler {
   Timer? _heartbeatTimer;
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    if (kDebugMode) print('前台服務啟動：$timestamp (由 ${starter.name} 啟動)');
+    debugPrint('前台服务启动：$timestamp');
 
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    // 初始化 local notifications（用于 HIGH 通知）
+    const AndroidInitializationSettings initSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initSettings =
+        InitializationSettings(android: initSettingsAndroid);
+    await _notifications.initialize(initSettings);
+
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       FlutterForegroundTask.sendDataToMain({
         'type': 'heartbeat',
         'time': DateTime.now().toIso8601String(),
       });
     });
-
-    FlutterForegroundTask.sendDataToMain({
-      'type': 'started',
-      'time': timestamp.toIso8601String(),
-    });
   }
 
   @override
   void onRepeatEvent(DateTime timestamp) {
-    // 修正：移除了 async、移除了 TaskStarter 参数，改为 void 返回类型
-    if (kDebugMode) print('心跳：$timestamp');
-
-    FlutterForegroundTask.sendDataToMain({
-      'type': 'tick',
-      'time': timestamp.toIso8601String(),
-    });
+    // 可选：周期性检查或心跳
   }
 
   @override
   Future<void> onDestroy(DateTime timestamp, bool wasForceStopped) async {
-    if (kDebugMode) print('服務銷毀：$timestamp (強制？ $wasForceStopped)');
-
     _heartbeatTimer?.cancel();
-
-    FlutterForegroundTask.sendDataToMain({
-      'type': 'stopped',
-      'time': timestamp.toIso8601String(),
-      'force': wasForceStopped,
-    });
+    debugPrint('服务销毁：$timestamp');
   }
 
   @override
   void onNotificationPressed() {
-    if (kDebugMode) print('通知被點擊');
-    FlutterForegroundTask.sendDataToMain({'type': 'notification_tapped'});
+    FlutterForegroundTask.sendDataToMain({'type': 'notification_clicked'});
   }
 
   @override
   void onReceiveData(dynamic data) {
-    if (kDebugMode) print('收到 UI 指令：$data');
+    if (data is Map<String, dynamic> && data['type'] == 'new_message') {
+      final content = data['content'] as String? ?? '新消息';
+      _showMessageNotification(content);
+    }
+  }
+
+  Future<void> _showMessageNotification(String content) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'chat_message_channel',
+      '聊天新消息',
+      channelDescription: 'AI 回复时弹出通知',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      enableVibration: true,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('notification'), // res/raw/notification.mp3
+      fullScreenIntent: true, // 锁屏全屏意图（可选）
+    );
+
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+
+    await _notifications.show(
+      DateTime.now().millisecondsSinceEpoch % 100000, // 唯一 ID
+      '小猫回复了你～',
+      content.length > 50 ? '${content.substring(0, 50)}...' : content,
+      details,
+      payload: '/chat_room', // 点击跳转
+    );
   }
 }
 
