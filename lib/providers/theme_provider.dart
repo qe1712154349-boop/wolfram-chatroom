@@ -40,14 +40,16 @@ class CustomColorsNotifier extends StateNotifier<Map<String, Color>?> {
   }
 }
 
-final dynamicAppThemeProvider = Provider<ThemeData>((ref) {
+// family Provider：每个页面独立 watch
+final pageThemeProvider =
+    Provider.family<ThemeData, BuildContext>((ref, context) {
   final mode = ref.watch(themeModeProvider);
   final custom = ref.watch(customColorsProvider);
   final primaryOverride = custom?['primary'];
 
-  // fallback：永远保证 ThemeData 非 null
-  ThemeData light = AppTheme.lightTheme;
-  ThemeData dark = AppTheme.darkTheme;
+  // fallback 静态主题，保证永远非 null
+  var light = AppTheme.lightTheme;
+  var dark = AppTheme.darkTheme;
 
   try {
     if (primaryOverride != null) {
@@ -83,7 +85,6 @@ final dynamicAppThemeProvider = Provider<ThemeData>((ref) {
     }
   } catch (e, stack) {
     debugPrint('Theme 计算异常，使用 fallback: $e\n$stack');
-    // fallback 已设置，不再抛异常
   }
 
   return mode == ThemeMode.dark ? dark : light;

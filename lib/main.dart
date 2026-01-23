@@ -1,4 +1,4 @@
-// lib/main.dart - 最终优化版
+// lib/main.dart - 稳定版（根不 watch 动态，避免白屏）
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
@@ -12,21 +12,13 @@ import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/theme_provider.dart'; // 确保这个文件存在
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ 并行初始化（不阻塞UI）
   await Future.wait([
-    // 1. 初始化日期格式化
     initializeDateFormatting('zh_CN', null),
-
-    // 2. 初始化前台服务（静默）
     _initForegroundTaskInBackground(),
-
-    // 3. 屏幕方向
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -208,23 +200,16 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final theme = ref.watch(dynamicAppThemeProvider);
-        final themeMode = ref.watch(themeModeProvider);
-
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: theme,
-          darkTheme: theme,
-          themeMode: themeMode,
-          navigatorKey: _navigatorKey,
-          home: const MainScreen(initialIndex: 1),
-          routes: {
-            '/character-edit': (context) => const ChatCharacterEditPage(),
-            '/profile-settings': (context) => const ProfileSettingsPage(),
-          },
-        );
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: _themeMode,
+      navigatorKey: _navigatorKey,
+      home: const MainScreen(initialIndex: 1),
+      routes: {
+        '/character-edit': (context) => const ChatCharacterEditPage(),
+        '/profile-settings': (context) => const ProfileSettingsPage(),
       },
     );
   }

@@ -1,7 +1,6 @@
-// lib/pages/chat/chat_components.dart - 完整替换
+// lib/pages/chat/chat_components.dart - 完整修复版（Material 3 规范 + 动态主题响应）
 import 'package:flutter/material.dart';
 import 'dart:io';
-import '../../app/theme.dart'; // 导入主题
 
 class ReceivedMessage extends StatelessWidget {
   final String text;
@@ -15,8 +14,10 @@ class ReceivedMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
@@ -29,23 +30,22 @@ class ReceivedMessage extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              color: cs.surfaceContainerHighest,
               border: Border.all(
-                color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight,
+                color: cs.outline.withAlpha(77), // 0.3 透明
                 width: 1,
               ),
             ),
             child: CircleAvatar(
               radius: 16,
               backgroundColor: Colors.transparent,
-              backgroundImage: avatarPath != null
-                  ? FileImage(File(avatarPath!))
-                  : null,
+              backgroundImage:
+                  avatarPath != null ? FileImage(File(avatarPath!)) : null,
               child: avatarPath == null
                   ? Icon(
                       Icons.person,
                       size: 18,
-                      color: isDark ? const Color(0xFFF95685) : AppTheme.pinkAccent,
+                      color: cs.primary,
                     )
                   : null,
             ),
@@ -57,20 +57,17 @@ class ReceivedMessage extends StatelessWidget {
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
                 minWidth: 40,
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1A1A1A) : AppTheme.aiBubbleColorLight,
+                color: cs.surfaceContainerHighest,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
-                  topRight: Radius.circular(AppTheme.bubbleBorderRadius),
-                  bottomLeft: Radius.circular(AppTheme.bubbleBorderRadius),
-                  bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight,
+                  color: cs.outline.withAlpha(77),
                   width: 1,
                 ),
               ),
@@ -78,7 +75,7 @@ class ReceivedMessage extends StatelessWidget {
                 text,
                 style: TextStyle(
                   fontSize: 16,
-                  color: isDark ? Colors.white : AppTheme.primaryTextLight,
+                  color: cs.onSurface,
                   height: 1.4,
                   fontWeight: FontWeight.normal,
                 ),
@@ -105,8 +102,10 @@ class SentMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
@@ -120,20 +119,17 @@ class SentMessage extends StatelessWidget {
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
                 minWidth: 40,
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFFF95685) : AppTheme.userBubbleColorLight,
+                color: cs.primaryContainer,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppTheme.bubbleBorderRadius),
+                  topLeft: Radius.circular(18),
                   topRight: Radius.circular(4),
-                  bottomLeft: Radius.circular(AppTheme.bubbleBorderRadius),
-                  bottomRight: Radius.circular(AppTheme.bubbleBorderRadius),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
                 border: Border.all(
-                  color: isDark ? const Color(0xFFD6406E) : AppTheme.userBubbleBorderLight,
+                  color: cs.outline.withAlpha(77),
                   width: 1,
                 ),
               ),
@@ -141,7 +137,7 @@ class SentMessage extends StatelessWidget {
                 text,
                 style: TextStyle(
                   fontSize: 16,
-                  color: isDark ? Colors.white : AppTheme.userTextColorLight,
+                  color: cs.onPrimaryContainer,
                   height: 1.4,
                   fontWeight: FontWeight.normal,
                 ),
@@ -156,9 +152,9 @@ class SentMessage extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                color: cs.surfaceContainerHighest,
                 border: Border.all(
-                  color: isDark ? const Color(0xFF333333) : AppTheme.userBubbleBorderLight,
+                  color: cs.outline.withAlpha(77),
                   width: 1,
                 ),
               ),
@@ -172,7 +168,7 @@ class SentMessage extends StatelessWidget {
                     ? Icon(
                         Icons.person_outline,
                         size: 18,
-                        color: isDark ? const Color(0xFFF95685) : AppTheme.pinkAccent,
+                        color: cs.primary,
                       )
                     : null,
               ),
@@ -193,22 +189,23 @@ class SystemTimeMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF252525) : const Color(0xFFF0F0F5),
+            color: cs.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.grey[400] : AppTheme.secondaryTextLight,
+              color: cs.onSurfaceVariant,
               fontWeight: FontWeight.w500,
               letterSpacing: 0.3,
             ),
@@ -233,33 +230,30 @@ class NarrationMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
       child: Align(
-        alignment: isCentered 
-            ? Alignment.center 
+        alignment: isCentered
+            ? Alignment.center
             : (isAI ? Alignment.centerLeft : Alignment.centerRight),
         child: Container(
-          margin: isCentered 
-              ? null 
-              : (isAI 
-                  ? const EdgeInsets.only(left: 12)    // AI 左对齐时留左边距
-                  : const EdgeInsets.only(right: 22)), // 用户右对齐时留右边距
+          margin: isCentered
+              ? null
+              : (isAI
+                  ? const EdgeInsets.only(left: 12)
+                  : const EdgeInsets.only(right: 22)),
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: isAI
-                ? (isDark ? const Color(0xFF2A1A1F) : Colors.pink[50])  // 暗色模式下的粉色背景
-                : (isDark ? const Color(0xFF252525) : Colors.grey[200]), // 暗色模式下的灰色背景
+            color: isAI ? cs.primaryContainer : cs.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isAI 
-                  ? (isDark ? const Color(0xFFD6406E) : Colors.pink[200]!) 
-                  : (isDark ? Colors.grey[700]! : Colors.grey[400]!),
+              color: cs.outline.withAlpha(77),
               width: 1,
             ),
           ),
@@ -267,9 +261,7 @@ class NarrationMessage extends StatelessWidget {
             text.trim(),
             style: TextStyle(
               fontSize: 13,
-              color: isAI 
-                  ? (isDark ? Colors.pink[200] : Colors.pink[800])
-                  : (isDark ? Colors.grey[300] : AppTheme.narrationTextLight),
+              color: isAI ? cs.onPrimaryContainer : cs.onSurfaceVariant,
               fontStyle: FontStyle.italic,
               height: 1.4,
               fontWeight: FontWeight.w400,

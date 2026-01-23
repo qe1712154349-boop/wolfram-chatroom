@@ -1,11 +1,12 @@
+// lib/pages/chat/chat_room_settings_page.dart - 修复版（Material 3 规范 + 动态主题响应）
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // 添加 Riverpod 导入
 import '../../services/storage_service.dart';
-import '../../app/theme.dart';  // 导入 AppTheme 以使用暗色常量
-import '../../services/export_service.dart';
+import '../../providers/theme_provider.dart'; // 导入 family provider
 import 'chat_backup_migrate_page.dart';
 
-class ChatRoomSettingsPage extends StatefulWidget {
+class ChatRoomSettingsPage extends ConsumerStatefulWidget {
   final String characterName;
   final String? avatarPath;
 
@@ -16,32 +17,46 @@ class ChatRoomSettingsPage extends StatefulWidget {
   });
 
   @override
-  State<ChatRoomSettingsPage> createState() => _ChatRoomSettingsPageState();
+  ConsumerState<ChatRoomSettingsPage> createState() =>
+      _ChatRoomSettingsPageState();
 }
 
-class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
+class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   final StorageService _storage = StorageService();
 
   Future<void> _clearChatHistory() async {
-    final bool? confirm = await showDialog(
+    final bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF1E1E1E) 
-            : Colors.white,
-        title: Text("清空聊天记录", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black)),
-        content: Text("确定要清空所有聊天记录吗？此操作不可恢复。", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.black87)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text("取消", style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey)),
+      builder: (context) {
+        final cs = Theme.of(context).colorScheme;
+        return AlertDialog(
+          backgroundColor: cs.surface,
+          title: Text(
+            "清空聊天记录",
+            style: TextStyle(color: cs.onSurface),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("清空", style: TextStyle(color: Colors.red)),
+          content: Text(
+            "确定要清空所有聊天记录吗？此操作不可恢复。",
+            style: TextStyle(color: cs.onSurfaceVariant),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                "取消",
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                "清空",
+                style: TextStyle(color: cs.error),
+              ),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirm == true) {
@@ -54,129 +69,132 @@ class _ChatRoomSettingsPageState extends State<ChatRoomSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // 使用 family provider，传入 context，实现局部动态主题
+    final pageTheme = ref.watch(pageThemeProvider(context));
+    final cs = pageTheme.colorScheme;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : const Color(0xFFFFF8FA),
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFF8FA),
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "${widget.characterName} 设置",
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.bold,
+    return Theme(
+      data: pageTheme,
+      child: Scaffold(
+        backgroundColor: cs.surface,
+        appBar: AppBar(
+          backgroundColor: cs.surface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: cs.onSurface),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            "${widget.characterName} 设置",
+            style: TextStyle(
+              color: cs.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        children: [
-          // 头像和名称展示
-          Container(
-            padding: const EdgeInsets.all(20),
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withAlpha(26),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: isDark ? const Color(0xFF2A1A1A) : Colors.pinkAccent,
-                  backgroundImage: widget.avatarPath != null
-                      ? FileImage(File(widget.avatarPath!))
-                      : null,
-                  child: widget.avatarPath == null
-                      ? Icon(Icons.person, size: 36, color: isDark ? Colors.white : Colors.white)
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.characterName,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "AI角色设置",
-                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
-                      ),
-                    ],
+        body: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          children: [
+            // 头像和名称展示
+            Container(
+              padding: const EdgeInsets.all(20),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.shadow.withAlpha(64),
+                    spreadRadius: 1,
+                    blurRadius: 5,
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.edit, color: isDark ? const Color(0xFFF95685) : Colors.pinkAccent),
-                  onPressed: () {
-                    // 这里可以跳转到角色编辑页面
-                    // Navigator.push(...)
-                  },
-                ),
-              ],
+                ],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: cs.primaryContainer,
+                    backgroundImage: widget.avatarPath != null
+                        ? FileImage(File(widget.avatarPath!))
+                        : null,
+                    child: widget.avatarPath == null
+                        ? Icon(Icons.person,
+                            size: 36, color: cs.onPrimaryContainer)
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.characterName,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "AI角色设置",
+                          style: TextStyle(color: cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit, color: cs.primary),
+                    onPressed: () {
+                      // 跳转到角色编辑页面
+                      // Navigator.push(...)
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // 设置选项（从这里开始替换为您提供的代码）
-          _buildSettingItem(
-            icon: Icons.delete_outline,
-            title: "清空聊天记录",
-            subtitle: "删除所有聊天消息",
-            color: Colors.red,
-            onTap: _clearChatHistory,
-          ),
-          _buildSettingItem(
-            icon: Icons.block,
-            title: "屏蔽此角色",
-            subtitle: "不再接收来自此角色的消息",
-            color: Colors.grey,
-            onTap: () {},
-          ),
-          _buildSettingItem(
-            icon: Icons.report_problem,
-            title: "举报",
-            subtitle: "举报此角色存在不当内容",
-            color: Colors.orange,
-            onTap: () {},
-          ),
-
-// 在 chat_room_settings_page.dart 中，修改这个设置项：
-_buildSettingItem(
-  icon: Icons.cloud_download,
-  title: "聊天记录迁移与备份",
-  subtitle: "导出/导入人设与消息，防丢失",
-  color: const Color(0xFFFF5A7E),
-  onTap: () async {
-    // 跳转到新的迁移备份页面
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatBackupMigratePage(
-          characterName: widget.characterName,
+            // 设置选项
+            _buildSettingItem(
+              icon: Icons.delete_outline,
+              title: "清空聊天记录",
+              subtitle: "删除所有聊天消息",
+              color: cs.error,
+              onTap: _clearChatHistory,
+            ),
+            _buildSettingItem(
+              icon: Icons.block,
+              title: "屏蔽此角色",
+              subtitle: "不再接收来自此角色的消息",
+              color: cs.onSurfaceVariant,
+              onTap: () {},
+            ),
+            _buildSettingItem(
+              icon: Icons.report_problem,
+              title: "举报",
+              subtitle: "举报此角色存在不当内容",
+              color: cs.errorContainer,
+              onTap: () {},
+            ),
+            _buildSettingItem(
+              icon: Icons.cloud_download,
+              title: "聊天记录迁移与备份",
+              subtitle: "导出/导入人设与消息，防丢失",
+              color: cs.primary,
+              onTap: () async {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatBackupMigratePage(
+                      characterName: widget.characterName,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
-      ),
-    );
-  },
-),
-        ],
       ),
     );
   }
@@ -188,16 +206,16 @@ _buildSettingItem(
     required Color color,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withAlpha(26),
+            color: cs.shadow.withAlpha(64),
             spreadRadius: 1,
             blurRadius: 3,
           ),
@@ -217,14 +235,15 @@ _buildSettingItem(
           title,
           style: TextStyle(
             fontWeight: FontWeight.w500,
-            color: isDark ? Colors.white : Colors.black,
+            color: cs.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
         ),
-        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: isDark ? Colors.grey[400] : Colors.grey),
+        trailing:
+            Icon(Icons.arrow_forward_ios, size: 16, color: cs.onSurfaceVariant),
         onTap: onTap,
       ),
     );

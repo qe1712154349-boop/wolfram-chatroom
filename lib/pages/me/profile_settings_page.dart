@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
 import '../../utils/asset_picker_util.dart';
 import '../../providers/theme_provider.dart';
-import 'package:photo_manager/photo_manager.dart'; // ← 必须导入！AssetEntity 来自这里
+import 'package:photo_manager/photo_manager.dart';
 
 class ProfileSettingsPage extends ConsumerStatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -24,17 +24,10 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   bool _isLoading = false;
   bool _isSaving = false;
 
-  static const Color _titleColor = Color(0xFF333333);
-  static const Color _dividerColor = Color(0xFF999999);
-  static const Color _descriptionColor = Color(0xFF666666);
-
-  static const TextStyle _titleTextStyle =
-      TextStyle(fontSize: 16, color: _titleColor);
-  static const TextStyle _descriptionTextStyle =
-      TextStyle(fontSize: 14, color: _descriptionColor);
-
-  static const Divider _customDivider =
-      Divider(indent: 16, color: _dividerColor, thickness: 1, height: 1);
+  // 静态 fallback 颜色（当动态主题未就绪时使用）
+  static const Color _fallbackTitleColor = Color(0xFF333333);
+  static const Color _fallbackDividerColor = Color(0xFF999999);
+  static const Color _fallbackDescriptionColor = Color(0xFF666666);
 
   @override
   void initState() {
@@ -46,6 +39,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
     setState(() => _isLoading = true);
     try {
       final profile = await _storage.getUserProfile();
+      if (!mounted) return;
       setState(() {
         _userAvatarPath = profile['avatarPath'] as String?;
         _userName = profile['name'] as String? ?? 'name';
@@ -53,6 +47,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -63,6 +58,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
           await AssetPickerUtil.pickSingleImageDirectly(context);
       if (asset == null) return;
 
+      if (!mounted) return;
       setState(() => _isSaving = true);
 
       final file = await asset.originFile;
@@ -71,6 +67,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
       final newPath = await _storage.copyUserAvatarToAppDir(file.path);
       await _storage.saveUserAvatarPath(newPath);
 
+      if (!mounted) return;
       setState(() {
         _userAvatarPath = newPath;
         _isSaving = false;
@@ -78,6 +75,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
       _showSuccessSnackBar('头像已更新');
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isSaving = false);
       _showErrorSnackBar('选择头像失败: ${e.toString()}');
     }
@@ -86,14 +84,17 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   Future<void> _saveUserName(String newName) async {
     if (newName.trim().isEmpty) return;
 
+    if (!mounted) return;
     setState(() => _isSaving = true);
     try {
       await _storage.saveUserName(newName.trim());
+      if (!mounted) return;
       setState(() => _userName = newName.trim());
       _showSuccessSnackBar('名字已保存');
     } catch (e) {
       _showErrorSnackBar('保存失败: ${e.toString()}');
     } finally {
+      if (!mounted) return;
       setState(() => _isSaving = false);
     }
   }
@@ -101,6 +102,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   Future<void> _toggleShowUserAvatar(bool value) async {
     try {
       await _storage.saveShowUserAvatar(value);
+      if (!mounted) return;
       setState(() => _showUserAvatar = value);
     } catch (e) {
       _showErrorSnackBar('设置失败: ${e.toString()}');
@@ -160,110 +162,159 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 使用 family provider，传入 context
+    final pageTheme = ref.watch(pageThemeProvider(context));
+
+    // 从动态主题中提取颜色，fallback 到静态常量
+    final dynamicTitleColor = pageTheme.colorScheme.primary;
+    final dynamicDividerColor =
+        pageTheme.dividerTheme.color ?? _fallbackDividerColor;
+    final dynamicDescriptionColor = pageTheme.colorScheme.secondary;
+
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
+      return Theme(
+        data: pageTheme,
+        child: Scaffold(
+          appBar: AppBar(
             title: const Text('个人资料'),
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor),
-        body: const Center(child: CircularProgressIndicator()),
+            backgroundColor: pageTheme.appBarTheme.backgroundColor,
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('个人资料'),
-        backgroundColor: Colors.white,
-        actions: [
-          if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: ListView(
-        children: [
-          // 头像设置
-          ListTile(
-            leading: const Text('头像', style: _titleTextStyle),
-            title: Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickUserAvatar,
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundImage: _userAvatarPath != null
-                        ? FileImage(File(_userAvatarPath!))
-                        : null,
-                    child: _userAvatarPath == null
-                        ? const Icon(Icons.person)
-                        : null,
+    return Theme(
+      data: pageTheme,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('个人资料'),
+          backgroundColor: pageTheme.appBarTheme.backgroundColor,
+          actions: [
+            if (_isSaving)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: dynamicTitleColor,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Text(_userName,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
+              ),
+          ],
+        ),
+        body: ListView(
+          children: [
+            // 头像设置
+            ListTile(
+              leading: Text('头像',
+                  style: TextStyle(fontSize: 16, color: dynamicTitleColor)),
+              title: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _pickUserAvatar,
+                    child: CircleAvatar(
+                      radius: 30,
+                      backgroundImage: _userAvatarPath != null
+                          ? FileImage(File(_userAvatarPath!))
+                          : null,
+                      child: _userAvatarPath == null
+                          ? Icon(Icons.person, color: dynamicTitleColor)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(_userName,
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: dynamicTitleColor)),
+                ],
+              ),
             ),
-          ),
-          _customDivider,
+            Divider(
+                indent: 16,
+                color: dynamicDividerColor,
+                thickness: 1,
+                height: 1),
 
-          // 名字设置
-          ListTile(
-            leading: const Text('名字', style: _titleTextStyle),
-            title: Text(_userName, style: _descriptionTextStyle),
-            trailing: const Icon(Icons.edit),
-            onTap: _showEditNameDialog,
-          ),
-          _customDivider,
+            // 名字设置
+            ListTile(
+              leading: Text('名字',
+                  style: TextStyle(fontSize: 16, color: dynamicTitleColor)),
+              title: Text(_userName,
+                  style:
+                      TextStyle(fontSize: 14, color: dynamicDescriptionColor)),
+              trailing: Icon(Icons.edit, color: dynamicTitleColor),
+              onTap: _showEditNameDialog,
+            ),
+            Divider(
+                indent: 16,
+                color: dynamicDividerColor,
+                thickness: 1,
+                height: 1),
 
-          // 显示头像开关（替换 activeColor → activeThumbColor）
-          SwitchListTile(
-            title: const Text('在聊天中显示我的头像', style: _titleTextStyle),
-            value: _showUserAvatar,
-            onChanged: _toggleShowUserAvatar,
-            activeThumbColor: const Color(0xFFFF5A7E), // ← 替换 activeColor
-            activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
-          ),
-          _customDivider,
+            // 显示头像开关
+            SwitchListTile(
+              title: Text('在聊天中显示我的头像',
+                  style: TextStyle(fontSize: 16, color: dynamicTitleColor)),
+              value: _showUserAvatar,
+              onChanged: _toggleShowUserAvatar,
+              activeThumbColor: dynamicTitleColor,
+              activeTrackColor:
+                  dynamicTitleColor.withAlpha((0.5 * 255).round()),
+            ),
+            Divider(
+                indent: 16,
+                color: dynamicDividerColor,
+                thickness: 1,
+                height: 1),
 
-          // 从图片提取主题色
-          ListTile(
-            leading: const Icon(Icons.palette, color: Color(0xFFFF5A7E)),
-            title: const Text('从图片提取主题色', style: _titleTextStyle),
-            subtitle:
-                const Text('选择一张图片，让 App 整体变色', style: _descriptionTextStyle),
-            onTap: () async {
-              final asset =
-                  await AssetPickerUtil.pickSingleImageDirectly(context);
-              if (asset == null) return;
+            // 从图片提取主题色
+            ListTile(
+              leading: Icon(Icons.palette, color: dynamicTitleColor),
+              title: Text('从图片提取主题色',
+                  style: TextStyle(fontSize: 16, color: dynamicTitleColor)),
+              subtitle: Text('选择一张图片，让 App 整体变色',
+                  style:
+                      TextStyle(fontSize: 14, color: dynamicDescriptionColor)),
+              onTap: () async {
+                final asset =
+                    await AssetPickerUtil.pickSingleImageDirectly(context);
+                if (asset == null) return;
 
-              final colors = await AssetPickerUtil.extractPalette(asset);
-              if (colors == null || colors.isEmpty) {
+                final colors = await AssetPickerUtil.extractPalette(asset);
+                if (colors == null || colors.isEmpty) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('提取失败，请重试')),
+                  );
+                  return;
+                }
+
+                ref.read(customColorsProvider.notifier).updateColors(colors);
+
+                // family provider 自动触发页面重建，无需 setState
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('提取失败，请重试')),
+                  SnackBar(
+                    content: const Text('主题已适配完成'),
+                    backgroundColor: dynamicTitleColor,
+                  ),
                 );
-                return;
-              }
-
-              ref.read(customColorsProvider.notifier).updateColors(colors);
-
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('主题已适配完成')),
-              );
-            },
-          ),
-          _customDivider,
-        ],
+              },
+            ),
+            Divider(
+                indent: 16,
+                color: dynamicDividerColor,
+                thickness: 1,
+                height: 1),
+          ],
+        ),
       ),
     );
   }
