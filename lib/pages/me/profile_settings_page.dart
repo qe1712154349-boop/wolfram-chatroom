@@ -1,10 +1,11 @@
-// lib/pages/me/profile_settings_page.dart - 最终版（逻辑优化）
+// lib/pages/me/profile_settings_page.dart - 简化调试版
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // ✅ 必须导入
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
 import '../../utils/asset_picker_util.dart';
-import '../../providers/theme_provider.dart'; // 只导入 customColorsProvider
+import '../../providers/theme_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class ProfileSettingsPage extends ConsumerStatefulWidget {
@@ -177,7 +178,6 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 关键修改：直接使用 Theme.of(context)，不依赖 pageThemeProvider
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -281,10 +281,39 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
             trailing: Switch(
               value: _showUserAvatar,
               onChanged: _toggleShowUserAvatar,
-              activeColor: cs.primary,
+              activeThumbColor: cs.primary,
             ),
             cs: cs,
           ),
+
+          // ✅ 关键：添加测试按钮
+          _buildSettingItem(
+            icon: Icons.color_lens,
+            title: '测试主题色更新',
+            subtitle: '点击测试颜色变化',
+            onTap: () async {
+              if (kDebugMode) {
+                print('🔄 测试：应用紫色主题');
+              }
+
+              final testColor = Colors.deepPurple;
+
+              try {
+                ref.read(customColorsProvider.notifier).updateColors({
+                  'primary': testColor,
+                });
+
+                _showSuccessSnackBar('已应用紫色主题');
+              } catch (e) {
+                if (kDebugMode) {
+                  print('❌ 测试失败: $e');
+                }
+                _showErrorSnackBar('测试失败: $e');
+              }
+            },
+            cs: cs,
+          ),
+
           _buildSettingItem(
             icon: Icons.palette,
             title: '从图片提取主题色',
@@ -295,17 +324,45 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
                     await AssetPickerUtil.pickSingleImageDirectly(context);
                 if (asset == null) return;
 
+                if (kDebugMode) {
+                  print('🖼️ 开始提取图片颜色...');
+                }
+
                 final colors = await AssetPickerUtil.extractPalette(asset);
-                if (colors == null || colors.isEmpty) {
+
+                if (colors == null ||
+                    colors.isEmpty ||
+                    colors['primary'] == null) {
                   _showErrorSnackBar('提取失败，请重试');
                   return;
                 }
 
-                // ✅ 只更新 customColorsProvider，main.dart会自动处理
+                if (kDebugMode) {
+                  print('🎨 提取到颜色: ${colors['primary']}');
+                }
+
                 ref.read(customColorsProvider.notifier).updateColors(colors);
                 _showSuccessSnackBar('主题色已提取完成');
               } catch (e) {
+                if (kDebugMode) {
+                  print('❌ 提取失败: $e');
+                }
                 _showErrorSnackBar('操作失败: ${e.toString()}');
+              }
+            },
+            cs: cs,
+          ),
+
+          _buildSettingItem(
+            icon: Icons.restart_alt,
+            title: '重置主题色',
+            subtitle: '恢复到默认颜色',
+            onTap: () async {
+              try {
+                ref.read(customColorsProvider.notifier).reset();
+                _showSuccessSnackBar('主题色已重置');
+              } catch (e) {
+                _showErrorSnackBar('重置失败: $e');
               }
             },
             cs: cs,

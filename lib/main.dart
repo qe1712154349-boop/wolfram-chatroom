@@ -1,4 +1,4 @@
-// lib/main.dart - 完整修复版
+// lib/main.dart - 简化调试版
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
@@ -139,6 +139,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
   final StorageService _storage = StorageService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool _isLoadingTheme = true;
+  Map<String, Color>? _lastCustomColors; // 缓存上次的颜色
 
   @override
   void initState() {
@@ -220,6 +221,12 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     // ✅ 监听自定义颜色变化
     final customColors = ref.watch(customColorsProvider);
 
+    // ✅ 只在颜色变化时打印调试信息
+    if (kDebugMode && customColors != _lastCustomColors) {
+      print('🎨 主题颜色变化: ${customColors != null ? "自定义" : "默认"}');
+      _lastCustomColors = customColors;
+    }
+
     // 根据自定义颜色调整主题
     ThemeData lightTheme = AppTheme.lightTheme;
     ThemeData darkTheme = AppTheme.darkTheme;
@@ -231,16 +238,92 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         colorScheme: lightTheme.colorScheme.copyWith(
           primary: primaryColor,
           secondary: primaryColor.withOpacity(0.8),
+          surface: primaryColor.withOpacity(0.05),
+          primaryContainer: primaryColor.withOpacity(0.1),
+          onPrimaryContainer: Colors.white,
+          surfaceContainerHighest: primaryColor.withOpacity(0.08),
         ),
         primaryColor: primaryColor,
+        appBarTheme: lightTheme.appBarTheme.copyWith(
+          backgroundColor: primaryColor.withOpacity(0.05),
+          foregroundColor: primaryColor,
+          titleTextStyle: TextStyle(
+            color: primaryColor,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+        ),
+        switchTheme: lightTheme.switchTheme.copyWith(
+          thumbColor: WidgetStateProperty.resolveWith((states) {
+            return states.contains(WidgetState.selected)
+                ? primaryColor
+                : Colors.grey;
+          }),
+          trackColor: WidgetStateProperty.resolveWith((states) {
+            return states.contains(WidgetState.selected)
+                ? primaryColor.withOpacity(0.5)
+                : Colors.grey.withOpacity(0.5);
+          }),
+        ),
+        iconTheme: lightTheme.iconTheme.copyWith(
+          color: primaryColor,
+        ),
       );
 
       darkTheme = darkTheme.copyWith(
         colorScheme: darkTheme.colorScheme.copyWith(
           primary: primaryColor,
           secondary: primaryColor.withOpacity(0.8),
+          surface: primaryColor.withOpacity(0.1),
+          primaryContainer: primaryColor.withOpacity(0.2),
+          onPrimaryContainer: Colors.white,
+          surfaceContainerHighest: primaryColor.withOpacity(0.15),
         ),
         primaryColor: primaryColor,
+        appBarTheme: darkTheme.appBarTheme.copyWith(
+          backgroundColor: primaryColor.withOpacity(0.1),
+          foregroundColor: primaryColor,
+          titleTextStyle: TextStyle(
+            color: primaryColor,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+        ),
+        switchTheme: darkTheme.switchTheme.copyWith(
+          thumbColor: WidgetStateProperty.resolveWith((states) {
+            return states.contains(WidgetState.selected)
+                ? primaryColor
+                : Colors.grey;
+          }),
+          trackColor: WidgetStateProperty.resolveWith((states) {
+            return states.contains(WidgetState.selected)
+                ? primaryColor.withOpacity(0.5)
+                : Colors.grey.withOpacity(0.5);
+          }),
+        ),
+        iconTheme: darkTheme.iconTheme.copyWith(
+          color: primaryColor,
+        ),
       );
     }
 
@@ -273,7 +356,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      showSemanticsDebugger: false, // ✅ 关闭语义化调试器
+      showSemanticsDebugger: false,
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: _themeMode,
@@ -283,11 +366,9 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),
       },
-      // ✅ 添加 builder 以确保主题正确应用到所有页面（更新为使用 textScaler）
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            // 使用 textScaler 替代已废弃的 textScaleFactor
             textScaler: TextScaler.linear(
               MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.5),
             ),
