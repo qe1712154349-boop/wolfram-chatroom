@@ -41,6 +41,7 @@ dependencies:
   # === 微信风格图片选择器 ===
   wechat_assets_picker: ^10.1.0
   photo_manager: ^3.3.1
+  palette_generator: ^0.3.3+7
 
 dev_dependencies:
   flutter_test:

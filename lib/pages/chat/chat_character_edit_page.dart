@@ -107,10 +107,12 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
     }
   }
 
-  // 🆕 修改：使用 wechat_assets_picker 替换 image_picker
+  // 只替换 _pickImageFromGallery 方法，其他全部保持原样（保护焦点逻辑等）
+
   Future<void> _pickImageFromGallery() async {
     try {
-      final AssetEntity? asset = await AssetPickerUtil.pickSingleImage(context);
+      final AssetEntity? asset =
+          await AssetPickerUtil.pickImageDirectly(context);
       if (asset == null) return;
 
       setState(() => _isSaving = true);
@@ -129,9 +131,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('头像已更新'),
-            duration: Duration(seconds: 2),
-          ),
+              content: Text('头像已更新'), duration: Duration(seconds: 2)),
         );
       }
     } catch (e) {
@@ -139,10 +139,7 @@ class _ChatCharacterEditPageState extends State<ChatCharacterEditPage> {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('操作失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('操作失败: $e'), backgroundColor: Colors.red),
         );
       }
     }

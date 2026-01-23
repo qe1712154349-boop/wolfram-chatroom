@@ -294,6 +294,38 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               style: _descriptionTextStyle,
             ),
           ),
+          _customDivider,
+
+          ListTile(
+            leading: const Text('从图片适配主题', style: _titleTextStyle),
+            title:
+                const Text('选择一张图片，让 App 跟随变色', style: _descriptionTextStyle),
+            trailing:
+                const Icon(Icons.palette_outlined, color: Color(0xFFFF5A7E)),
+            onTap: () async {
+              final asset = await AssetPickerUtil.pickImageDirectly(context);
+              if (asset == null) return;
+
+              final colors = await AssetPickerUtil.extractPalette(asset);
+              if (colors == null || colors.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('提取失败，请重试')),
+                );
+                return;
+              }
+
+              // 通过 Riverpod 更新（需 Consumer 或 ref）
+              // 如果页面不是 ConsumerWidget，可用 ProviderScope.containerOf(context).read()
+              final container = ProviderScope.containerOf(context);
+              container
+                  .read(customColorsProvider.notifier)
+                  .updateColors(colors);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('主题已适配完成')),
+              );
+            },
+          ),
         ],
       ),
     );
