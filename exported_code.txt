@@ -3041,7 +3041,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: isDark ? Colors.black.withOpacity(0.3) : primaryPink.withOpacity(0.08),
+                    color: isDark ? Colors.black.withValues(alpha: 0.3) : primaryPink.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -3052,7 +3052,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: primaryPink.withOpacity(0.12),
+                    color: primaryPink.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.cloud_upload_rounded, color: primaryPink, size: 28),
@@ -3087,7 +3087,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                    color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.1),
                     blurRadius: 8,
                   ),
                 ],
@@ -3097,7 +3097,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.12),
+                    color: Colors.grey.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.cloud_download_rounded, color: Colors.grey, size: 28),
@@ -3127,7 +3127,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: isDark ? Colors.black.withOpacity(0.4) : Colors.grey.withOpacity(0.12),
+                  color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.12),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -3328,7 +3328,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -6565,7 +6565,7 @@ class DiaryDetailPage extends ConsumerWidget {
             border: Border.all(color: Colors.grey[300]!, width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -7156,7 +7156,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           spreadRadius: 1,
                           offset: const Offset(0, 4),
@@ -7202,7 +7202,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           spreadRadius: 1,
                           offset: const Offset(0, 4),
@@ -7679,7 +7679,7 @@ class _PublishMomentPageState extends State<PublishMomentPage> with SingleTicker
                       child: CircularProgressIndicator(
                         value: _progress,
                         strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation(Color(0xFFFF5A7E).withOpacity(0.8)),
+                        valueColor: AlwaysStoppedAnimation(Color(0xFFFF5A7E).withValues(alpha: 0.8)),
                       ),
                     )
                   : TextButton(
@@ -8332,7 +8332,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: _showUserAvatar,
                   onChanged: _toggleShowUserAvatar,
                   activeThumbColor: const Color(0xFFFF5A7E),
-                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+                  activeTrackColor: const Color(0xFFFF5A7E).withValues(alpha: 0.5),
                 ),
               ],
             ),

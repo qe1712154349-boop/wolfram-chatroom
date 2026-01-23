@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+import 'package:image_picker/image_picker.dart'; // 🆕 加这一行！pickMultipleAsXFile 用到 XFile
 
 class AssetPickerUtil {
   /// 单选图片（头像/背景等），支持 picker 内 pinch zoom + pan
@@ -8,22 +10,28 @@ class AssetPickerUtil {
     final List<AssetEntity>? result = await AssetPicker.pickAssets(
       context,
       pickerConfig: AssetPickerConfig(
-        requestType: RequestType.image, // 只选图片
-        specialPickerType: SpecialPickerType.noPreview, // 去掉底部预览条，更简洁
-        maxAssets: 1, // 单选
+        requestType: RequestType.image,
+        specialPickerType: SpecialPickerType.noPreview,
+        maxAssets: 1,
         themeColor: Theme.of(context).primaryColor,
-        pickerTheme: AssetPickerThemeData(
-          // 匹配你 App 粉色主题
+        // ✅ 修正：使用正确的主题设置方式
+        pickerTheme: ThemeData(
           primaryColor: const Color(0xFFFF5A7E),
-          // 可选：更多自定义（背景、文字等）
+          colorScheme: const ColorScheme.light(primary: Color(0xFFFF5A7E)),
           textTheme: Theme.of(context).textTheme.copyWith(
-                bodyMedium: TextStyle(color: Colors.white),
+                bodyMedium: const TextStyle(color: Colors.white),
               ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFFF5A7E),
+            foregroundColor: Colors.white,
+          ),
+          bottomSheetTheme: const BottomSheetThemeData(
+            backgroundColor: Colors.white,
+          ),
         ),
-        // 核心参数（最新版命名）
-        previewThumbnailSize: const ThumbnailSize(150, 150), // 预览缩略图大小
-        gridCount: 4, // 网格 4 列（微信默认）
-        pageSize: 80, // 每页加载量
+        previewThumbnailSize: const ThumbnailSize.square(150),
+        gridCount: 4,
+        pageSize: 80,
       ),
     );
 
@@ -42,22 +50,44 @@ class AssetPickerUtil {
         maxAssets: maxAssets,
         specialPickerType: SpecialPickerType.noPreview,
         themeColor: const Color(0xFFFF5A7E),
-        previewThumbnailSize: const ThumbnailSize(200, 200),
+        // ✅ 修正：使用 ThemeData
+        pickerTheme: ThemeData(
+          primaryColor: const Color(0xFFFF5A7E),
+          colorScheme: const ColorScheme.light(primary: Color(0xFFFF5A7E)),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFFF5A7E),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        previewThumbnailSize: const ThumbnailSize.square(200),
         gridCount: 4,
         pageSize: 80,
       ),
     );
   }
 
-  /// AssetEntity → File（可在此加压缩）
+  /// AssetEntity → File（兼容原有压缩逻辑）
   static Future<File?> getFileFromAsset(AssetEntity asset) async {
     final file = await asset.file;
     if (file == null) return null;
-
-    // 可选：在这里插入你已有的压缩逻辑（用 image 包或 extended_image）
-    // 示例：final compressedPath = await _compress(file.path);
-    // return File(compressedPath);
-
     return file;
+  }
+
+  /// 如果需要兼容原有 XFile（moments_detail_page 用）
+  static Future<List<XFile>?> pickMultipleAsXFile(
+    BuildContext context, {
+    int maxAssets = 9,
+  }) async {
+    final assets = await pickMultipleImages(context, maxAssets: maxAssets);
+    if (assets == null || assets.isEmpty) return null;
+
+    final List<XFile> files = [];
+    for (final asset in assets) {
+      final file = await getFileFromAsset(asset);
+      if (file != null) {
+        files.add(XFile(file.path));
+      }
+    }
+    return files.isEmpty ? null : files;
   }
 }

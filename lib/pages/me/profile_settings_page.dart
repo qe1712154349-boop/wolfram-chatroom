@@ -1,8 +1,10 @@
 // lib/pages/me/profile_settings_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../services/storage_service.dart';
+import '../../utils/asset_picker_util.dart'; // 🆕 新增导入
+import 'package:photo_manager/photo_manager.dart'; // AssetEntity 来自这里
+import 'package:wechat_assets_picker/wechat_assets_picker.dart'; // AssetPicker, AssetPickerConfig, AssetPickerThemeData
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -14,30 +16,29 @@ class ProfileSettingsPage extends StatefulWidget {
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   // ========== 服务 ==========
   final StorageService _storage = StorageService();
-  final ImagePicker _picker = ImagePicker();
-  
+
   // ========== 状态 ==========
   String? _userAvatarPath;
   String _userName = 'name';
   bool _showUserAvatar = true;
   bool _isLoading = false;
   bool _isSaving = false;
-  
+
   // ========== 样式常量 ==========
-  static const Color _titleColor = Color(0xFF333333);      // 深灰色文字
-  static const Color _dividerColor = Color(0xFF999999);    // 中灰色分割线
+  static const Color _titleColor = Color(0xFF333333); // 深灰色文字
+  static const Color _dividerColor = Color(0xFF999999); // 中灰色分割线
   static const Color _descriptionColor = Color(0xFF666666); // 说明文字灰色
-  
+
   static const TextStyle _titleTextStyle = TextStyle(
     fontSize: 16,
     color: _titleColor,
   );
-  
+
   static const TextStyle _descriptionTextStyle = TextStyle(
     fontSize: 14,
     color: _descriptionColor,
   );
-  
+
   static const Divider _customDivider = Divider(
     indent: 16,
     color: _dividerColor,
@@ -68,25 +69,23 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   }
 
   // ========== 头像处理 ==========
+  // 🆕 修改：使用 wechat_assets_picker 替换 image_picker
   Future<void> _pickUserAvatar() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-      
-      if (image != null) {
-        setState(() => _isSaving = true);
-        final newPath = await _storage.copyUserAvatarToAppDir(image.path);
-        await _storage.saveUserAvatarPath(newPath);
-        setState(() {
-          _userAvatarPath = newPath;
-          _isSaving = false;
-        });
-        _showSuccessSnackBar('头像已更新');
-      }
+      final AssetEntity? asset = await AssetPickerUtil.pickSingleImage(context);
+      if (asset == null) return;
+
+      setState(() => _isSaving = true);
+      final file = await AssetPickerUtil.getFileFromAsset(asset);
+      if (file == null) return;
+
+      final newPath = await _storage.copyUserAvatarToAppDir(file.path);
+      await _storage.saveUserAvatarPath(newPath);
+      setState(() {
+        _userAvatarPath = newPath;
+        _isSaving = false;
+      });
+      _showSuccessSnackBar('头像已更新');
     } catch (e) {
       setState(() => _isSaving = false);
       _showErrorSnackBar('选择头像失败: ${e.toString()}');
@@ -96,7 +95,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   // ========== 名字处理 ==========
   Future<void> _saveUserName(String newName) async {
     if (newName.trim().isEmpty) return;
-    
+
     setState(() => _isSaving = true);
     try {
       await _storage.saveUserName(newName.trim());
@@ -239,21 +238,22 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: const Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
                             ),
                           ),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),  // 保持原来的间距
+                const SizedBox(width: 8), // 保持原来的间距
                 const Icon(Icons.chevron_right, color: Colors.grey),
               ],
             ),
             onTap: _pickUserAvatar,
           ),
           _customDivider,
-          
+
           // 名字设置
           ListTile(
             leading: const Text('名字', style: _titleTextStyle),
@@ -267,7 +267,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             onTap: _showEditNameDialog,
           ),
           _customDivider,
-          
+
           // 头像显示开关
           ListTile(
             leading: const Text('头像显示', style: _titleTextStyle),
@@ -278,13 +278,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   value: _showUserAvatar,
                   onChanged: _toggleShowUserAvatar,
                   activeThumbColor: const Color(0xFFFF5A7E),
-                  activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
+                  activeTrackColor:
+                      const Color(0xFFFF5A7E).withValues(alpha: 0.5),
                 ),
               ],
             ),
           ),
           _customDivider,
-          
+
           // 说明文字
           Padding(
             padding: const EdgeInsets.all(16),

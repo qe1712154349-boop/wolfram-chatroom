@@ -150,7 +150,7 @@ class _PublishMomentPageState extends State<PublishMomentPage>
                         value: _progress,
                         strokeWidth: 3,
                         valueColor: AlwaysStoppedAnimation(
-                            Color(0xFFFF5A7E).withOpacity(0.8)),
+                            Color(0xFFFF5A7E).withValues(alpha: 0.8)),
                       ),
                     )
                   : TextButton(

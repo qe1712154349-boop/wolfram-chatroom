@@ -1,10 +1,11 @@
-// lib/pages/entrance/moments_detail_page.dart - 完全修正版
+// lib/pages/entrance/moments_detail_page.dart - 终极修复版
 import 'package:flutter/material.dart';
 import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart';
 import 'package:my_new_app/pages/friends_circle/camera_capture_page.dart';
-import 'package:my_new_app/utils/asset_picker_util.dart'; // 🆕 新增导入
-import 'package:photo_manager/photo_manager.dart'; // AssetEntity 来自这里
-import 'package:wechat_assets_picker/wechat_assets_picker.dart'; // AssetPicker, AssetPickerConfig, AssetPickerThemeData
+import 'package:my_new_app/utils/asset_picker_util.dart';
+import 'package:image_picker/image_picker.dart'; // 🆕 必须加！XFile 来自这里
+import 'package:photo_manager/photo_manager.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
 class MomentsDetailPage extends StatefulWidget {
   const MomentsDetailPage({super.key});
@@ -17,59 +18,44 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
   bool _showActionSheet = false;
 
   void _showImageSourceActionSheet() {
-    setState(() {
-      _showActionSheet = true;
-    });
+    setState(() => _showActionSheet = true);
   }
 
   void _hideActionSheet() {
-    setState(() {
-      _showActionSheet = false;
-    });
+    setState(() => _showActionSheet = false);
   }
 
   Future<void> _openCamera() async {
     _hideActionSheet();
     await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => CameraCapturePage(),
-      ),
+      MaterialPageRoute(builder: (_) => const CameraCapturePage()),
     );
   }
 
-  // 🆕 修改：使用 wechat_assets_picker 替换 ImagePicker().pickMultiImage
   Future<void> _pickFromGallery() async {
     _hideActionSheet();
     await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
 
-    final assets = await AssetPickerUtil.pickMultipleImages(
+    final List<XFile>? images = await AssetPickerUtil.pickMultipleAsXFile(
       context,
       maxAssets: 9,
     );
 
-    if (assets == null || assets.isEmpty) return;
+    if (images == null || images.isEmpty) return;
+    if (!mounted) return;
 
-    // 将 AssetEntity 转换为 XFile
-    final List<XFile> files = [];
-    for (final asset in assets) {
-      final file = await AssetPickerUtil.getFileFromAsset(asset);
-      if (file != null) {
-        files.add(XFile(file.path));
-      }
-    }
-
-    if (files.isEmpty) return;
-
-    final success = await Navigator.push(
+    final success = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => PublishMomentPage(initialImages: files),
+        builder: (_) => PublishMomentPage(initialImages: images),
       ),
     );
 
-    if (success == true) {
+    if (success == true && mounted) {
       debugPrint('发布成功，需要刷新朋友圈');
     }
   }
@@ -80,7 +66,6 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
 
     return Stack(
       children: [
-        // 主内容
         Scaffold(
           backgroundColor:
               isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
@@ -102,13 +87,15 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                              icon: const Icon(Icons.arrow_back,
-                                  color: Colors.white),
-                              onPressed: () => Navigator.pop(context)),
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
                           IconButton(
-                              icon: const Icon(Icons.camera_alt,
-                                  color: Colors.white),
-                              onPressed: _showImageSourceActionSheet),
+                            icon: const Icon(Icons.camera_alt,
+                                color: Colors.white),
+                            onPressed: _showImageSourceActionSheet,
+                          ),
                         ],
                       ),
                     ),
@@ -118,14 +105,17 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     right: 20,
                     child: Row(
                       children: [
-                        const Text("尘不言",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(blurRadius: 10, color: Colors.black45)
-                                ])),
+                        const Text(
+                          "尘不言",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: Colors.black45)
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: 15),
                         Container(
                           width: 80,
@@ -134,9 +124,10 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                             border: Border.all(color: Colors.white, width: 3),
                             borderRadius: BorderRadius.circular(8),
                             image: const DecorationImage(
-                                image: NetworkImage(
-                                    'https://via.placeholder.com/150'),
-                                fit: BoxFit.cover),
+                              image: NetworkImage(
+                                  'https://via.placeholder.com/150'),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ],
@@ -156,20 +147,18 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
             ],
           ),
         ),
-
-        // 底部动作面板（覆盖层）
         if (_showActionSheet)
           GestureDetector(
             onTap: _hideActionSheet,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              color: Colors.black.withOpacity(_showActionSheet ? 0.4 : 0.0),
+              color:
+                  Colors.black.withValues(alpha: _showActionSheet ? 0.4 : 0.0),
               width: double.infinity,
               height: double.infinity,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // 第一个卡片（拍摄 + 相册选择）
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOut,
@@ -181,7 +170,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           spreadRadius: 1,
                           offset: const Offset(0, 4),
@@ -190,7 +179,6 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     ),
                     child: Column(
                       children: [
-                        // 拍摄选项
                         _buildActionItem(
                           icon: Icons.camera_alt_outlined,
                           title: '拍摄',
@@ -198,7 +186,6 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                           onTap: _openCamera,
                           showDivider: true,
                         ),
-                        // 从相册选择选项
                         _buildActionItem(
                           icon: Icons.photo_library_outlined,
                           title: '从相册选择',
@@ -209,10 +196,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 8), // 真正的空隙（用于阴影效果）
-
-                  // 第二个卡片（取消按钮）
+                  const SizedBox(height: 8),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOut,
@@ -225,7 +209,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           spreadRadius: 1,
                           offset: const Offset(0, 4),
@@ -249,7 +233,6 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     );
   }
 
-  // 构建动作面板选项项
   Widget _buildActionItem({
     required IconData? icon,
     required String title,
@@ -297,9 +280,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                             child: Text(
                               subtitle,
                               style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF888888),
-                              ),
+                                  fontSize: 13, color: Color(0xFF888888)),
                             ),
                           ),
                       ],
@@ -343,16 +324,21 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(content,
-                    style: TextStyle(
-                        fontSize: 15,
-                        color: isDark ? Colors.white : Colors.black)),
+                Text(
+                  content,
+                  style: TextStyle(
+                      fontSize: 15,
+                      color: isDark ? Colors.white : Colors.black),
+                ),
                 if (images.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   GridView.builder(
@@ -370,8 +356,9 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
                           image: DecorationImage(
-                              image: NetworkImage(images[index]),
-                              fit: BoxFit.cover),
+                            image: NetworkImage(images[index]),
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       );
                     },
@@ -381,14 +368,20 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(time,
-                        style: TextStyle(
-                            color: isDark ? Colors.grey[400] : Colors.grey,
-                            fontSize: 13)),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
                     IconButton(
-                        icon: Icon(Icons.more_horiz,
-                            color: isDark ? Colors.grey[400] : Colors.grey),
-                        onPressed: () {}),
+                      icon: Icon(
+                        Icons.more_horiz,
+                        color: isDark ? Colors.grey[400] : Colors.grey,
+                      ),
+                      onPressed: () {},
+                    ),
                   ],
                 ),
               ],

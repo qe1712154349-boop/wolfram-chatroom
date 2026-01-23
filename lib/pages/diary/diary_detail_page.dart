@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/diary_provider.dart';
 import 'diary_editor_page.dart';
-import '../../models/diary_entry.dart';  // 确保这行存在且正确
+import '../../models/diary_entry.dart'; // 确保这行存在且正确
 
 class DiaryDetailPage extends ConsumerWidget {
   final DiaryEntry entry;
@@ -152,7 +152,7 @@ class DiaryDetailPage extends ConsumerWidget {
             border: Border.all(color: Colors.grey[300]!, width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -211,7 +211,7 @@ class DiaryDetailPage extends ConsumerWidget {
             }
           }
         }
-        
+
         return Text(
           text.trim(),
           style: const TextStyle(
@@ -223,7 +223,7 @@ class DiaryDetailPage extends ConsumerWidget {
     } catch (e) {
       // 如果解析失败，显示纯文本
     }
-    
+
     return Text(
       entry.content,
       style: const TextStyle(
