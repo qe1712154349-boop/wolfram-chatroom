@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../app/ui_theme_manager.dart'; // 🎨 新增导入
 import '../../utils/asset_picker_util.dart'; // 🆕 新增导入
+import 'package:photo_manager/photo_manager.dart'; // 🆕 新增导入
 
 // ════════════════════════════════════════════════════════════════════════════════
 // 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
