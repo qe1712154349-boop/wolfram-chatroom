@@ -207,7 +207,6 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
   Future<String> getCurrentTheme() async => await _storage.getThemeMode();
 
   @override
-  @override
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, child) {
       return MaterialApp(

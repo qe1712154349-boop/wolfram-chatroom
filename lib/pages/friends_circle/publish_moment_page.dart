@@ -1,11 +1,10 @@
-// lib/pages/friends_circle/publish_moment_page.dart（完整重构版）
+// lib/pages/friends_circle/publish_moment_page.dart
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:image_picker/image_picker.dart'; // ← 必须导入！XFile 来自这里
 import '../../utils/asset_picker_util.dart';
-import '../../services/storage_service.dart';
 
 class PublishMomentPage extends StatefulWidget {
   final List<XFile>? initialImages;
@@ -31,7 +30,6 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
   final _textController = TextEditingController();
   List<String> _imagePaths = [];
   bool _isCompressing = false;
-  final StorageService _storage = StorageService();
 
   @override
   void initState() {
@@ -45,11 +43,10 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
     if (files.isEmpty) return;
     setState(() => _isCompressing = true);
 
-    // 先转路径
     final paths = files.map((f) => f.path).toList();
-    // 使用新压缩方案
     final compressed = await AssetPickerUtil.compressMultiple(paths);
 
+    if (!mounted) return;
     setState(() {
       _imagePaths.addAll(compressed);
       _isCompressing = false;
@@ -67,7 +64,9 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
     final List<XFile> files = [];
     for (var asset in assets) {
       final file = await asset.originFile;
-      if (file != null) files.add(XFile(file.path));
+      if (file != null) {
+        files.add(XFile(file.path));
+      }
     }
 
     if (files.isNotEmpty) await _compressAndAdd(files);
@@ -93,11 +92,14 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
                     )
                   : TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('发布',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF5A7E))),
+                      child: const Text(
+                        '发布',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF5A7E),
+                        ),
+                      ),
                     ),
             ),
           ),
@@ -112,15 +114,18 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: TextField(
                 controller: _textController,
                 maxLines: null,
                 autofocus: true,
                 style: const TextStyle(fontSize: 17, height: 1.6),
                 decoration: const InputDecoration.collapsed(
-                    hintText: '这一刻的想法...',
-                    hintStyle: TextStyle(color: Colors.grey)),
+                  hintText: '这一刻的想法...',
+                  hintStyle: TextStyle(color: Colors.grey),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -130,13 +135,16 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12)),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: _isCompressing && _imagePaths.isEmpty
                     ? const Center(
                         child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: CircularProgressIndicator()))
+                          padding: EdgeInsets.all(32),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
                     : MasonryGridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),

@@ -313,14 +313,14 @@ class AppTheme {
 
   static Color getAppBackground(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return cs.background;
+    return cs.surface;
   }
 
   static Color getAiBubbleColor(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Theme.of(context).brightness == Brightness.dark
         ? cs.surface
-        : cs.surfaceVariant;
+        : cs.surface;
   }
 
   static Color getAiBubbleBorder(BuildContext context) {
@@ -348,14 +348,14 @@ class AppTheme {
     final cs = Theme.of(context).colorScheme;
     return Theme.of(context).brightness == Brightness.dark
         ? cs.surface
-        : cs.surfaceVariant;
+        : cs.surface;
   }
 
   static Color getMessageInputBackground(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Theme.of(context).brightness == Brightness.dark
         ? cs.surface
-        : cs.surfaceVariant;
+        : cs.surface;
   }
 
   static Color getMessageFieldBackground(BuildContext context) {

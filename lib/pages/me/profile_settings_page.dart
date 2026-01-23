@@ -1,50 +1,40 @@
 // lib/pages/me/profile_settings_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
-import '../../utils/asset_picker_util.dart'; // 🆕 新增导入
-import 'package:photo_manager/photo_manager.dart'; // AssetEntity 来自这里
-import 'package:wechat_assets_picker/wechat_assets_picker.dart'; // AssetPicker, AssetPickerConfig, AssetPickerThemeData
+import '../../utils/asset_picker_util.dart';
+import '../../providers/theme_provider.dart';
+import 'package:photo_manager/photo_manager.dart'; // ← 必须导入！AssetEntity 来自这里
 
-class ProfileSettingsPage extends StatefulWidget {
+class ProfileSettingsPage extends ConsumerStatefulWidget {
   const ProfileSettingsPage({super.key});
 
   @override
-  State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
+  ConsumerState<ProfileSettingsPage> createState() =>
+      _ProfileSettingsPageState();
 }
 
-class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
-  // ========== 服务 ==========
+class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   final StorageService _storage = StorageService();
 
-  // ========== 状态 ==========
   String? _userAvatarPath;
   String _userName = 'name';
   bool _showUserAvatar = true;
   bool _isLoading = false;
   bool _isSaving = false;
 
-  // ========== 样式常量 ==========
-  static const Color _titleColor = Color(0xFF333333); // 深灰色文字
-  static const Color _dividerColor = Color(0xFF999999); // 中灰色分割线
-  static const Color _descriptionColor = Color(0xFF666666); // 说明文字灰色
+  static const Color _titleColor = Color(0xFF333333);
+  static const Color _dividerColor = Color(0xFF999999);
+  static const Color _descriptionColor = Color(0xFF666666);
 
-  static const TextStyle _titleTextStyle = TextStyle(
-    fontSize: 16,
-    color: _titleColor,
-  );
+  static const TextStyle _titleTextStyle =
+      TextStyle(fontSize: 16, color: _titleColor);
+  static const TextStyle _descriptionTextStyle =
+      TextStyle(fontSize: 14, color: _descriptionColor);
 
-  static const TextStyle _descriptionTextStyle = TextStyle(
-    fontSize: 14,
-    color: _descriptionColor,
-  );
-
-  static const Divider _customDivider = Divider(
-    indent: 16,
-    color: _dividerColor,
-    thickness: 1,
-    height: 1,
-  );
+  static const Divider _customDivider =
+      Divider(indent: 16, color: _dividerColor, thickness: 1, height: 1);
 
   @override
   void initState() {
@@ -52,15 +42,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     _loadUserProfile();
   }
 
-  // ========== 数据加载 ==========
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
     try {
       final profile = await _storage.getUserProfile();
       setState(() {
-        _userAvatarPath = profile['avatarPath'];
-        _userName = profile['name'] ?? 'name';
-        _showUserAvatar = profile['showAvatar'] ?? true;
+        _userAvatarPath = profile['avatarPath'] as String?;
+        _userName = profile['name'] as String? ?? 'name';
+        _showUserAvatar = profile['showAvatar'] as bool? ?? true;
         _isLoading = false;
       });
     } catch (e) {
@@ -68,23 +57,25 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
-  // ========== 头像处理 ==========
-  // 🆕 修改：使用 wechat_assets_picker 替换 image_picker
   Future<void> _pickUserAvatar() async {
     try {
-      final AssetEntity? asset = await AssetPickerUtil.pickSingleImage(context);
+      final AssetEntity? asset =
+          await AssetPickerUtil.pickSingleImageDirectly(context);
       if (asset == null) return;
 
       setState(() => _isSaving = true);
-      final file = await AssetPickerUtil.getFileFromAsset(asset);
+
+      final file = await asset.originFile;
       if (file == null) return;
 
       final newPath = await _storage.copyUserAvatarToAppDir(file.path);
       await _storage.saveUserAvatarPath(newPath);
+
       setState(() {
         _userAvatarPath = newPath;
         _isSaving = false;
       });
+
       _showSuccessSnackBar('头像已更新');
     } catch (e) {
       setState(() => _isSaving = false);
@@ -92,7 +83,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
-  // ========== 名字处理 ==========
   Future<void> _saveUserName(String newName) async {
     if (newName.trim().isEmpty) return;
 
@@ -108,7 +98,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
-  // ========== 开关处理 ==========
   Future<void> _toggleShowUserAvatar(bool value) async {
     try {
       await _storage.saveShowUserAvatar(value);
@@ -118,28 +107,20 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     }
   }
 
-  // ========== SnackBar 辅助方法 ==========
   void _showSuccessSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
-  // ========== 对话框 ==========
   void _showEditNameDialog() {
     final controller = TextEditingController(text: _userName);
     showDialog(
@@ -162,14 +143,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                _saveUserName(controller.text.trim());
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                _saveUserName(name);
                 Navigator.pop(context);
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5A7E),
-            ),
+                backgroundColor: const Color(0xFFFF5A7E)),
             child: const Text('保存', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -177,15 +158,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 
-  // ========== 构建方法 ==========
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('个人资料'),
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        ),
+            title: const Text('个人资料'),
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -214,118 +193,76 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ListTile(
             leading: const Text('头像', style: _titleTextStyle),
             title: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 GestureDetector(
                   onTap: _pickUserAvatar,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.pink,
-                        backgroundImage: _userAvatarPath != null
-                            ? FileImage(File(_userAvatarPath!))
-                            : null,
-                        child: _userAvatarPath == null
-                            ? const Icon(Icons.person, color: Colors.white)
-                            : null,
-                      ),
-                      if (_isSaving)
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                  color: Colors.white),
-                            ),
-                          ),
-                        ),
-                    ],
+                  child: CircleAvatar(
+                    radius: 30,
+                    backgroundImage: _userAvatarPath != null
+                        ? FileImage(File(_userAvatarPath!))
+                        : null,
+                    child: _userAvatarPath == null
+                        ? const Icon(Icons.person)
+                        : null,
                   ),
                 ),
-                const SizedBox(width: 8), // 保持原来的间距
-                const Icon(Icons.chevron_right, color: Colors.grey),
+                const SizedBox(width: 16),
+                Text(_userName,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
-            onTap: _pickUserAvatar,
           ),
           _customDivider,
 
           // 名字设置
           ListTile(
             leading: const Text('名字', style: _titleTextStyle),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(_userName, style: const TextStyle(fontSize: 16)),
-                const Icon(Icons.chevron_right, color: Colors.grey),
-              ],
-            ),
+            title: Text(_userName, style: _descriptionTextStyle),
+            trailing: const Icon(Icons.edit),
             onTap: _showEditNameDialog,
           ),
           _customDivider,
 
-          // 头像显示开关
-          ListTile(
-            leading: const Text('头像显示', style: _titleTextStyle),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Switch(
-                  value: _showUserAvatar,
-                  onChanged: _toggleShowUserAvatar,
-                  activeThumbColor: const Color(0xFFFF5A7E),
-                  activeTrackColor:
-                      const Color(0xFFFF5A7E).withValues(alpha: 0.5),
-                ),
-              ],
-            ),
+          // 显示头像开关（替换 activeColor → activeThumbColor）
+          SwitchListTile(
+            title: const Text('在聊天中显示我的头像', style: _titleTextStyle),
+            value: _showUserAvatar,
+            onChanged: _toggleShowUserAvatar,
+            activeThumbColor: const Color(0xFFFF5A7E), // ← 替换 activeColor
+            activeTrackColor: const Color(0xFFFF5A7E).withOpacity(0.5),
           ),
           _customDivider,
 
-          // 说明文字
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              '关闭"头像显示"后，在聊天界面中将不会显示您的头像',
-              style: _descriptionTextStyle,
-            ),
-          ),
-          _customDivider,
-
+          // 从图片提取主题色
           ListTile(
-            leading: const Text('从图片适配主题', style: _titleTextStyle),
-            title:
-                const Text('选择一张图片，让 App 跟随变色', style: _descriptionTextStyle),
-            trailing:
-                const Icon(Icons.palette_outlined, color: Color(0xFFFF5A7E)),
+            leading: const Icon(Icons.palette, color: Color(0xFFFF5A7E)),
+            title: const Text('从图片提取主题色', style: _titleTextStyle),
+            subtitle:
+                const Text('选择一张图片，让 App 整体变色', style: _descriptionTextStyle),
             onTap: () async {
-              final asset = await AssetPickerUtil.pickImageDirectly(context);
+              final asset =
+                  await AssetPickerUtil.pickSingleImageDirectly(context);
               if (asset == null) return;
 
               final colors = await AssetPickerUtil.extractPalette(asset);
               if (colors == null || colors.isEmpty) {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('提取失败，请重试')),
                 );
                 return;
               }
 
-              // 通过 Riverpod 更新（需 Consumer 或 ref）
-              // 如果页面不是 ConsumerWidget，可用 ProviderScope.containerOf(context).read()
-              final container = ProviderScope.containerOf(context);
-              container
-                  .read(customColorsProvider.notifier)
-                  .updateColors(colors);
+              ref.read(customColorsProvider.notifier).updateColors(colors);
 
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('主题已适配完成')),
               );
             },
           ),
+          _customDivider,
         ],
       ),
     );
