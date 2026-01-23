@@ -208,19 +208,24 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(builder: (context, ref, child) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ref.watch(dynamicAppThemeProvider), // ← 动态主题
-        darkTheme: ref.watch(dynamicAppThemeProvider), // ← 动态主题
-        themeMode: ref.watch(themeModeProvider), // ← 动态 mode
-        navigatorKey: _navigatorKey,
-        home: const MainScreen(initialIndex: 1),
-        routes: {
-          '/character-edit': (context) => const ChatCharacterEditPage(),
-          '/profile-settings': (context) => const ProfileSettingsPage(),
-        },
-      );
-    });
+    return Consumer(
+      builder: (context, ref, child) {
+        final theme = ref.watch(dynamicAppThemeProvider);
+        final themeMode = ref.watch(themeModeProvider);
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: theme,
+          darkTheme: theme,
+          themeMode: themeMode,
+          navigatorKey: _navigatorKey,
+          home: const MainScreen(initialIndex: 1),
+          routes: {
+            '/character-edit': (context) => const ChatCharacterEditPage(),
+            '/profile-settings': (context) => const ProfileSettingsPage(),
+          },
+        );
+      },
+    );
   }
 }

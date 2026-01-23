@@ -45,41 +45,45 @@ final dynamicAppThemeProvider = Provider<ThemeData>((ref) {
   final custom = ref.watch(customColorsProvider);
   final primaryOverride = custom?['primary'];
 
-  final seedColor = primaryOverride ?? AppTheme.primaryLight;
+  // fallback：永远保证 ThemeData 非 null
+  ThemeData light = AppTheme.lightTheme;
+  ThemeData dark = AppTheme.darkTheme;
 
-  var light = AppTheme.lightTheme;
-  var dark = AppTheme.darkTheme;
+  try {
+    if (primaryOverride != null) {
+      light = light.copyWith(
+        colorScheme: light.colorScheme.copyWith(
+          primary: primaryOverride,
+          secondary: primaryOverride.withAlpha((0.8 * 255).round()),
+          surface: primaryOverride.withAlpha((0.02 * 255).round()),
+        ),
+        primaryColor: primaryOverride,
+        switchTheme: light.switchTheme.copyWith(
+          thumbColor: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.selected)
+                  ? primaryOverride
+                  : light.switchTheme.thumbColor!.resolve({})),
+        ),
+      );
 
-  if (primaryOverride != null) {
-    light = light.copyWith(
-      colorScheme: light.colorScheme.copyWith(
-        primary: primaryOverride,
-        secondary: primaryOverride.withOpacity(0.8),
-        surface: primaryOverride.withOpacity(0.02),
-      ),
-      primaryColor: primaryOverride,
-      switchTheme: light.switchTheme.copyWith(
-        thumbColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? primaryOverride
-                : light.switchTheme.thumbColor!.resolve({})),
-      ),
-    );
-
-    dark = dark.copyWith(
-      colorScheme: dark.colorScheme.copyWith(
-        primary: primaryOverride,
-        secondary: primaryOverride.withOpacity(0.8),
-        surface: primaryOverride.withOpacity(0.04),
-      ),
-      primaryColor: primaryOverride,
-      switchTheme: dark.switchTheme.copyWith(
-        thumbColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? primaryOverride
-                : dark.switchTheme.thumbColor!.resolve({})),
-      ),
-    );
+      dark = dark.copyWith(
+        colorScheme: dark.colorScheme.copyWith(
+          primary: primaryOverride,
+          secondary: primaryOverride.withAlpha((0.8 * 255).round()),
+          surface: primaryOverride.withAlpha((0.04 * 255).round()),
+        ),
+        primaryColor: primaryOverride,
+        switchTheme: dark.switchTheme.copyWith(
+          thumbColor: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.selected)
+                  ? primaryOverride
+                  : dark.switchTheme.thumbColor!.resolve({})),
+        ),
+      );
+    }
+  } catch (e, stack) {
+    debugPrint('Theme 计算异常，使用 fallback: $e\n$stack');
+    // fallback 已设置，不再抛异常
   }
 
   return mode == ThemeMode.dark ? dark : light;

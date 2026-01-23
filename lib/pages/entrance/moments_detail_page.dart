@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart';
 import 'package:my_new_app/pages/friends_circle/camera_capture_page.dart';
 import 'package:my_new_app/utils/asset_picker_util.dart';
-import 'package:image_picker/image_picker.dart'; // 🆕 必须加！XFile 来自这里
-import 'package:photo_manager/photo_manager.dart';
-import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+import 'package:image_picker/image_picker.dart'; // XFile 来自这里
 
 class MomentsDetailPage extends StatefulWidget {
   const MomentsDetailPage({super.key});
@@ -40,12 +38,17 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
 
-    final List<XFile>? images = await AssetPickerUtil.pickMultipleAsXFile(
-      context,
-      maxAssets: 9,
-    );
+    final assets =
+        await AssetPickerUtil.pickMultipleImagesDirectly(context, maxAssets: 9);
+    if (assets == null || assets.isEmpty) return;
 
-    if (images == null || images.isEmpty) return;
+    final List<XFile> images = [];
+    for (var asset in assets) {
+      final file = await asset.originFile;
+      if (file != null) images.add(XFile(file.path));
+    }
+
+    if (images.isEmpty) return;
     if (!mounted) return;
 
     final success = await Navigator.push<bool>(
@@ -152,8 +155,8 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
             onTap: _hideActionSheet,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              color:
-                  Colors.black.withValues(alpha: _showActionSheet ? 0.4 : 0.0),
+              color: Colors.black.withAlpha(
+                  _showActionSheet ? 102 : 0), // 替换 withValues(alpha: ...)
               width: double.infinity,
               height: double.infinity,
               child: Column(
@@ -170,7 +173,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withAlpha(26),
                           blurRadius: 12,
                           spreadRadius: 1,
                           offset: const Offset(0, 4),
@@ -209,7 +212,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withAlpha(26),
                           blurRadius: 12,
                           spreadRadius: 1,
                           offset: const Offset(0, 4),
