@@ -12,6 +12,8 @@ import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/theme_provider.dart'; // 确保这个文件存在
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +22,10 @@ void main() async {
   await Future.wait([
     // 1. 初始化日期格式化
     initializeDateFormatting('zh_CN', null),
-    
+
     // 2. 初始化前台服务（静默）
     _initForegroundTaskInBackground(),
-    
+
     // 3. 屏幕方向
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -60,9 +62,9 @@ Future<void> _initForegroundTaskInBackground() async {
         allowWifiLock: true,
       ),
     );
-    
+
     FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
-    
+
     if (kDebugMode) {
       print('✅ 前台服务初始化完成');
     }
@@ -102,7 +104,8 @@ Future<void> _startForegroundService() async {
       return;
     }
 
-    final ServiceRequestResult result = await FlutterForegroundTask.startService(
+    final ServiceRequestResult result =
+        await FlutterForegroundTask.startService(
       notificationTitle: '小猫',
       notificationText: '在线等待你的消息...',
       notificationIcon: const NotificationIcon(
@@ -190,9 +193,12 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   void _updateThemeMode(String savedMode) {
     setState(() {
-      if (savedMode == 'dark') _themeMode = ThemeMode.dark;
-      else if (savedMode == 'light') _themeMode = ThemeMode.light;
-      else _themeMode = ThemeMode.system;
+      if (savedMode == 'dark') {
+        _themeMode = ThemeMode.dark;
+      } else if (savedMode == 'light')
+        _themeMode = ThemeMode.light;
+      else
+        _themeMode = ThemeMode.system;
     });
   }
 
@@ -201,52 +207,21 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
   Future<String> getCurrentTheme() async => await _storage.getThemeMode();
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme.copyWith(
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            shadowColor: Colors.transparent,
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            elevation: 0,
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            elevation: 0,
-          ),
-        ),
-      ),
-      darkTheme: AppTheme.darkTheme.copyWith(
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            shadowColor: Colors.transparent,
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            elevation: 0,
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            elevation: 0,
-          ),
-        ),
-      ),
-      themeMode: _themeMode,
-      navigatorKey: _navigatorKey,
-      home: const MainScreen(initialIndex: 1), // ✅ 直接进入聊天页
-      routes: {
-        '/character-edit': (context) => const ChatCharacterEditPage(),
-        '/profile-settings': (context) => const ProfileSettingsPage(),
-      },
-    );
+    return Consumer(builder: (context, ref, child) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ref.watch(dynamicAppThemeProvider), // ← 动态主题
+        darkTheme: ref.watch(dynamicAppThemeProvider), // ← 动态主题
+        themeMode: ref.watch(themeModeProvider), // ← 动态 mode
+        navigatorKey: _navigatorKey,
+        home: const MainScreen(initialIndex: 1),
+        routes: {
+          '/character-edit': (context) => const ChatCharacterEditPage(),
+          '/profile-settings': (context) => const ProfileSettingsPage(),
+        },
+      );
+    });
   }
 }
