@@ -1,19 +1,20 @@
 // lib/utils/asset_picker_util.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:wechat_assets_picker/wechat_assets_picker.dart'; // 包含 AssetEntity、AssetPicker 等
+import 'package:photo_manager/photo_manager.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 class AssetPickerUtil {
-  /// 统一单选入口（头像、提取主题色）
+  /// 统一单选入口（头像、提取主题色） - 微信风格
   static Future<AssetEntity?> pickSingleImageDirectly(
       BuildContext context) async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
     if (ps != PermissionState.authorized && ps != PermissionState.limited)
-      return null; // ← 正确判断方式
+      return null;
 
     final result = await AssetPicker.pickAssets(
       context,
@@ -26,9 +27,8 @@ class AssetPickerUtil {
           primaryColor: const Color(0xFFFF5A7E),
           colorScheme: const ColorScheme.light(primary: Color(0xFFFF5A7E)),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFFF5A7E),
-            foregroundColor: Colors.white,
-          ),
+              backgroundColor: Color(0xFFFF5A7E),
+              foregroundColor: Colors.white),
           scaffoldBackgroundColor: Colors.white,
           bottomSheetTheme:
               const BottomSheetThemeData(backgroundColor: Colors.white),
@@ -38,7 +38,7 @@ class AssetPickerUtil {
     return result?.first;
   }
 
-  /// 统一多选入口（朋友圈发图，最多9张）
+  /// 统一多选入口（朋友圈发图，最多9张） - 微信风格
   static Future<List<AssetEntity>?> pickMultipleImagesDirectly(
     BuildContext context, {
     int maxAssets = 9,
@@ -58,12 +58,16 @@ class AssetPickerUtil {
           primaryColor: const Color(0xFFFF5A7E),
           colorScheme: const ColorScheme.light(primary: Color(0xFFFF5A7E)),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFFF5A7E),
-            foregroundColor: Colors.white,
-          ),
+              backgroundColor: Color(0xFFFF5A7E),
+              foregroundColor: Colors.white),
         ),
       ),
     );
+  }
+
+  /// 从 AssetEntity 获取 File（兼容旧代码）
+  static Future<File?> getFileFromAsset(AssetEntity asset) async {
+    return await asset.originFile;
   }
 
   /// 异步压缩单张（原生 flutter_image_compress）
