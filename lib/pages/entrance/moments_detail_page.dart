@@ -1,8 +1,10 @@
 // lib/pages/entrance/moments_detail_page.dart - 完全修正版
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart';
 import 'package:my_new_app/pages/friends_circle/camera_capture_page.dart';
+import 'package:my_new_app/utils/asset_picker_util.dart'; // 🆕 新增导入
+import 'package:photo_manager/photo_manager.dart'; // AssetEntity 来自这里
+import 'package:wechat_assets_picker/wechat_assets_picker.dart'; // AssetPicker, AssetPickerConfig, AssetPickerThemeData
 
 class MomentsDetailPage extends StatefulWidget {
   const MomentsDetailPage({super.key});
@@ -37,25 +39,36 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     );
   }
 
+  // 🆕 修改：使用 wechat_assets_picker 替换 ImagePicker().pickMultiImage
   Future<void> _pickFromGallery() async {
     _hideActionSheet();
     await Future.delayed(const Duration(milliseconds: 300));
-    
-    final List<XFile>? images = await ImagePicker().pickMultiImage(
-      maxWidth: 1080,
-      imageQuality: 88,
-      limit: 9,
+
+    final assets = await AssetPickerUtil.pickMultipleImages(
+      context,
+      maxAssets: 9,
     );
-    
-    if (images == null || images.isEmpty) return;
+
+    if (assets == null || assets.isEmpty) return;
+
+    // 将 AssetEntity 转换为 XFile
+    final List<XFile> files = [];
+    for (final asset in assets) {
+      final file = await AssetPickerUtil.getFileFromAsset(asset);
+      if (file != null) {
+        files.add(XFile(file.path));
+      }
+    }
+
+    if (files.isEmpty) return;
 
     final success = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PublishMomentPage(initialImages: images),
+        builder: (_) => PublishMomentPage(initialImages: files),
       ),
     );
-    
+
     if (success == true) {
       debugPrint('发布成功，需要刷新朋友圈');
     }
@@ -64,12 +77,13 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Stack(
       children: [
         // 主内容
         Scaffold(
-          backgroundColor: isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
+          backgroundColor:
+              isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
           body: ListView(
             children: [
               Stack(
@@ -78,7 +92,8 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     height: 300,
                     decoration: const BoxDecoration(
                       image: DecorationImage(
-                        image: NetworkImage('https://via.placeholder.com/800x400?text=Moments+Cover'),
+                        image: NetworkImage(
+                            'https://via.placeholder.com/800x400?text=Moments+Cover'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -87,13 +102,13 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white), 
-                            onPressed: () => Navigator.pop(context)
-                          ),
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context)),
                           IconButton(
-                            icon: const Icon(Icons.camera_alt, color: Colors.white), 
-                            onPressed: _showImageSourceActionSheet
-                          ),
+                              icon: const Icon(Icons.camera_alt,
+                                  color: Colors.white),
+                              onPressed: _showImageSourceActionSheet),
                         ],
                       ),
                     ),
@@ -103,13 +118,14 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     right: 20,
                     child: Row(
                       children: [
-                        const Text("尘不言", 
+                        const Text("尘不言",
                             style: TextStyle(
-                              color: Colors.white, 
-                              fontSize: 20, 
-                              fontWeight: FontWeight.bold, 
-                              shadows: [Shadow(blurRadius: 10, color: Colors.black45)]
-                            )),
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(blurRadius: 10, color: Colors.black45)
+                                ])),
                         const SizedBox(width: 15),
                         Container(
                           width: 80,
@@ -118,9 +134,9 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                             border: Border.all(color: Colors.white, width: 3),
                             borderRadius: BorderRadius.circular(8),
                             image: const DecorationImage(
-                              image: NetworkImage('https://via.placeholder.com/150'), 
-                              fit: BoxFit.cover
-                            ),
+                                image: NetworkImage(
+                                    'https://via.placeholder.com/150'),
+                                fit: BoxFit.cover),
                           ),
                         ),
                       ],
@@ -129,7 +145,6 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                 ],
               ),
               const SizedBox(height: 20),
-
               _buildMomentItem(
                 context: context,
                 avatar: 'https://via.placeholder.com/150',
@@ -159,10 +174,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOut,
                     transform: Matrix4.translationValues(
-                      0, 
-                      _showActionSheet ? 0 : 200, 
-                      0
-                    ),
+                        0, _showActionSheet ? 0 : 200, 0),
                     margin: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -197,19 +209,17 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 8), // 真正的空隙（用于阴影效果）
-                  
+
                   // 第二个卡片（取消按钮）
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOut,
                     transform: Matrix4.translationValues(
-                      0, 
-                      _showActionSheet ? 0 : 200, 
-                      0
-                    ),
-                    margin: const EdgeInsets.only(left: 12, right: 12, bottom: 24),
+                        0, _showActionSheet ? 0 : 200, 0),
+                    margin:
+                        const EdgeInsets.only(left: 12, right: 12, bottom: 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -275,8 +285,10 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                           title,
                           style: TextStyle(
                             fontSize: 17,
-                            fontWeight: isCancel ? FontWeight.w400 : FontWeight.w500,
-                            color: isCancel ? Colors.red : const Color(0xFF333333),
+                            fontWeight:
+                                isCancel ? FontWeight.w400 : FontWeight.w500,
+                            color:
+                                isCancel ? Colors.red : const Color(0xFF333333),
                           ),
                         ),
                         if (subtitle != null)
@@ -317,7 +329,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     required String time,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       padding: const EdgeInsets.all(16),
@@ -331,18 +343,16 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, 
+                Text(name,
                     style: TextStyle(
-                      color: Theme.of(context).primaryColor, 
-                      fontSize: 16, 
-                      fontWeight: FontWeight.bold
-                    )),
+                        color: Theme.of(context).primaryColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(content, 
+                Text(content,
                     style: TextStyle(
-                      fontSize: 15,
-                      color: isDark ? Colors.white : Colors.black
-                    )),
+                        fontSize: 15,
+                        color: isDark ? Colors.white : Colors.black)),
                 if (images.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   GridView.builder(
@@ -360,9 +370,8 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
                           image: DecorationImage(
-                            image: NetworkImage(images[index]), 
-                            fit: BoxFit.cover
-                          ),
+                              image: NetworkImage(images[index]),
+                              fit: BoxFit.cover),
                         ),
                       );
                     },
@@ -372,15 +381,14 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(time, 
+                    Text(time,
                         style: TextStyle(
-                          color: isDark ? Colors.grey[400] : Colors.grey, 
-                          fontSize: 13
-                        )),
+                            color: isDark ? Colors.grey[400] : Colors.grey,
+                            fontSize: 13)),
                     IconButton(
-                      icon: Icon(Icons.more_horiz, color: isDark ? Colors.grey[400] : Colors.grey), 
-                      onPressed: () {}
-                    ),
+                        icon: Icon(Icons.more_horiz,
+                            color: isDark ? Colors.grey[400] : Colors.grey),
+                        onPressed: () {}),
                   ],
                 ),
               ],

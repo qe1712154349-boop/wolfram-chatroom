@@ -26,7 +26,9 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
     try {
       final cameras = await availableCameras();
       final firstCamera = cameras.firstWhere(
-        (c) => _isRearCamera ? c.lensDirection == CameraLensDirection.back : c.lensDirection == CameraLensDirection.front,
+        (c) => _isRearCamera
+            ? c.lensDirection == CameraLensDirection.back
+            : c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
@@ -40,33 +42,33 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
   }
 
   Future<void> _takePicture() async {
-  try {
-    await _initializeControllerFuture;
-    if (!_controller!.value.isInitialized) {
-      debugPrint('相机未初始化');
-      return;
-    }
-    
-    final XFile photo = await _controller!.takePicture();
-    if (!mounted) return;
+    try {
+      await _initializeControllerFuture;
+      if (!_controller!.value.isInitialized) {
+        debugPrint('相机未初始化');
+        return;
+      }
 
-    // 修复：显式提供两个类型参数
-    final success = await Navigator.pushReplacement<bool, void>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PublishMomentPage(initialImages: [photo]),
-      ),
-    );
-    
-    // 可选：处理发布结果（success 为 PublishMomentPage pop 时返回的 bool?）
-    if (success == true) {
-      debugPrint('发布成功');
-      // 如果需要，可以在这里 pop 或刷新上层朋友圈
+      final XFile photo = await _controller!.takePicture();
+      if (!mounted) return;
+
+      // 修复：显式提供两个类型参数
+      final success = await Navigator.pushReplacement<bool, void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PublishMomentPage(initialImages: [photo]),
+        ),
+      );
+
+      // 可选：处理发布结果（success 为 PublishMomentPage pop 时返回的 bool?）
+      if (success == true) {
+        debugPrint('发布成功');
+        // 如果需要，可以在这里 pop 或刷新上层朋友圈
+      }
+    } catch (e) {
+      debugPrint('拍照失败: $e');
     }
-  } catch (e) {
-    debugPrint('拍照失败: $e');
   }
-}
 
   @override
   void dispose() {
@@ -82,12 +84,15 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
         future: _initializeControllerFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            if (snapshot.hasError || _controller == null || !_controller!.value.isInitialized) {
+            if (snapshot.hasError ||
+                _controller == null ||
+                !_controller!.value.isInitialized) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('相机初始化失败', style: TextStyle(color: Colors.white)),
+                    const Text('相机初始化失败',
+                        style: TextStyle(color: Colors.white)),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _initCamera,
@@ -97,7 +102,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
                 ),
               );
             }
-            
+
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -111,19 +116,24 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                        icon: Icon(_isFlashOn ? Icons.flash_on : Icons.flash_off, color: Colors.white),
+                        icon: Icon(
+                            _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                            color: Colors.white),
                         onPressed: () {
                           setState(() => _isFlashOn = !_isFlashOn);
-                          _controller!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
+                          _controller!.setFlashMode(
+                              _isFlashOn ? FlashMode.torch : FlashMode.off);
                         },
                       ),
                       FloatingActionButton(
                         backgroundColor: Colors.white,
                         onPressed: _takePicture,
-                        child: const Icon(Icons.camera_alt, color: Color(0xFFFF5A7E)),
+                        child: const Icon(Icons.camera_alt,
+                            color: Color(0xFFFF5A7E)),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+                        icon: const Icon(Icons.flip_camera_ios,
+                            color: Colors.white),
                         onPressed: () {
                           setState(() => _isRearCamera = !_isRearCamera);
                           _initCamera();
@@ -136,11 +146,13 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
             );
           } else if (snapshot.hasError) {
             return Center(
-              child: Text('相机初始化失败: ${snapshot.error}', style: const TextStyle(color: Colors.white)),
+              child: Text('相机初始化失败: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.white)),
             );
           } else {
             return const Center(
-              child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+              child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
             );
           }
         },
