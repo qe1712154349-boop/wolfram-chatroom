@@ -1,4 +1,4 @@
-// lib/main.dart - 稳定版（根不 watch 动态，避免白屏）
+// lib/main.dart - 完整修复版
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +12,9 @@ import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
+
+// ✅ 导入 theme_provider 中的 provider
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -123,17 +126,19 @@ Future<void> _startForegroundService() async {
   }
 }
 
-class MyBunnyApp extends StatefulWidget {
+class MyBunnyApp extends ConsumerStatefulWidget {
   const MyBunnyApp({super.key});
 
   @override
-  State<MyBunnyApp> createState() => _MyBunnyAppState();
+  ConsumerState<MyBunnyApp> createState() => _MyBunnyAppState();
 }
 
-class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
+class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
+    with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
   final StorageService _storage = StorageService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool _isLoadingTheme = true;
 
   @override
   void initState() {
@@ -179,18 +184,30 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _loadThemeMode() async {
-    final savedMode = await _storage.getThemeMode();
-    _updateThemeMode(savedMode);
+    try {
+      final savedMode = await _storage.getThemeMode();
+      _updateThemeMode(savedMode);
+    } catch (e) {
+      // 失败时使用默认主题
+      _updateThemeMode('system');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTheme = false);
+      }
+    }
   }
 
   void _updateThemeMode(String savedMode) {
+    if (!mounted) return;
+
     setState(() {
       if (savedMode == 'dark') {
         _themeMode = ThemeMode.dark;
-      } else if (savedMode == 'light')
+      } else if (savedMode == 'light') {
         _themeMode = ThemeMode.light;
-      else
+      } else {
         _themeMode = ThemeMode.system;
+      }
     });
   }
 
@@ -200,16 +217,83 @@ class _MyBunnyAppState extends State<MyBunnyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 监听自定义颜色变化
+    final customColors = ref.watch(customColorsProvider);
+
+    // 根据自定义颜色调整主题
+    ThemeData lightTheme = AppTheme.lightTheme;
+    ThemeData darkTheme = AppTheme.darkTheme;
+
+    if (customColors != null && customColors['primary'] != null) {
+      final primaryColor = customColors['primary']!;
+
+      lightTheme = lightTheme.copyWith(
+        colorScheme: lightTheme.colorScheme.copyWith(
+          primary: primaryColor,
+          secondary: primaryColor.withOpacity(0.8),
+        ),
+        primaryColor: primaryColor,
+      );
+
+      darkTheme = darkTheme.copyWith(
+        colorScheme: darkTheme.colorScheme.copyWith(
+          primary: primaryColor,
+          secondary: primaryColor.withOpacity(0.8),
+        ),
+        primaryColor: primaryColor,
+      );
+    }
+
+    // 加载期间显示简单加载界面
+    if (_isLoadingTheme) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: AppTheme.lightTheme.colorScheme.surface,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  color: AppTheme.lightTheme.colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '加载中...',
+                  style: TextStyle(
+                    color: AppTheme.lightTheme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      showSemanticsDebugger: false, // ✅ 关闭语义化调试器
+      theme: lightTheme,
+      darkTheme: darkTheme,
       themeMode: _themeMode,
       navigatorKey: _navigatorKey,
       home: const MainScreen(initialIndex: 1),
       routes: {
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),
+      },
+      // ✅ 添加 builder 以确保主题正确应用到所有页面（更新为使用 textScaler）
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            // 使用 textScaler 替代已废弃的 textScaleFactor
+            textScaler: TextScaler.linear(
+              MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.5),
+            ),
+          ),
+          child: child!,
+        );
       },
     );
   }

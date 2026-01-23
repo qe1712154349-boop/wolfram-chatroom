@@ -1,4 +1,4 @@
-// lib/providers/theme_provider.dart
+// lib/providers/theme_provider.dart - 修复版
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,14 +40,18 @@ class CustomColorsNotifier extends StateNotifier<Map<String, Color>?> {
   }
 }
 
-// family Provider：每个页面独立 watch
-final pageThemeProvider =
-    Provider.family<ThemeData, BuildContext>((ref, context) {
+// ✅ 移除 family，使用普通 provider
+final pageThemeProvider = Provider<ThemeData>((ref) {
   final mode = ref.watch(themeModeProvider);
   final custom = ref.watch(customColorsProvider);
   final primaryOverride = custom?['primary'];
 
-  // fallback 静态主题，保证永远非 null
+  // 获取系统主题（通过 GlobalKey）
+  final context = ref.read(appContextProvider);
+  final platformBrightness = MediaQuery.platformBrightnessOf(context);
+  final systemDark = platformBrightness == Brightness.dark;
+
+  // fallback 静态主题
   var light = AppTheme.lightTheme;
   var dark = AppTheme.darkTheme;
 
@@ -83,9 +87,22 @@ final pageThemeProvider =
         ),
       );
     }
-  } catch (e, stack) {
-    debugPrint('Theme 计算异常，使用 fallback: $e\n$stack');
+  } catch (e) {
+    debugPrint('Theme 计算异常，使用 fallback: $e');
   }
 
-  return mode == ThemeMode.dark ? dark : light;
+  // 根据主题模式选择
+  if (mode == ThemeMode.dark) {
+    return dark;
+  } else if (mode == ThemeMode.light) {
+    return light;
+  } else {
+    // 跟随系统
+    return systemDark ? dark : light;
+  }
+});
+
+// ✅ 添加全局 context provider（用于获取 MediaQuery）
+final appContextProvider = Provider<BuildContext>((ref) {
+  throw UnimplementedError('appContextProvider 需要在 main.dart 中设置');
 });

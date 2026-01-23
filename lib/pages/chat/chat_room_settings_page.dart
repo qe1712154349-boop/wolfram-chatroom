@@ -1,10 +1,8 @@
-// lib/pages/chat/chat_room_settings_page.dart - 优化版
+// lib/pages/chat/chat_room_settings_page.dart - 修复版
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../services/storage_service.dart';
-import '../../providers/theme_provider.dart';
 import 'chat_backup_migrate_page.dart';
 
 class ChatRoomSettingsPage extends ConsumerStatefulWidget {
@@ -58,10 +56,7 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
     );
 
     if (confirm == true) {
-      // 显示加载指示器
-      final overlay =
-          Overlay.of(context).context.findRenderObject() as RenderBox?;
-
+      // ✅ 修复：删除有问题的 Overlay 代码
       await _storage.clearChatHistory();
 
       if (mounted) {
@@ -75,12 +70,21 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
 
     return AlertDialog(
       backgroundColor: cs.surface,
-      title: const Text("清空聊天记录"),
-      content: const Text("确定要清空所有聊天记录吗？此操作不可恢复。"),
+      title: Text(
+        "清空聊天记录",
+        style: TextStyle(color: cs.onSurface),
+      ),
+      content: Text(
+        "确定要清空所有聊天记录吗？此操作不可恢复。",
+        style: TextStyle(color: cs.onSurfaceVariant),
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text("取消"),
+          child: Text(
+            "取消",
+            style: TextStyle(color: cs.onSurfaceVariant),
+          ),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
@@ -95,30 +99,30 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 优化：使用 select 来避免不必要的重建
-    final pageTheme =
-        ref.watch(pageThemeProvider(context).select((value) => value));
-    final cs = pageTheme.colorScheme;
+    // ✅ 关键修复：直接使用 Theme.of(context)，不再使用 pageThemeProvider
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
-    return Theme(
-      data: pageTheme,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: cs.surface,
+      appBar: AppBar(
         backgroundColor: cs.surface,
-        appBar: AppBar(
-          backgroundColor: cs.surface,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            "${widget.characterName} 设置",
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: cs.onSurface),
+          onPressed: () => Navigator.pop(context),
         ),
-        body: _buildBody(cs),
+        title: Text(
+          "${widget.characterName} 设置",
+          style: TextStyle(
+            color: cs.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
+      body: _buildBody(cs),
     );
   }
 
@@ -278,25 +282,13 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   }
 
   void _navigateToBackup() {
+    // 使用简单的 MaterialPageRoute，避免复杂动画
     Navigator.push(
       context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            ChatBackupMigratePage(
+      MaterialPageRoute(
+        builder: (context) => ChatBackupMigratePage(
           characterName: widget.characterName,
         ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.ease;
-          var tween =
-              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          return SlideTransition(
-            position: animation.drive(tween),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
   }

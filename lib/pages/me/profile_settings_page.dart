@@ -1,10 +1,10 @@
-// lib/pages/me/profile_settings_page.dart - 修复版
+// lib/pages/me/profile_settings_page.dart - 最终版
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
 import '../../utils/asset_picker_util.dart';
-import '../../providers/theme_provider.dart';
+import '../../providers/theme_provider.dart'; // 只导入 customColorsProvider
 import 'package:photo_manager/photo_manager.dart';
 
 class ProfileSettingsPage extends ConsumerStatefulWidget {
@@ -17,8 +17,6 @@ class ProfileSettingsPage extends ConsumerStatefulWidget {
 
 class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   final StorageService _storage = StorageService();
-  final GlobalKey _scaffoldKey = GlobalKey(); // 添加全局Key
-
   String? _userAvatarPath;
   String _userName = 'name';
   bool _showUserAvatar = true;
@@ -31,12 +29,6 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadUserProfile();
     });
-  }
-
-  @override
-  void dispose() {
-    // 清理可能的异步操作
-    super.dispose();
   }
 
   Future<void> _loadUserProfile() async {
@@ -125,331 +117,237 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
   void _showSuccessSnackBar(String message) {
     if (!mounted) return;
-    // 使用安全的 SnackBar 显示方式
-    Future.delayed(Duration.zero, () {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
-    Future.delayed(Duration.zero, () {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _showEditNameDialog() {
     final controller = TextEditingController(text: _userName);
 
-    // 延迟显示对话框，确保UI稳定
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (context) => AlertDialog(
-          title: const Text('修改名字'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 20,
-            decoration: const InputDecoration(
-              hintText: '请输入名字',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = controller.text.trim();
-                if (name.isNotEmpty) {
-                  _saveUserName(name);
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-              child: Text(
-                '保存',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 使用 family provider，传入 context
-    final pageTheme = ref.watch(pageThemeProvider(context));
-    final cs = pageTheme.colorScheme;
-
-    if (_isLoading) {
-      return Theme(
-        data: pageTheme,
-        child: Scaffold(
-          key: _scaffoldKey,
-          appBar: AppBar(
-            title: const Text('个人资料'),
-            backgroundColor: cs.surface,
-          ),
-          body: const Center(
-            child: CircularProgressIndicator(),
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        title: const Text('修改名字'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 20,
+          decoration: const InputDecoration(
+            hintText: '请输入名字',
+            border: OutlineInputBorder(),
           ),
         ),
-      );
-    }
-
-    return Theme(
-      data: pageTheme,
-      child: Scaffold(
-        key: _scaffoldKey,
-        appBar: AppBar(
-          title: const Text('个人资料'),
-          backgroundColor: cs.surface,
-          actions: [
-            if (_isSaving)
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      color: cs.primary,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          // 使用 SingleChildScrollView 替代 ListView
-          child: Column(
-            children: [
-              // 头像设置
-              _buildAvatarSection(cs),
-              const SizedBox(height: 8),
-
-              // 名字设置
-              _buildNameSection(cs),
-              const SizedBox(height: 8),
-
-              // 显示头像开关
-              _buildAvatarSwitch(cs),
-              const SizedBox(height: 8),
-
-              // 从图片提取主题色
-              _buildThemeExtractSection(cs),
-              const SizedBox(height: 16),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAvatarSection(ColorScheme cs) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: _pickUserAvatar,
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundImage: _userAvatarPath != null
-                      ? FileImage(File(_userAvatarPath!))
-                      : null,
-                  backgroundColor: cs.primaryContainer,
-                  child: _userAvatarPath == null
-                      ? Icon(Icons.person,
-                          size: 40, color: cs.onPrimaryContainer)
-                      : null,
-                ),
-                if (_isSaving)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(36),
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _userName,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: cs.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '点击头像更换',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                _saveUserName(name);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('保存'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildNameSection(ColorScheme cs) {
+  @override
+  Widget build(BuildContext context) {
+    // ✅ 关键修改：直接使用 Theme.of(context)，不依赖 pageThemeProvider
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('个人资料'),
+          backgroundColor: cs.surface,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('个人资料'),
+        backgroundColor: cs.surface,
+        actions: [
+          if (_isSaving)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: cs.primary,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: ListView(
+        children: [
+          // 头像区域
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: _pickUserAvatar,
+                  child: CircleAvatar(
+                    radius: 32,
+                    backgroundImage: _userAvatarPath != null
+                        ? FileImage(File(_userAvatarPath!))
+                        : null,
+                    backgroundColor: cs.primaryContainer,
+                    child: _userAvatarPath == null
+                        ? Icon(Icons.person,
+                            size: 36, color: cs.onPrimaryContainer)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _userName,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '点击头像更换',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 设置项
+          _buildSettingItem(
+            icon: Icons.edit,
+            title: '修改名字',
+            subtitle: _userName,
+            onTap: _showEditNameDialog,
+            cs: cs,
+          ),
+          _buildSettingItem(
+            icon: Icons.visibility,
+            title: '在聊天中显示头像',
+            subtitle: _showUserAvatar ? '已开启' : '已关闭',
+            trailing: Switch(
+              value: _showUserAvatar,
+              onChanged: _toggleShowUserAvatar,
+              activeColor: cs.primary,
+            ),
+            cs: cs,
+          ),
+          _buildSettingItem(
+            icon: Icons.palette,
+            title: '从图片提取主题色',
+            subtitle: '选择图片让App变色',
+            onTap: () async {
+              try {
+                final asset =
+                    await AssetPickerUtil.pickSingleImageDirectly(context);
+                if (asset == null) return;
+
+                final colors = await AssetPickerUtil.extractPalette(asset);
+                if (colors == null || colors.isEmpty) {
+                  _showErrorSnackBar('提取失败，请重试');
+                  return;
+                }
+
+                // ✅ 只更新 customColorsProvider，main.dart会自动处理
+                ref.read(customColorsProvider.notifier).updateColors(colors);
+                _showSuccessSnackBar('主题色已提取完成');
+              } catch (e) {
+                _showErrorSnackBar('操作失败: ${e.toString()}');
+              }
+            },
+            cs: cs,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required ColorScheme cs,
+    VoidCallback? onTap,
+    Widget? trailing,
+  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(Icons.person, color: cs.primary),
+        leading: Icon(icon, color: cs.primary),
         title: Text(
-          '名字',
+          title,
           style: TextStyle(
-            fontSize: 16,
             color: cs.onSurface,
+            fontWeight: FontWeight.w500,
           ),
         ),
         subtitle: Text(
-          _userName,
+          subtitle,
           style: TextStyle(
-            fontSize: 14,
             color: cs.onSurfaceVariant,
+            fontSize: 12,
           ),
         ),
-        trailing: Icon(Icons.edit, color: cs.primary),
-        onTap: _showEditNameDialog,
-      ),
-    );
-  }
-
-  Widget _buildAvatarSwitch(ColorScheme cs) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: SwitchListTile(
-        title: Text(
-          '在聊天中显示我的头像',
-          style: TextStyle(
-            fontSize: 16,
-            color: cs.onSurface,
-          ),
-        ),
-        subtitle: Text(
-          '开启后，你的头像会在聊天界面显示',
-          style: TextStyle(
-            fontSize: 14,
-            color: cs.onSurfaceVariant,
-          ),
-        ),
-        value: _showUserAvatar,
-        onChanged: _toggleShowUserAvatar,
-        activeColor: cs.primary,
-        activeTrackColor: cs.primaryContainer,
-      ),
-    );
-  }
-
-  Widget _buildThemeExtractSection(ColorScheme cs) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(Icons.palette, color: cs.primary),
-        title: Text(
-          '从图片提取主题色',
-          style: TextStyle(
-            fontSize: 16,
-            color: cs.onSurface,
-          ),
-        ),
-        subtitle: Text(
-          '选择一张图片，让 App 整体变色',
-          style: TextStyle(
-            fontSize: 14,
-            color: cs.onSurfaceVariant,
-          ),
-        ),
-        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: cs.primary),
-        onTap: () async {
-          try {
-            final asset =
-                await AssetPickerUtil.pickSingleImageDirectly(context);
-            if (asset == null) return;
-
-            final colors = await AssetPickerUtil.extractPalette(asset);
-            if (colors == null || colors.isEmpty) {
-              _showErrorSnackBar('提取失败，请重试');
-              return;
-            }
-
-            ref.read(customColorsProvider.notifier).updateColors(colors);
-
-            _showSuccessSnackBar('主题已适配完成');
-          } catch (e) {
-            _showErrorSnackBar('操作失败: ${e.toString()}');
-          }
-        },
+        trailing: trailing ??
+            Icon(Icons.arrow_forward_ios, size: 16, color: cs.onSurfaceVariant),
+        onTap: onTap,
       ),
     );
   }
