@@ -24,7 +24,7 @@ Write-Host "0. Export ENTIRE lib directory (all files recursively)"
 Write-Host ""
 
 if ($dirs.Count -gt 0) {
-    Write-Host "Or select a specific directory:"
+    Write-Host "Or select specific directories (e.g., 1, 1+2, 1-3, 2+4):"
     for ($i = 0; $i -lt $dirs.Count; $i++) {
         # 统计子目录中的Dart文件数量
         $subFiles = Get-ChildItem $dirs[$i].FullName -Recurse -Filter "*.dart" -File
@@ -41,68 +41,106 @@ if ($rootFileCount -gt 0) {
     Write-Host "Note: Lib root contains $rootFileCount Dart file(s)"
 }
 
-$choice = Read-Host "`nEnter your choice (0-$($dirs.Count))"
+$choice = Read-Host "`nEnter your choice (0-$($dirs.Count), or multiple like 1+2)"
+
+# ===== 函数：解析多选输入 =====
+function Parse-MultiChoice {
+    param([string]$inputText, [int]$maxIndex)
+    
+    $selectedIndices = @()
+    
+    # 处理空输入
+    if ([string]::IsNullOrWhiteSpace($inputText)) {
+        return $selectedIndices
+    }
+    
+    # 如果是单个数字
+    if ($inputText -match '^\d+$') {
+        $num = [int]$inputText
+        if ($num -ge 0 -and $num -le $maxIndex) {
+            return @($num)
+        }
+        return $selectedIndices
+    }
+    
+    # 分割输入（支持 + - , 空格等分隔符）
+    $inputText = $inputText -replace '\s', ''  # 移除空格
+    $parts = $inputText -split '[+,]'  # 按 + 或 , 分割
+    
+    foreach ($part in $parts) {
+        # 处理范围 如 1-3
+        if ($part -match '^(\d+)-(\d+)$') {
+            $start = [int]$matches[1]
+            $end = [int]$matches[2]
+            
+            if ($start -le $end -and $start -ge 0 -and $end -le $maxIndex) {
+                for ($i = $start; $i -le $end; $i++) {
+                    $selectedIndices += $i
+                }
+            }
+        }
+        # 处理单个数字
+        elseif ($part -match '^\d+$') {
+            $num = [int]$part
+            if ($num -ge 0 -and $num -le $maxIndex) {
+                $selectedIndices += $num
+            }
+        }
+    }
+    
+    # 去重并排序
+    return $selectedIndices | Sort-Object | Get-Unique
+}
 
 # ===== 处理全部导出的选项 =====
 if ($choice -eq "0") {
-    $targetDir = $root
-    Write-Host "Exporting ENTIRE lib directory: $targetDir"
+    $targetDirs = @($root)
+    Write-Host "Exporting ENTIRE lib directory: $root"
 } 
-# ===== 检查是否要查看子目录 =====
-elseif ($choice.EndsWith("/")) {
-    $index = [int]$choice.TrimEnd('/') - 1
-    if ($index -lt 0 -or $index -ge $dirs.Count) {
-        Write-Host "Invalid selection"
-        exit
-    }
-    
-    $selectedDir = $dirs[$index]
-    $subDirs = Get-ChildItem $selectedDir.FullName -Directory
-    
-    if ($subDirs.Count -eq 0) {
-        Write-Host "$($selectedDir.Name) has no subdirectories"
-        $targetDir = $selectedDir.FullName
-    } else {
-        Write-Host "`nSubdirectories of $($selectedDir.Name):"
-        for ($i = 0; $i -lt $subDirs.Count; $i++) {
-            Write-Host "$($i + 1). $($subDirs[$i].Name)"
-        }
-        
-        Write-Host "0. Export parent directory ($($selectedDir.Name))"
-        $subChoice = Read-Host "`nSelect subdirectory number"
-        
-        if ($subChoice -eq "0") {
-            $targetDir = $selectedDir.FullName
-        } else {
-            $subIndex = [int]$subChoice - 1
-            if ($subIndex -lt 0 -or $subIndex -ge $subDirs.Count) {
-                Write-Host "Invalid selection"
-                exit
-            }
-            $targetDir = $subDirs[$subIndex].FullName
-        }
-    }
-} 
-# ===== 正常选择子目录 =====
 else {
-    $index = [int]$choice - 1
-    if ($index -lt 0 -or $index -ge $dirs.Count) {
+    # 解析多选输入
+    $selectedNumbers = Parse-MultiChoice -inputText $choice -maxIndex $dirs.Count
+    
+    if ($selectedNumbers.Count -eq 0) {
         Write-Host "Invalid selection"
         exit
     }
-    $targetDir = $dirs[$index].FullName
+    
+    $targetDirs = @()
+    foreach ($num in $selectedNumbers) {
+        if ($num -eq 0) {
+            # 如果包含0，则只导出整个lib（覆盖其他选择）
+            $targetDirs = @($root)
+            Write-Host "Selected option 0, exporting ENTIRE lib directory"
+            break
+        } else {
+            $index = $num - 1
+            if ($index -lt 0 -or $index -ge $dirs.Count) {
+                Write-Host "Warning: Invalid index $num, skipping"
+                continue
+            }
+            $targetDirs += $dirs[$index].FullName
+        }
+    }
 }
 
-# ===== 确认导出 =====
+# ===== 显示选择结果 =====
 Write-Host ""
 Write-Host "========================================"
-Write-Host "Exporting from: $targetDir"
-Write-Host "Output file: $output"
+Write-Host "Selected directories to export:"
+foreach ($dir in $targetDirs) {
+    Write-Host "- $dir"
+}
 Write-Host "========================================"
 Write-Host ""
 
 # 统计要导出的文件数量
-$dartFiles = Get-ChildItem $targetDir -Recurse -Filter "*.dart" -File
+$dartFiles = @()
+foreach ($targetDir in $targetDirs) {
+    $files = Get-ChildItem $targetDir -Recurse -Filter "*.dart" -File
+    $dartFiles += $files
+}
+
 Write-Host "Found $($dartFiles.Count) Dart file(s) to export"
 
 $confirm = Read-Host "Continue? (Y/N)"
@@ -117,18 +155,18 @@ Write-Host "Exporting files..."
 
 # ===== Traverse dart files =====
 $fileCount = 0
-Get-ChildItem $targetDir -Recurse -Filter "*.dart" | ForEach-Object {
+foreach ($file in $dartFiles) {
     $fileCount++
-    Write-Host "  [$fileCount/$($dartFiles.Count)] $($_.FullName)"
+    Write-Host "  [$fileCount/$($dartFiles.Count)] $($file.FullName)"
     
     try {
-        $content = Get-Content $_.FullName -Encoding UTF8 -Raw
+        $content = Get-Content $file.FullName -Encoding UTF8 -Raw
         
         # 添加文件路径作为分隔符
         Add-Content $output "========================================`n" -Encoding UTF8
-        Add-Content $output "File: $($_.FullName)`n" -Encoding UTF8
-        Add-Content $output "Size: $($_.Length) bytes`n" -Encoding UTF8
-        Add-Content $output "Modified: $($_.LastWriteTime)`n" -Encoding UTF8
+        Add-Content $output "File: $($file.FullName)`n" -Encoding UTF8
+        Add-Content $output "Size: $($file.Length) bytes`n" -Encoding UTF8
+        Add-Content $output "Modified: $($file.LastWriteTime)`n" -Encoding UTF8
         Add-Content $output "========================================`n" -Encoding UTF8
         
         # 添加文件内容
@@ -138,8 +176,8 @@ Get-ChildItem $targetDir -Recurse -Filter "*.dart" | ForEach-Object {
         Add-Content $output "`n`n" -Encoding UTF8
         
     } catch {
-        Write-Host "  Error reading file: $($_.FullName)" -ForegroundColor Red
-        Add-Content $output "ERROR: Failed to read file $($_.FullName)`n" -Encoding UTF8
+        Write-Host "  Error reading file: $($file.FullName)" -ForegroundColor Red
+        Add-Content $output "ERROR: Failed to read file $($file.FullName)`n" -Encoding UTF8
     }
 }
 
@@ -150,6 +188,7 @@ Write-Host "Export completed!"
 Write-Host "Output file: $output"
 Write-Host "Total files exported: $fileCount"
 Write-Host "File size: $((Get-Item $output).Length) bytes"
+Write-Host "Selected directories: $($targetDirs.Count)"
 Write-Host "========================================"
 
 # 可选：打开输出文件
