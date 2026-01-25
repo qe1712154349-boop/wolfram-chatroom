@@ -348,7 +348,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     // 如果是应用私有目录，给出额外提示
     if (displayPath.contains('/Android/data/')) {
       displayPath =
-          '应用私有下载目录/lovme\n(文件管理器 → 内部存储 → Android → data → com.example.my_new_app → files → downloads → lovme)';
+          '应用私有下载目录/lovme\n(文件管理器 → 内部存储 → Android → data → com.wolfram.lovme → files → downloads → lovme)';
     }
 
     // 显示微信风格的底部卡片
@@ -473,3 +473,4 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     );
   }
 }
+

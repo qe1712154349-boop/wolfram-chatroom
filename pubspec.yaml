@@ -100,6 +100,7 @@ dev_dependencies:
 
   # Isar 代码生成器
   isar_community_generator: ^3.2.0
+  rename: ^3.1.0
 
 # =============== 🎨 Flutter 配置 ===============
 flutter:
