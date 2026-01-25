@@ -1,5 +1,4 @@
 // lib/pages/chat/chat_list_page.dart - 完整替换
-// lib/pages/chat/chat_list_page.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'chat_room_page.dart';
