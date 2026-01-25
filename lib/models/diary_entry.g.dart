@@ -73,7 +73,7 @@ const DiaryEntrySchema = CollectionSchema(
   getId: _diaryEntryGetId,
   getLinks: _diaryEntryGetLinks,
   attach: _diaryEntryAttach,
-  version: '3.3.0',
+  version: '3.3.0-dev.1',
 );
 
 int _diaryEntryEstimateSize(

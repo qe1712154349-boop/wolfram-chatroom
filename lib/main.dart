@@ -237,15 +237,15 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
       lightTheme = lightTheme.copyWith(
         colorScheme: lightTheme.colorScheme.copyWith(
           primary: primaryColor,
-          secondary: primaryColor.withOpacity(0.8),
-          surface: primaryColor.withOpacity(0.05),
-          primaryContainer: primaryColor.withOpacity(0.1),
+          secondary: primaryColor.withValues(alpha: 0.8),
+          surface: primaryColor.withValues(alpha: 0.05),
+          primaryContainer: primaryColor.withValues(alpha: 0.1),
           onPrimaryContainer: Colors.white,
-          surfaceContainerHighest: primaryColor.withOpacity(0.08),
+          surfaceContainerHighest: primaryColor.withValues(alpha: 0.08),
         ),
         primaryColor: primaryColor,
         appBarTheme: lightTheme.appBarTheme.copyWith(
-          backgroundColor: primaryColor.withOpacity(0.05),
+          backgroundColor: primaryColor.withValues(alpha: 0.05),
           foregroundColor: primaryColor,
           titleTextStyle: TextStyle(
             color: primaryColor,
@@ -271,8 +271,8 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
           }),
           trackColor: WidgetStateProperty.resolveWith((states) {
             return states.contains(WidgetState.selected)
-                ? primaryColor.withOpacity(0.5)
-                : Colors.grey.withOpacity(0.5);
+                ? primaryColor.withValues(alpha: 0.5)
+                : Colors.grey.withValues(alpha: 0.5);
           }),
         ),
         iconTheme: lightTheme.iconTheme.copyWith(
@@ -283,15 +283,15 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
       darkTheme = darkTheme.copyWith(
         colorScheme: darkTheme.colorScheme.copyWith(
           primary: primaryColor,
-          secondary: primaryColor.withOpacity(0.8),
-          surface: primaryColor.withOpacity(0.1),
-          primaryContainer: primaryColor.withOpacity(0.2),
+          secondary: primaryColor.withValues(alpha: 0.8),
+          surface: primaryColor.withValues(alpha: 0.1),
+          primaryContainer: primaryColor.withValues(alpha: 0.2),
           onPrimaryContainer: Colors.white,
-          surfaceContainerHighest: primaryColor.withOpacity(0.15),
+          surfaceContainerHighest: primaryColor.withValues(alpha: 0.15),
         ),
         primaryColor: primaryColor,
         appBarTheme: darkTheme.appBarTheme.copyWith(
-          backgroundColor: primaryColor.withOpacity(0.1),
+          backgroundColor: primaryColor.withValues(alpha: 0.1),
           foregroundColor: primaryColor,
           titleTextStyle: TextStyle(
             color: primaryColor,
@@ -317,8 +317,8 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
           }),
           trackColor: WidgetStateProperty.resolveWith((states) {
             return states.contains(WidgetState.selected)
-                ? primaryColor.withOpacity(0.5)
-                : Colors.grey.withOpacity(0.5);
+                ? primaryColor.withValues(alpha: 0.5)
+                : Colors.grey.withValues(alpha: 0.5);
           }),
         ),
         iconTheme: darkTheme.iconTheme.copyWith(

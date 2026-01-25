@@ -20,8 +20,7 @@ dependencies:
   
   # 💾 本地存储
   shared_preferences: ^2.2.2
-  sqflite: ^2.3.0      # ✅ SQLite 数据库（稳定无冲突）
-  path: ^1.9.0         # 路径处理（配合 sqflite）
+  path: ^1.9.0         # 路径处理（Isar 也用）
   
   # 📷 多媒体
   image_picker: ^1.1.2
@@ -59,7 +58,7 @@ dependencies:
   
   # =============== 📔 日记本核心依赖 ===============
   # 🎯 状态管理
-  flutter_riverpod: ^2.6.1
+  flutter_riverpod: ^2.5.1
   
   # 🆔 唯一标识
   uuid: ^4.3.0
@@ -80,6 +79,10 @@ dependencies:
   # 🏷️ Riverpod 注解
   riverpod_annotation: ^2.3.9
 
+  # =============== Isar 数据库 ===============
+  isar_community: ^3.2.0
+  isar_community_flutter_libs: ^3.2.0
+
 # =============== 🔧 开发依赖 ===============
 dev_dependencies:
   # Flutter 测试框架
@@ -94,6 +97,9 @@ dev_dependencies:
   
   # 🏷️ Riverpod 代码生成器
   riverpod_generator: ^2.3.9
+
+  # Isar 代码生成器
+  isar_community_generator: ^3.2.0
 
 # =============== 🎨 Flutter 配置 ===============
 flutter:
@@ -120,23 +126,18 @@ flutter_launcher_icons:
 # =============== 📝 迁移说明 ===============
 # 
 # ✅ 主要变更：
-# 1. 新增：sqflite ^2.3.0（SQLite 数据库，替换 Isar）
-# 2. 移除：所有 isar_community 相关包
-# 3. 保留：path ^1.9.0（sqflite 需要）
+# 1. 移除：sqflite ^2.3.0（SQLite 数据库）
+# 2. 新增：isar_community ^3.2.0 + isar_community_flutter_libs ^3.2.0 + isar_community_generator ^3.2.0（恢复 Isar，降到与 riverpod_generator 兼容的版本）
+# 3. Riverpod 系列保持 2.x（与 Isar 兼容最稳）
+# 4. 保留：path ^1.9.0（Isar 内部也用 path 处理文件路径）
 # 
-# ✅ 图标处理：
-# - flutter_launcher_icons 已配置并运行
-# - 各尺寸图标已生成到平台目录
-# - assets/splash.png 是源文件，用于重新生成
-# 
-# ✅ 后续操作：
-# 1. 重写 database_helper.dart（SQLite 版本）
-# 2. 修改 DiaryEntry 模型（添加 toMap/fromMap）
-# 3. 更新 diary_provider.dart
-# 4. 如需数据迁移，编写迁移脚本
+# ✅ 此回滚解决了依赖冲突：
+#    - isar_community_generator 3.3.0 需要 build ^3.0.0，与 riverpod_generator ^2.3.9 冲突
+#    - 降到 3.2.0 后 build ^2.4.x 兼容，pub get 成功
 # 
 # 🚀 执行命令：
 # flutter clean
 # flutter pub get
+# dart run build_runner build --delete-conflicting-outputs
 # 
 # ==============================================
