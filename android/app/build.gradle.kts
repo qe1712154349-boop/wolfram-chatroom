@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.my_new_app"
+    namespace = "com.wolfram.lovme"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
