@@ -1,23 +1,32 @@
-// lib/main.dart - 简化调试版
+// lib/main.dart - 完整优化版
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'dart:io';
+
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
+import 'pages/chat/chat_list_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
 
-// ✅ 导入 theme_provider 中的 provider
+// 导入 providers
 import 'providers/theme_provider.dart';
+import 'providers/chat_provider.dart'; // 新增
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 保持启动页显示
+  FlutterNativeSplash.preserve(
+      widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
 
   await Future.wait([
     initializeDateFormatting('zh_CN', null),
@@ -139,7 +148,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
   final StorageService _storage = StorageService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool _isLoadingTheme = true;
-  Map<String, Color>? _lastCustomColors; // 缓存上次的颜色
+  Map<String, Color>? _lastCustomColors;
 
   @override
   void initState() {
@@ -147,7 +156,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     WidgetsBinding.instance.addObserver(this);
     _loadThemeMode();
 
-    // 延迟启动前台服务（让UI先出来）
+    // 延迟启动前台服务
     Future.delayed(const Duration(seconds: 2), () {
       _startForegroundService();
     });
@@ -181,6 +190,30 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         break;
       default:
         break;
+    }
+  }
+
+  // ✅ 头像和聊天数据预热方法
+  Future<void> _preheatChatData() async {
+    try {
+      final character = await ref.read(chatCharacterProvider.future);
+
+      if (character.avatarPath != null && character.avatarPath!.isNotEmpty) {
+        final file = File(character.avatarPath!);
+        if (await file.exists()) {
+          // 预热头像图片
+          await precacheImage(FileImage(file), context);
+          if (kDebugMode) print('✅ 头像预缓存成功: ${character.avatarPath}');
+        }
+      }
+
+      // 预加载聊天历史
+      await ref.read(chatMessagesProvider.future);
+      await ref.read(lastMessageProvider.future);
+
+      if (kDebugMode) print('✅ 聊天数据预热完成 - 昵称: ${character.name}');
+    } catch (e) {
+      if (kDebugMode) print('❌ 预热失败: $e');
     }
   }
 
@@ -326,6 +359,15 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         ),
       );
     }
+
+    // ✅ 添加 post-frame callback 进行数据预热和移除启动页
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _preheatChatData();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) FlutterNativeSplash.remove();
+      });
+    });
 
     // 加载期间显示简单加载界面
     if (_isLoadingTheme) {

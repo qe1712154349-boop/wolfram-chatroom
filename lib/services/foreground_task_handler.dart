@@ -5,7 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart'; /
 
 class ChatForegroundTaskHandler extends TaskHandler {
   Timer? _heartbeatTimer;
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
@@ -51,7 +52,8 @@ class ChatForegroundTaskHandler extends TaskHandler {
   }
 
   Future<void> _showMessageNotification(String content) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'chat_message_channel',
       '聊天新消息',
       channelDescription: 'AI 回复时弹出通知',
@@ -60,11 +62,13 @@ class ChatForegroundTaskHandler extends TaskHandler {
       showWhen: true,
       enableVibration: true,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound('notification'), // res/raw/notification.mp3
+      sound: RawResourceAndroidNotificationSound(
+          'notification'), // res/raw/notification.mp3
       fullScreenIntent: true, // 锁屏全屏意图（可选）
     );
 
-    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
 
     await _notifications.show(
       DateTime.now().millisecondsSinceEpoch % 100000, // 唯一 ID
