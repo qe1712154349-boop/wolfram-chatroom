@@ -8,7 +8,8 @@ import 'package:isar_community/isar.dart';
 import '../services/isar_service.dart';
 import '../models/diary_entry.dart';
 
-final diaryListProvider = AsyncNotifierProvider<DiaryNotifier, List<DiaryEntry>>(
+final diaryListProvider =
+    AsyncNotifierProvider<DiaryNotifier, List<DiaryEntry>>(
   DiaryNotifier.new,
 );
 
@@ -16,10 +17,7 @@ class DiaryNotifier extends AsyncNotifier<List<DiaryEntry>> {
   @override
   Future<List<DiaryEntry>> build() async {
     final Isar isar = await ref.watch(isarProvider.future); // 显式声明 Isar 类型
-    return isar.diaryEntrys
-        .where()
-        .sortByCreatedAtDesc()
-        .findAll();
+    return isar.diaryEntrys.where().sortByCreatedAtDesc().findAll();
   }
 
   Future<void> addDiary(String content) async {
