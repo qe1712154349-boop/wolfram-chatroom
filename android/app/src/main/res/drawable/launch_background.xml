@@ -1,16 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 粉色背景 -->
     <item>
-        <shape>
-            <solid android:color="#FDF7F7" />
-        </shape>
+        <bitmap android:gravity="fill" android:src="@drawable/background"/>
     </item>
-    
-    <!-- 居中显示应用图标 -->
-    <item
-        android:width="120dp"
-        android:height="120dp"
-        android:drawable="@mipmap/ic_launcher"
-        android:gravity="center" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/splash"/>
+    </item>
 </layer-list>

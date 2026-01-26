@@ -5,8 +5,8 @@
         <!-- 启动动画图标 -->
         <item name="android:windowSplashScreenAnimationDuration">1000</item>
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowSplashScreenBackground">#181818</item>
     </style>

@@ -38,7 +38,7 @@
     <application
         android:label="lovme"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher_foreground"
         android:allowBackup="true"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
@@ -58,7 +58,7 @@
         <!-- 前台服务通知图标 meta-data（9.2.0 必须） -->
         <meta-data
             android:name="foreground_icon"
-            android:resource="@mipmap/ic_launcher"/>
+            android:resource="@drawable/ic_launcher_foreground"/>
         <!-- 主 Activity -->
         <activity
             android:name=".MainActivity"

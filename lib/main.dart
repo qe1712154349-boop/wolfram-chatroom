@@ -11,10 +11,8 @@ import 'dart:io';
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
-import 'pages/chat/chat_list_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
-import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
 
 // 导入 providers
