@@ -3,9 +3,9 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 13521 bytes
+Size: 13441 bytes
 
-Modified: 01/25/2026 23:43:39
+Modified: 01/27/2026 02:43:40
 
 ========================================
 
@@ -22,10 +22,8 @@ import 'dart:io';
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
-import 'pages/chat/chat_list_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
-import 'services/isar_service.dart';
 import 'services/foreground_task_handler.dart';
 
 // 导入 providers
@@ -442,7 +440,7 @@ File: D:\D\my_new_app\lib\app\theme.dart
 
 Size: 14009 bytes
 
-Modified: 01/25/2026 18:20:23
+Modified: 01/27/2026 02:42:35
 
 ========================================
 
@@ -4710,7 +4708,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
 Size: 5729 bytes
 
-Modified: 01/25/2026 21:58:59
+Modified: 01/27/2026 02:42:35
 
 ========================================
 
@@ -7773,7 +7771,7 @@ File: D:\D\my_new_app\lib\pages\friends_circle\publish_moment_page.dart
 
 Size: 8614 bytes
 
-Modified: 01/25/2026 18:20:23
+Modified: 01/27/2026 02:42:35
 
 ========================================
 
@@ -8722,7 +8720,7 @@ File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
 Size: 37267 bytes
 
-Modified: 01/25/2026 18:20:23
+Modified: 01/27/2026 02:42:35
 
 ========================================
 
@@ -10641,7 +10639,7 @@ File: D:\D\my_new_app\lib\services\foreground_task_handler.dart
 
 Size: 2774 bytes
 
-Modified: 01/25/2026 22:01:18
+Modified: 01/27/2026 02:42:35
 
 ========================================
 
@@ -11196,7 +11194,7 @@ File: D:\D\my_new_app\lib\utils\asset_picker_util.dart
 
 Size: 4697 bytes
 
-Modified: 01/25/2026 18:20:23
+Modified: 01/27/2026 02:42:35
 
 ========================================
 
