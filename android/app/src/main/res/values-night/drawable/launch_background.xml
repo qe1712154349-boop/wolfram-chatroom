@@ -4,11 +4,12 @@
     <item>
         <shape>
             <solid android:color="#181818" />
+            <!-- 暗色启动背景 -->
         </shape>
     </item>
 
     <item>
-        <bitmap android:src="@mipmap/ic_launcher" android:gravity="center" android:tileMode="clamp" />
+        <bitmap android:src="@mipmap/ic_launcher" android:gravity="center" />
     </item>
 
 </layer-list>

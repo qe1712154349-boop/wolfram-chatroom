@@ -1,20 +1,12 @@
 flutter_native_splash:
-  color: "#FFD6E6"
-  color_dark: "#FFE6F0"
-  
+  color: "#FDF7F7"          # 亮色模式：你想要的浅粉白
+  color_dark: "#181818"     # 暗色模式：深黑灰
   android: true
   ios: true
   fullscreen: true
-  
-  # ✅ 必须指定图标路径！
-  image: android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-  
   android_gravity: center
   ios_content_mode: center
-  
   android_12:
-    color: "#FFD6E6"
-    color_dark: "#FFE6F0"
-    image: android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-  
-  branding: false
+    color: "#FDF7F7"        # 亮色
+    color_dark: "#181818"   # 暗色
+    image: null             # 强制用 launcher icon（居中圆形动画）

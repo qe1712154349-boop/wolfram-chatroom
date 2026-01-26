@@ -1,6 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 背景层：你想要的粉红色（亮色模式） -->
     <item>
-        <bitmap android:gravity="fill" android:src="@drawable/background"/>
+        <shape>
+            <solid android:color="#FDF7F7" />
+        </shape>
     </item>
+
+    <!-- 图标层：居中显示你的自定义 launcher icon -->
+    <item>
+        <bitmap android:src="@mipmap/ic_launcher" android:gravity="center" android:tileMode="clamp" />
+    </item>
+
 </layer-list>
