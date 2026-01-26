@@ -116,13 +116,10 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/splash.png"          # 源图片路径（必须）
-  adaptive_icon_background: "#FFD2DD"      # 自适应图标背景色
-  adaptive_icon_foreground: "assets/splash.png"  # 前景图标
   min_sdk_android: 21                      # 最低安卓版本
   
   # 可选优化配置
   remove_alpha_ios: true                   # iOS 移除透明背景
-  generate_adaptive_icon_background: true  # 生成自适应背景
 
 # =============== 📝 迁移说明 ===============
 # 

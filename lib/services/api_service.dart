@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 
 class ApiService {
-  Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
+  Future<String?> sendChatMessage(List<Map<String, String>> messages,
+      {String? model}) async {
     final provider = await ApiConfig.getCurrentProvider();
     if (provider == null) {
       throw Exception('没有选择服务商');
@@ -64,7 +65,7 @@ class ApiService {
 
     final testBaseUrl = baseUrl ?? provider.baseUrl;
     final testApiKey = apiKey ?? provider.apiKey;
-    
+
     if (testApiKey.isEmpty) {
       throw Exception('API Key 为空');
     }
