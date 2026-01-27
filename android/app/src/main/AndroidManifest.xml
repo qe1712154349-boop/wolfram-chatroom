@@ -55,10 +55,10 @@
             android:name="com.pravera.flutter_foreground_task.receiver.ForegroundBroadcastReceiver"
             android:enabled="true"
             android:exported="false"/>
-        <!-- 前台服务通知图标 meta-data（9.2.0 必须） -->
+<!-- 前台服务通知图标 meta-data（9.2.0 必须） -->
         <meta-data
             android:name="foreground_icon"
-            android:resource="@drawable/ic_launcher_foreground"/>
+            android:resource="@mipmap/ic_launcher" />
         <!-- 主 Activity -->
         <activity
             android:name=".MainActivity"
