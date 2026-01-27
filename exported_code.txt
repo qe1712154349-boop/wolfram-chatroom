@@ -440,7 +440,7 @@ File: D:\D\my_new_app\lib\app\theme.dart
 
 Size: 14009 bytes
 
-Modified: 01/27/2026 02:42:35
+Modified: 01/27/2026 17:25:45
 
 ========================================
 
@@ -4708,7 +4708,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
 Size: 5729 bytes
 
-Modified: 01/27/2026 02:42:35
+Modified: 01/27/2026 17:25:45
 
 ========================================
 
@@ -7771,7 +7771,7 @@ File: D:\D\my_new_app\lib\pages\friends_circle\publish_moment_page.dart
 
 Size: 8614 bytes
 
-Modified: 01/27/2026 02:42:35
+Modified: 01/27/2026 17:25:45
 
 ========================================
 
@@ -8720,7 +8720,7 @@ File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
 Size: 37267 bytes
 
-Modified: 01/27/2026 02:42:35
+Modified: 01/27/2026 17:25:45
 
 ========================================
 
@@ -10333,9 +10333,9 @@ class ApiConfig {
 
 File: D:\D\my_new_app\lib\services\api_service.dart
 
-Size: 2603 bytes
+Size: 2608 bytes
 
-Modified: 01/18/2026 15:43:26
+Modified: 01/27/2026 03:59:14
 
 ========================================
 
@@ -10345,7 +10345,8 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 
 class ApiService {
-  Future<String?> sendChatMessage(List<Map<String, String>> messages, {String? model}) async {
+  Future<String?> sendChatMessage(List<Map<String, String>> messages,
+      {String? model}) async {
     final provider = await ApiConfig.getCurrentProvider();
     if (provider == null) {
       throw Exception('没有选择服务商');
@@ -10405,7 +10406,7 @@ class ApiService {
 
     final testBaseUrl = baseUrl ?? provider.baseUrl;
     final testApiKey = apiKey ?? provider.apiKey;
-    
+
     if (testApiKey.isEmpty) {
       throw Exception('API Key 为空');
     }
@@ -10426,6 +10427,7 @@ class ApiService {
     }
   }
 }
+
 
 
 
@@ -11194,7 +11196,7 @@ File: D:\D\my_new_app\lib\utils\asset_picker_util.dart
 
 Size: 4697 bytes
 
-Modified: 01/27/2026 02:42:35
+Modified: 01/27/2026 17:25:45
 
 ========================================
 
