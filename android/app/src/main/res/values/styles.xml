@@ -1,13 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">@drawable/launch_background</item>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- ========== SplashScreen API 主题 (Android 12+) ========== -->
+    <style name="SplashTheme" parent="Theme.SplashScreen">
+        <!-- 背景纯色 #FFD2DD -->
+        <item name="windowSplashScreenBackground">#FFD2DD</item>
+        
+        <!-- 居中显示 ic_launcher（mipmap） -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        
+        <!-- 图标动画时长（毫秒），300ms 淡出 -->
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        
+        <!-- 为 Android 11 及以下版本提供向后兼容 -->
+        <item name="android:windowBackground">#FFD2DD</item>
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+    
+    <!-- ========== 保持原有的 NormalTheme（Flutter 主界面使用） ========== -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@android:color/white</item>
+    </style>
+    
+    <!-- ========== 向后兼容的主题（可选） ========== -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">#FFD2DD</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

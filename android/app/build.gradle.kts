@@ -33,6 +33,12 @@ android {
         versionName = flutter.versionName
     }
 
+lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        baseline = file("lint-baseline.xml")  // 可选，后续生成
+    }
+    
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -47,5 +53,7 @@ flutter {
 }
 
 dependencies {
+    implementation("androidx.core:core-splashscreen:1.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
+

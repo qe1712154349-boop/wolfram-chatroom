@@ -473,4 +473,3 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     );
   }
 }
-

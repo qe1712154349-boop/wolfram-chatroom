@@ -42,7 +42,7 @@
         android:allowBackup="true"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
-        android:theme="@style/SplashTheme">
+        android:theme="@style/LaunchTheme">
         <!-- flutter_foreground_task 9.x 要求的 service -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
@@ -65,7 +65,7 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
-            android:theme="@style/SplashTheme"
+            android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
@@ -84,4 +84,3 @@
             android:value="2"/>
     </application>
 </manifest>
-

@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'dart:io';
 
 import 'app/theme.dart';
@@ -22,9 +21,10 @@ import 'providers/chat_provider.dart'; // 新增
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 保持启动页显示
-  FlutterNativeSplash.preserve(
-      widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
+  // 删除这一行 ↓↓↓
+  // FlutterNativeSplash.preserve(
+  //     widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
+  // 删除这一行 ↑↑↑
 
   await Future.wait([
     initializeDateFormatting('zh_CN', null),
@@ -358,13 +358,15 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
       );
     }
 
-    // ✅ 添加 post-frame callback 进行数据预热和移除启动页
+// 修改这个 post-frame callback
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await _preheatChatData();
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) FlutterNativeSplash.remove();
-      });
+      // 删除这一行 ↓↓↓
+      // Future.delayed(const Duration(milliseconds: 100), () {
+      //   if (mounted) FlutterNativeSplash.remove();
+      // });
+      // 删除这一行 ↑↑↑
     });
 
     // 加载期间显示简单加载界面

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- <color name="ic_launcher_background">#FFD2DD</color> -->
+    <!-- 补 ic_launcher_background 的 base 默认值 -->
+    <color name="ic_launcher_background">#FFD2DD</color>  <!-- 或你想要的颜色，#181818 也行 -->
 </resources>
