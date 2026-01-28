@@ -94,7 +94,8 @@ class AppTheme {
           onSecondaryContainer: primaryLight,
           surface: surfaceLight,
           onSurface: onSurfaceLight,
-          surfaceVariant: surfaceContainerLowestLight, // 替换 surfaceVariant
+          surfaceContainerHighest:
+              surfaceContainerLowestLight, // 替换 surfaceVariant
           onSurfaceVariant: onSurfaceVariantLight,
           outline: outlineLight,
           outlineVariant: outlineVariantLight,
@@ -209,7 +210,7 @@ class AppTheme {
           onSecondaryContainer: primaryDark,
           surface: surfaceDark,
           onSurface: onSurfaceDark,
-          surfaceVariant: surfaceContainerLowestDark,
+          surfaceContainerHighest: surfaceContainerLowestDark,
           onSurfaceVariant: onSurfaceVariantDark,
           outline: outlineDark,
           outlineVariant: outlineVariantDark,

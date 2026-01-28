@@ -13,8 +13,9 @@ class AssetPickerUtil {
   static Future<AssetEntity?> pickSingleImageDirectly(
       BuildContext context) async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
-    if (ps != PermissionState.authorized && ps != PermissionState.limited)
+    if (ps != PermissionState.authorized && ps != PermissionState.limited) {
       return null;
+    }
 
     final result = await AssetPicker.pickAssets(
       context,
@@ -44,8 +45,9 @@ class AssetPickerUtil {
     int maxAssets = 9,
   }) async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
-    if (ps != PermissionState.authorized && ps != PermissionState.limited)
+    if (ps != PermissionState.authorized && ps != PermissionState.limited) {
       return null;
+    }
 
     return await AssetPicker.pickAssets(
       context,

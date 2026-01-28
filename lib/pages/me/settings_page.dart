@@ -496,8 +496,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 FutureBuilder<List<ApiProvider>>(
                   future: ApiConfig.loadProviders(),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData)
+                    if (!snapshot.hasData) {
                       return const CircularProgressIndicator();
+                    }
                     final providers = snapshot.data!;
                     final currentIdFuture = ApiConfig.getCurrentProviderId();
 

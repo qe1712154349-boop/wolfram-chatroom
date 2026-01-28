@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
-import '../../services/storage_service.dart';
-import '../../models/message.dart';
 import '../../providers/chat_provider.dart';
 
 class ChatListPage extends ConsumerWidget {

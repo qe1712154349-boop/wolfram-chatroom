@@ -28,7 +28,7 @@ class PublishMomentPage extends StatefulWidget {
 
 class _PublishMomentPageState extends State<PublishMomentPage> {
   final _textController = TextEditingController();
-  List<String> _imagePaths = [];
+  final List<String> _imagePaths = [];
   bool _isCompressing = false;
 
   @override
