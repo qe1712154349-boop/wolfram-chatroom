@@ -3,9 +3,9 @@
 
 File: D:\D\my_new_app\lib\main.dart
 
-Size: 13441 bytes
+Size: 13457 bytes
 
-Modified: 01/27/2026 02:43:40
+Modified: 01/29/2026 15:22:19
 
 ========================================
 
@@ -16,7 +16,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'dart:io';
 
 import 'app/theme.dart';
@@ -33,9 +32,10 @@ import 'providers/chat_provider.dart'; // 新增
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 保持启动页显示
-  FlutterNativeSplash.preserve(
-      widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
+  // 删除这一行 ↓↓↓
+  // FlutterNativeSplash.preserve(
+  //     widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
+  // 删除这一行 ↑↑↑
 
   await Future.wait([
     initializeDateFormatting('zh_CN', null),
@@ -369,13 +369,15 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
       );
     }
 
-    // ✅ 添加 post-frame callback 进行数据预热和移除启动页
+// 修改这个 post-frame callback
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await _preheatChatData();
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) FlutterNativeSplash.remove();
-      });
+      // 删除这一行 ↓↓↓
+      // Future.delayed(const Duration(milliseconds: 100), () {
+      //   if (mounted) FlutterNativeSplash.remove();
+      // });
+      // 删除这一行 ↑↑↑
     });
 
     // 加载期间显示简单加载界面
@@ -438,9 +440,9 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
 
 File: D:\D\my_new_app\lib\app\theme.dart
 
-Size: 14009 bytes
+Size: 14042 bytes
 
-Modified: 01/27/2026 17:25:45
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -540,7 +542,8 @@ class AppTheme {
           onSecondaryContainer: primaryLight,
           surface: surfaceLight,
           onSurface: onSurfaceLight,
-          surfaceVariant: surfaceContainerLowestLight, // 替换 surfaceVariant
+          surfaceContainerHighest:
+              surfaceContainerLowestLight, // 替换 surfaceVariant
           onSurfaceVariant: onSurfaceVariantLight,
           outline: outlineLight,
           outlineVariant: outlineVariantLight,
@@ -655,7 +658,7 @@ class AppTheme {
           onSecondaryContainer: primaryDark,
           surface: surfaceDark,
           onSurface: onSurfaceDark,
-          surfaceVariant: surfaceContainerLowestDark,
+          surfaceContainerHighest: surfaceContainerLowestDark,
           onSurfaceVariant: onSurfaceVariantDark,
           outline: outlineDark,
           outlineVariant: outlineVariantDark,
@@ -1246,7 +1249,7 @@ File: D:\D\my_new_app\lib\models\diary_entry.dart
 
 Size: 692 bytes
 
-Modified: 01/26/2026 21:25:26
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -1284,9 +1287,9 @@ class DiaryEntry {
 
 File: D:\D\my_new_app\lib\models\diary_entry.g.dart
 
-Size: 39155 bytes
+Size: 40518 bytes
 
-Modified: 01/26/2026 01:50:08
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -3114,9 +3117,9 @@ class VowPage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_backup_migrate_page.dart
 
-Size: 16547 bytes
+Size: 16545 bytes
 
-Modified: 01/25/2026 21:53:37
+Modified: 01/28/2026 17:47:03
 
 ========================================
 
@@ -3599,14 +3602,13 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
 
 
 
-
 ========================================
 
 File: D:\D\my_new_app\lib\pages\chat\chat_character_edit_page.dart
 
 Size: 30227 bytes
 
-Modified: 01/25/2026 16:34:45
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -4419,7 +4421,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_components.dart
 
 Size: 8508 bytes
 
-Modified: 01/24/2026 03:02:07
+Modified: 01/28/2026 17:30:36
 
 ========================================
 
@@ -4706,9 +4708,9 @@ class NarrationMessage extends StatelessWidget {
 
 File: D:\D\my_new_app\lib\pages\chat\chat_list_page.dart
 
-Size: 5729 bytes
+Size: 5645 bytes
 
-Modified: 01/27/2026 17:25:45
+Modified: 01/29/2026 15:22:19
 
 ========================================
 
@@ -4718,8 +4720,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
-import '../../services/storage_service.dart';
-import '../../models/message.dart';
 import '../../providers/chat_provider.dart';
 
 class ChatListPage extends ConsumerWidget {
@@ -6034,7 +6034,7 @@ File: D:\D\my_new_app\lib\pages\chat\chat_room_settings_page.dart
 
 Size: 9071 bytes
 
-Modified: 01/24/2026 03:29:22
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -6609,7 +6609,7 @@ File: D:\D\my_new_app\lib\pages\diary\diary_detail_page.dart
 
 Size: 7544 bytes
 
-Modified: 01/23/2026 19:56:53
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -7184,7 +7184,7 @@ File: D:\D\my_new_app\lib\pages\entrance\moments_detail_page.dart
 
 Size: 14508 bytes
 
-Modified: 01/24/2026 01:41:25
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -7595,7 +7595,7 @@ File: D:\D\my_new_app\lib\pages\friends_circle\camera_capture_page.dart
 
 Size: 5398 bytes
 
-Modified: 01/23/2026 19:43:33
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -7769,9 +7769,9 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
 
 File: D:\D\my_new_app\lib\pages\friends_circle\publish_moment_page.dart
 
-Size: 8614 bytes
+Size: 8620 bytes
 
-Modified: 01/27/2026 17:25:45
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -7805,7 +7805,7 @@ class PublishMomentPage extends StatefulWidget {
 
 class _PublishMomentPageState extends State<PublishMomentPage> {
   final _textController = TextEditingController();
-  List<String> _imagePaths = [];
+  final List<String> _imagePaths = [];
   bool _isCompressing = false;
 
   @override
@@ -8295,7 +8295,7 @@ File: D:\D\my_new_app\lib\pages\me\profile_settings_page.dart
 
 Size: 12460 bytes
 
-Modified: 01/24/2026 04:05:21
+Modified: 01/29/2026 15:22:19
 
 ========================================
 
@@ -8718,9 +8718,9 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
 File: D:\D\my_new_app\lib\pages\me\settings_page.dart
 
-Size: 37267 bytes
+Size: 37292 bytes
 
-Modified: 01/27/2026 17:25:45
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -9222,8 +9222,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 FutureBuilder<List<ApiProvider>>(
                   future: ApiConfig.loadProviders(),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData)
+                    if (!snapshot.hasData) {
                       return const CircularProgressIndicator();
+                    }
                     final providers = snapshot.data!;
                     final currentIdFuture = ApiConfig.getCurrentProviderId();
 
@@ -9712,7 +9713,7 @@ File: D:\D\my_new_app\lib\providers\chat_provider.dart
 
 Size: 1447 bytes
 
-Modified: 01/25/2026 21:57:45
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -9774,7 +9775,7 @@ File: D:\D\my_new_app\lib\providers\diary_provider.dart
 
 Size: 4640 bytes
 
-Modified: 01/26/2026 13:33:47
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -9935,7 +9936,7 @@ File: D:\D\my_new_app\lib\providers\theme_provider.dart
 
 Size: 3696 bytes
 
-Modified: 01/24/2026 03:19:33
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -10335,7 +10336,7 @@ File: D:\D\my_new_app\lib\services\api_service.dart
 
 Size: 2608 bytes
 
-Modified: 01/27/2026 03:59:14
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -10641,7 +10642,7 @@ File: D:\D\my_new_app\lib\services\foreground_task_handler.dart
 
 Size: 2774 bytes
 
-Modified: 01/27/2026 02:42:35
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -11183,7 +11184,7 @@ File: D:\D\my_new_app\lib\services\theme_storage_service.dart
 
 Size: 0 bytes
 
-Modified: 01/24/2026 00:24:16
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -11194,9 +11195,9 @@ Modified: 01/24/2026 00:24:16
 
 File: D:\D\my_new_app\lib\utils\asset_picker_util.dart
 
-Size: 4697 bytes
+Size: 4715 bytes
 
-Modified: 01/27/2026 17:25:45
+Modified: 01/28/2026 16:05:27
 
 ========================================
 
@@ -11215,8 +11216,9 @@ class AssetPickerUtil {
   static Future<AssetEntity?> pickSingleImageDirectly(
       BuildContext context) async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
-    if (ps != PermissionState.authorized && ps != PermissionState.limited)
+    if (ps != PermissionState.authorized && ps != PermissionState.limited) {
       return null;
+    }
 
     final result = await AssetPicker.pickAssets(
       context,
@@ -11246,8 +11248,9 @@ class AssetPickerUtil {
     int maxAssets = 9,
   }) async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
-    if (ps != PermissionState.authorized && ps != PermissionState.limited)
+    if (ps != PermissionState.authorized && ps != PermissionState.limited) {
       return null;
+    }
 
     return await AssetPicker.pickAssets(
       context,

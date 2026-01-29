@@ -21,11 +21,6 @@ import 'providers/chat_provider.dart'; // 新增
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 删除这一行 ↓↓↓
-  // FlutterNativeSplash.preserve(
-  //     widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
-  // 删除这一行 ↑↑↑
-
   await Future.wait([
     initializeDateFormatting('zh_CN', null),
     _initForegroundTaskInBackground(),
@@ -362,11 +357,6 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await _preheatChatData();
-      // 删除这一行 ↓↓↓
-      // Future.delayed(const Duration(milliseconds: 100), () {
-      //   if (mounted) FlutterNativeSplash.remove();
-      // });
-      // 删除这一行 ↑↑↑
     });
 
     // 加载期间显示简单加载界面

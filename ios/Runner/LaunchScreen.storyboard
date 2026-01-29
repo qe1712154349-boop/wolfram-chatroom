@@ -1,0 +1,7 @@
+<!-- 找到类似这样的部分 -->
+<viewController id="01J-lp-oVM" sceneMemberID="viewController">
+    <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+        <!-- 这里修改背景色 -->
+        <color key="backgroundColor" red="0.992" green="0.969" blue="0.969" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+    </view>
+</viewController>
