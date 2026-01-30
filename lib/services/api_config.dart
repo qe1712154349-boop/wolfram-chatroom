@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_new_app/utils/logger.dart'; // ← 替换 your_app_name 为 pubspec.yaml 里的 name:
 
 class ApiProvider {
   final String id; // 唯一标识，如 'deepseek', 'groq', 'custom_1'
