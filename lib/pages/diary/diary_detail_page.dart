@@ -36,9 +36,12 @@ class DiaryDetailPage extends ConsumerWidget {
 
     if (result == true && context.mounted) {
       await ref.read(diaryListProvider.notifier).deleteDiary(entry);
-      Navigator.pop(context);
+      if (context.mounted) {
+        // ← 加 mounted 检查
+        Navigator.pop(context);
+      }
     }
-  }
+  } // ← 这是缺少的右大括号！把它添加到第 42 行后面
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -8,6 +8,8 @@ environment:
 
 # =============== 🚀 运行时依赖 ===============
 dependencies:
+  logger: ^2.4.0   # ← 2.4.0 是2026年1月最新版，纯Dart、无native、删除零负担
+
   # Flutter 框架
   flutter:
     sdk: flutter
@@ -39,7 +41,7 @@ dependencies:
   # 📱 前台任务
   flutter_foreground_task: ^9.2.0
   
-  # ✨ 启动屏
+
 
   
   # 🎨 UI 增强
@@ -105,11 +107,6 @@ dev_dependencies:
 # =============== 🎨 Flutter 配置 ===============
 flutter:
   uses-material-design: true
-  
-  # 🖼️ 资源文件配置
-  # splash.png 主要用于图标生成，如果启动屏也用，就取消注释
-  assets:
-    # - assets/splash.png  # ⚠️ 按需取消注释（如果启动屏需要）
 
 # =============== 🎯 应用图标配置 ===============
 flutter_launcher_icons:

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'dart:io';
-
+import 'utils/logger.dart'; // 或者直接使用你已经创建的 logger
 import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
@@ -191,12 +191,14 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     try {
       final character = await ref.read(chatCharacterProvider.future);
 
+// 199行 precacheImage 那段（假设在 async 函数里）
       if (character.avatarPath != null && character.avatarPath!.isNotEmpty) {
         final file = File(character.avatarPath!);
         if (await file.exists()) {
-          // 预热头像图片
+          if (!mounted)
+            return; // ← 用 mounted（State 的 mounted），不是 context.mounted
           await precacheImage(FileImage(file), context);
-          if (kDebugMode) print('✅ 头像预缓存成功: ${character.avatarPath}');
+          log.i('✅ 头像预缓存成功: ${character.avatarPath}');
         }
       }
 
@@ -248,8 +250,9 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     final customColors = ref.watch(customColorsProvider);
 
     // ✅ 只在颜色变化时打印调试信息
+// 254行 curly_braces 修复 + logger
     if (kDebugMode && customColors != _lastCustomColors) {
-      print('🎨 主题颜色变化: ${customColors != null ? "自定义" : "默认"}');
+      log.d('🎨 主题颜色变化: ${customColors != null ? "自定义" : "默认"}');
       _lastCustomColors = customColors;
     }
 
@@ -398,6 +401,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),
       },
+      // 408行 textScaler
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(

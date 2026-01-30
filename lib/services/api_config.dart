@@ -4,15 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class ApiProvider {
-  final String id;                // 唯一标识，如 'deepseek', 'groq', 'custom_1'
-  final String name;              // 显示名
-  final String baseUrl;           // 基础 URL
-  final String apiKey;            // 密钥（保存时加密更好，但先明文）
-  final List<String> models;      // 可用模型列表
-  final bool isOpenAiCompatible;  // 是否 OpenAI 格式（header Bearer, /chat/completions）
-  final bool isCustom;            // 是否用户自定义
-  final bool requiresProxy;       // 仅用于提示用户，App不控制代理
-  final String setupGuide;        // 设置指南
+  final String id; // 唯一标识，如 'deepseek', 'groq', 'custom_1'
+  final String name; // 显示名
+  final String baseUrl; // 基础 URL
+  final String apiKey; // 密钥（保存时加密更好，但先明文）
+  final List<String> models; // 可用模型列表
+  final bool
+      isOpenAiCompatible; // 是否 OpenAI 格式（header Bearer, /chat/completions）
+  final bool isCustom; // 是否用户自定义
+  final bool requiresProxy; // 仅用于提示用户，App不控制代理
+  final String setupGuide; // 设置指南
 
   ApiProvider({
     required this.id,
@@ -66,17 +67,24 @@ class ApiConfig {
       models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
       isOpenAiCompatible: true,
       requiresProxy: false,
-      setupGuide: '1. 访问 https://platform.deepseek.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方',
+      setupGuide:
+          '1. 访问 https://platform.deepseek.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方',
     ),
     ApiProvider(
       id: 'ohmygpt',
       name: 'OhMyGPT',
       baseUrl: 'https://api.ohmygpt.com/v1',
       apiKey: '',
-      models: ['claude-3-5-haiku-20241022', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus'],
+      models: [
+        'claude-3-5-haiku-20241022',
+        'gpt-4o-mini',
+        'gpt-4-turbo',
+        'claude-3-opus'
+      ],
       isOpenAiCompatible: true,
       requiresProxy: true,
-      setupGuide: '1. 访问 https://www.ohmygpt.com/dashboard\n2. 确保账户有余额\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
+      setupGuide:
+          '1. 访问 https://www.ohmygpt.com/dashboard\n2. 确保账户有余额\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
     ),
     ApiProvider(
       id: 'openai',
@@ -86,17 +94,24 @@ class ApiConfig {
       models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
       isOpenAiCompatible: true,
       requiresProxy: true,
-      setupGuide: '1. 访问 https://platform.openai.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
+      setupGuide:
+          '1. 访问 https://platform.openai.com\n2. 注册账号并获取API Key\n3. 将Key粘贴到下方\n4. 可能需要VPN/代理才能访问',
     ),
     ApiProvider(
       id: 'nvidia',
       name: 'NVIDIA API',
       baseUrl: 'https://integrate.api.nvidia.com/v1',
       apiKey: '',
-      models: ['meta/llama-3.1-405b-instruct', 'meta/llama-3.1-70b-instruct', 'z-ai/glm-4', 'minimaxai/minimax-m2.1'],
+      models: [
+        'meta/llama-3.1-405b-instruct',
+        'meta/llama-3.1-70b-instruct',
+        'z-ai/glm-4',
+        'minimaxai/minimax-m2.1'
+      ],
       isOpenAiCompatible: true,
       requiresProxy: true,
-      setupGuide: '1. 访问 https://build.nvidia.com\n2. 获取 API Key\n3. 可能需要 VPN/代理',
+      setupGuide:
+          '1. 访问 https://build.nvidia.com\n2. 获取 API Key\n3. 可能需要 VPN/代理',
     ),
     // 新增预设
     ApiProvider(
@@ -104,7 +119,12 @@ class ApiConfig {
       name: 'Groq',
       baseUrl: 'https://api.groq.com/openai/v1',
       apiKey: '',
-      models: ['llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it', 'llama-3.1-70b-versatile'],
+      models: [
+        'llama3-70b-8192',
+        'mixtral-8x7b-32768',
+        'gemma2-9b-it',
+        'llama-3.1-70b-versatile'
+      ],
       isOpenAiCompatible: true,
       requiresProxy: false,
       setupGuide: '1. 访问 https://console.groq.com\n2. 注册并获取API Key',
@@ -114,10 +134,15 @@ class ApiConfig {
       name: 'Anthropic (Claude)',
       baseUrl: 'https://api.anthropic.com/v1',
       apiKey: '',
-      models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
+      models: [
+        'claude-3-5-sonnet-20241022',
+        'claude-3-opus-20240229',
+        'claude-3-haiku-20240307'
+      ],
       isOpenAiCompatible: false,
       requiresProxy: true,
-      setupGuide: '1. 访问 https://console.anthropic.com\n2. 获取 API Key\n3. 需要特殊格式请求',
+      setupGuide:
+          '1. 访问 https://console.anthropic.com\n2. 获取 API Key\n3. 需要特殊格式请求',
     ),
   ];
 
@@ -125,17 +150,17 @@ class ApiConfig {
   static Future<List<ApiProvider>> loadProviders() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_providersKey);
-    
+
     if (jsonStr == null || jsonStr.isEmpty) {
       // 第一次：返回预设
       return List.from(defaultProviders);
     }
-    
+
     try {
       final List<dynamic> list = jsonDecode(jsonStr);
       return list.map((e) => ApiProvider.fromMap(e)).toList();
     } catch (e) {
-      print('加载服务商失败: $e');
+      log.e('加载服务商失败: $e');
       return List.from(defaultProviders);
     }
   }
@@ -186,17 +211,17 @@ class ApiConfig {
         Uri.parse('${provider.baseUrl}/models'),
         headers: {'Authorization': 'Bearer ${provider.apiKey}'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> modelList = data['data'] ?? [];
         return modelList.map((m) => m['id'].toString()).toList();
       } else {
-        print('拉取模型失败: ${response.statusCode}');
+        log.i('拉取模型失败: ${response.statusCode}');
         return provider.models;
       }
     } catch (e) {
-      print('拉取模型异常: $e');
+      log.e('拉取模型异常: $e');
       return provider.models;
     }
   }
@@ -210,10 +235,10 @@ class ApiConfig {
     bool requiresProxy = false,
   }) async {
     final all = await loadProviders();
-    
+
     // 生成唯一ID
     final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
-    
+
     final newProvider = ApiProvider(
       id: id,
       name: name,
@@ -225,7 +250,7 @@ class ApiConfig {
       requiresProxy: requiresProxy,
       setupGuide: '自定义服务商',
     );
-    
+
     all.add(newProvider);
     await saveProviders(all);
   }
@@ -245,7 +270,7 @@ class ApiConfig {
   }) async {
     final all = await loadProviders();
     final index = all.indexWhere((p) => p.id == id);
-    
+
     if (index != -1) {
       final provider = all[index];
       all[index] = ApiProvider(

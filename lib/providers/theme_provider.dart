@@ -30,7 +30,9 @@ class CustomColorsNotifier extends StateNotifier<Map<String, Color>?> {
     state = colors;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        'custom_primary', colors['primary']!.value.toRadixString(16));
+      'custom_primary',
+      colors['primary']!.toARGB32().toRadixString(16), // ← 改这里
+    );
   }
 
   Future<void> reset() async {

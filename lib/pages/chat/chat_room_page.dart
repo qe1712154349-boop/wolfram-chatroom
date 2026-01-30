@@ -16,6 +16,7 @@ import '../../app/theme.dart';
 import 'chat_components.dart';
 import 'chat_room_settings_page.dart';
 import 'package:permission_handler/permission_handler.dart'; // 新增
+import '../../utils/logger.dart'; // 因为第245行使用了 log.d 和 log.w
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -24,7 +25,8 @@ class ChatRoomPage extends StatefulWidget {
   State<ChatRoomPage> createState() => _ChatRoomPageState();
 }
 
-class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver {
+class _ChatRoomPageState extends State<ChatRoomPage>
+    with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Message> _messages = [];
@@ -35,7 +37,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   final StorageService _storage = StorageService();
 
   final FocusNode _focusNode = FocusNode();
- // ✅ 新增：标记前台服务是否正在初始化
+  // ✅ 新增：标记前台服务是否正在初始化
   bool _isInitializingForegroundService = false;
 
   String _characterName = 'name';
@@ -59,19 +61,22 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   // 新增：记录是否已引导过（防止重复弹窗）
   bool _hasShownPermissionGuide = false;
   bool _hasShownBatteryGuide = false;
-  
+
+  // ✅ 新增：前台服务数据回调引用
+  void Function(dynamic)? _taskDataCallback;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-      // ✅ 新的（延迟调用，不阻塞UI）：
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    // 延迟一点，让UI先完全显示出来
-    Future.delayed(const Duration(milliseconds: 300), () {
-      _initializeForegroundService();
+    // ✅ 新的（延迟调用，不阻塞UI）：
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 延迟一点，让UI先完全显示出来
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _initializeForegroundService();
+      });
     });
-  });
     _restoreAppState();
     _loadCharacterData();
     _loadNarrationCentered();
@@ -124,6 +129,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
 
   @override
   void dispose() {
+    // ✅ 新增：移除前台服务数据回调
+    if (_taskDataCallback != null) {
+      FlutterForegroundTask.removeTaskDataCallback(_taskDataCallback!);
+    }
+
     WidgetsBinding.instance.removeObserver(this);
     _focusNode.dispose();
     _scrollController.dispose();
@@ -134,7 +144,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
 
     _storage.saveAppState(
       messages: _messages,
-      scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
+      scrollOffset:
+          _scrollController.hasClients ? _scrollController.offset : 0.0,
       inputText: _controller.text,
     );
 
@@ -145,10 +156,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _storage.saveAppState(
         messages: _messages,
-        scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0.0,
+        scrollOffset:
+            _scrollController.hasClients ? _scrollController.offset : 0.0,
         inputText: _controller.text,
         currentRoute: '/chat_room',
       );
@@ -162,20 +175,20 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     }
   }
 
-/// ✅ 新增：异步初始化前台服务（不阻塞UI）
-Future<void> _initializeForegroundService() async {
-  if (_isInitializingForegroundService) return;
-  
-  _isInitializingForegroundService = true;
-  
-  try {
-    await _startForegroundServiceWithPermissions();
-  } catch (e) {
-    debugPrint('前台服务初始化失败: $e');
-  } finally {
-    _isInitializingForegroundService = false;
+  /// ✅ 新增：异步初始化前台服务（不阻塞UI）
+  Future<void> _initializeForegroundService() async {
+    if (_isInitializingForegroundService) return;
+
+    _isInitializingForegroundService = true;
+
+    try {
+      await _startForegroundServiceWithPermissions();
+    } catch (e) {
+      debugPrint('前台服务初始化失败: $e');
+    } finally {
+      _isInitializingForegroundService = false;
+    }
   }
-}
 
   @override
   void didChangeMetrics() {
@@ -192,7 +205,8 @@ Future<void> _initializeForegroundService() async {
   }
 
   void _startServiceMonitor() {
-    _serviceMonitorTimer = Timer.periodic(const Duration(minutes: 2), (timer) async {
+    _serviceMonitorTimer =
+        Timer.periodic(const Duration(minutes: 2), (timer) async {
       if (!mounted) return;
       final isRunning = await FlutterForegroundTask.isRunningService;
       if (!isRunning) {
@@ -243,49 +257,50 @@ Future<void> _initializeForegroundService() async {
   }
 
   Future<void> _loadHistory() async {
-  final allHistory = await _storage.loadChatHistory();
-  
-  if (allHistory.isEmpty) {
-    await _loadOpeningMessage();
-    return;
+    final allHistory = await _storage.loadChatHistory();
+
+    if (allHistory.isEmpty) {
+      await _loadOpeningMessage();
+      return;
+    }
+
+    // 1. 先显示一屏能容纳的消息（35条）
+    final screenFullCount = 35;
+    final displayCount = allHistory.length > screenFullCount
+        ? screenFullCount
+        : allHistory.length;
+
+    final recentMessages = allHistory.sublist(allHistory.length - displayCount);
+
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(recentMessages);
+      });
+
+      // 滚动到最新消息
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0.0);
+        }
+      });
+    }
+
+    // 2. 如果有更多历史，后台悄悄添加到顶部
+    if (allHistory.length > displayCount) {
+      final olderMessages =
+          allHistory.sublist(0, allHistory.length - displayCount);
+
+      // 延迟一点，等用户开始看消息后再添加
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          setState(() {
+            _messages.insertAll(0, olderMessages);
+          });
+        }
+      });
+    }
   }
-  
-  // 1. 先显示一屏能容纳的消息（35条）
-  final screenFullCount = 35;
-  final displayCount = allHistory.length > screenFullCount 
-      ? screenFullCount 
-      : allHistory.length;
-  
-  final recentMessages = allHistory.sublist(allHistory.length - displayCount);
-  
-  if (mounted) {
-    setState(() {
-      _messages.clear();
-      _messages.addAll(recentMessages);
-    });
-    
-    // 滚动到最新消息
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(0.0);
-      }
-    });
-  }
-  
-  // 2. 如果有更多历史，后台悄悄添加到顶部
-  if (allHistory.length > displayCount) {
-    final olderMessages = allHistory.sublist(0, allHistory.length - displayCount);
-    
-    // 延迟一点，等用户开始看消息后再添加
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        setState(() {
-          _messages.insertAll(0, olderMessages);
-        });
-      }
-    });
-  }
-}
 
   Future<void> _loadOpeningMessage() async {
     final opening = await _storage.getCharacterOpening();
@@ -351,31 +366,33 @@ Future<void> _initializeForegroundService() async {
 
 // 3. 启动服务（9.2.0 标准写法）
 // 替换这段：
-final result = await FlutterForegroundTask.startService(
-  notificationTitle: '小猫在线',
-  notificationText: '一直陪着你，等你的消息～',
-  notificationIcon: const NotificationIcon(metaDataName: 'foreground_icon'),
-  notificationInitialRoute: '/chat_room',
-);
+      final result = await FlutterForegroundTask.startService(
+        notificationTitle: '小猫在线',
+        notificationText: '一直陪着你，等你的消息～',
+        notificationIcon:
+            const NotificationIcon(metaDataName: 'foreground_icon'),
+        notificationInitialRoute: '/chat_room',
+      );
 
-if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
-  debugPrint('前台服务启动成功！通知已显示');
+      if (result is ServiceRequestSuccess) {
+        // ← 改成 is 类型检查
+        debugPrint('前台服务启动成功！通知已显示');
 
-  // 监听服务数据
-  _setupReceivePortListener();
+        // 监听服务数据
+        _setupReceivePortListener();
 
-  // 延迟引导电池优化
-  Future.delayed(const Duration(seconds: 3), () {
-    if (mounted) _handleBatteryOptimizationGuide();
-  });
-} else {
-  debugPrint('启动失败: $result');
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('服务启动失败 ($result)，请检查通知权限')),
-    );
-  }
-}
+        // 延迟引导电池优化
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) _handleBatteryOptimizationGuide();
+        });
+      } else {
+        debugPrint('启动失败: $result');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('服务启动失败 ($result)，请检查通知权限')),
+          );
+        }
+      }
     } catch (e, st) {
       debugPrint('前台服务异常: $e\n$st');
     }
@@ -387,7 +404,8 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
 
     if (status == NotificationPermission.granted) return;
 
-    final requestResult = await FlutterForegroundTask.requestNotificationPermission();
+    final requestResult =
+        await FlutterForegroundTask.requestNotificationPermission();
 
     if (requestResult == NotificationPermission.granted) return;
 
@@ -452,12 +470,18 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   }
 
   /// 监听服务数据（心跳、停止重启等）
+  // 官方推荐方式（2025-2026 FlutterForegroundTask 文档路径）
+  /// ✅ 替换旧的 _setupReceivePortListener 方法
   void _setupReceivePortListener() {
-    _foregroundServiceSubscription?.cancel();
-    _foregroundServiceSubscription = FlutterForegroundTask.receivePort?.listen((data) {
-      if (!mounted) return;
+    // 先移除旧 callback（防重复注册）
+    if (_taskDataCallback != null) {
+      FlutterForegroundTask.removeTaskDataCallback(_taskDataCallback!);
+    }
 
-      debugPrint('收到前台服务数据: $data');
+    // 官方生产方式：注册 callback
+    _taskDataCallback = (dynamic data) {
+      if (!mounted) return;
+      log.d('收到前台服务数据: $data');
 
       if (data is Map<String, dynamic>) {
         final type = data['type'] as String?;
@@ -466,17 +490,19 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
             // 可用于心跳 UI 更新
             break;
           case 'service_stopped':
-            debugPrint('服务被停止，3秒后自动重启');
+            log.w('服务被停止，3秒后自动重启');
             Future.delayed(const Duration(seconds: 3), () {
               if (mounted) _startForegroundServiceWithPermissions();
             });
             break;
           case 'notification_clicked':
-            debugPrint('用户点击通知，可跳转或刷新');
+            log.i('用户点击通知，可跳转或刷新');
             break;
         }
       }
-    });
+    };
+
+    FlutterForegroundTask.addTaskDataCallback(_taskDataCallback!);
   }
 
   Future<void> _restoreAppState() async {
@@ -546,7 +572,8 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
             'content': msg['content']!,
           })));
 
-      final aiReply = await _apiService.sendChatMessage(apiMessages, model: 'deepseek-chat');
+      final aiReply = await _apiService.sendChatMessage(apiMessages,
+          model: 'deepseek-chat');
 
       if (mounted) {
         final aiTimestamp = DateFormat('HH:mm').format(DateTime.now());
@@ -612,7 +639,8 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text("删除消息", style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        title: const Text("删除消息",
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: const Text("确定要删除这条消息吗？", style: TextStyle(fontSize: 14)),
         actions: [
           TextButton(
@@ -634,11 +662,14 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   List<Map<String, String>> _buildContextMessages({int maxCount = 20}) {
     if (_messages.isEmpty) return [];
 
-    final candidates = _messages.where((m) => m.messageType != MessageType.systemTime).toList();
+    final candidates = _messages
+        .where((m) => m.messageType != MessageType.systemTime)
+        .toList();
 
     if (candidates.isEmpty) return [];
 
-    final startIndex = (candidates.length - maxCount).clamp(0, candidates.length);
+    final startIndex =
+        (candidates.length - maxCount).clamp(0, candidates.length);
     final recent = candidates.sublist(startIndex);
 
     final apiList = <Map<String, String>>[];
@@ -659,7 +690,8 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
     return apiList;
   }
 
-  Future<List<Message>> _parseAiResponse(String aiContent, String timestamp) async {
+  Future<List<Message>> _parseAiResponse(
+      String aiContent, String timestamp) async {
     final List<Message> messages = [];
     final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -687,11 +719,15 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
       final startResponse = rawContent.indexOf('<response>');
       final endResponse = rawContent.lastIndexOf('</response>');
 
-      if (startResponse != -1 && endResponse != -1 && endResponse > startResponse) {
-        final responseInner = rawContent.substring(
-          startResponse + '<response>'.length,
-          endResponse,
-        ).trim();
+      if (startResponse != -1 &&
+          endResponse != -1 &&
+          endResponse > startResponse) {
+        final responseInner = rawContent
+            .substring(
+              startResponse + '<response>'.length,
+              endResponse,
+            )
+            .trim();
 
         final envStart = responseInner.indexOf('<environment>');
         final envEnd = responseInner.indexOf('</environment>');
@@ -798,16 +834,14 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
   }
 
   @override
-    Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        backgroundColor: isDark 
-            ? Colors.grey[900]
-            : AppTheme.chatRoomTopLight,
+        backgroundColor: isDark ? Colors.grey[900] : AppTheme.chatRoomTopLight,
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -819,16 +853,13 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                backgroundImage: _avatarPath != null
-                    ? FileImage(File(_avatarPath!))
-                    : null,
+                backgroundColor:
+                    isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                backgroundImage:
+                    _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
                 child: _avatarPath == null
-                    ? Icon(
-                        Icons.person, 
-                        size: 18, 
-                        color: isDark ? Colors.white : Colors.white
-                      )
+                    ? Icon(Icons.person,
+                        size: 18, color: isDark ? Colors.white : Colors.white)
                     : null,
               ),
               const SizedBox(width: 10),
@@ -846,9 +877,8 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                   Text(
                     '状态：$_currentStatus',
                     style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey, 
-                      fontSize: 12
-                    ),
+                        color: isDark ? Colors.grey[400] : Colors.grey,
+                        fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -869,7 +899,7 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                   ),
                 ),
               );
-              
+
               if (result == true) {
                 await _clearAllMessages();
               }
@@ -899,33 +929,45 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                                 duration: const Duration(milliseconds: 200),
                                 curve: Curves.easeOut,
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0, horizontal: 16.0),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       CircleAvatar(
                                         radius: 18,
-                                        backgroundColor: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                        backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
-                                        child: _avatarPath == null 
-                                            ? Icon(Icons.person, size: 20, color: isDark ? Colors.white : Colors.white) 
+                                        backgroundColor: isDark
+                                            ? const Color(0xFF2A1A1A)
+                                            : const Color(0xFFFFD2DD),
+                                        backgroundImage: _avatarPath != null
+                                            ? FileImage(File(_avatarPath!))
+                                            : null,
+                                        child: _avatarPath == null
+                                            ? Icon(Icons.person,
+                                                size: 20,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : Colors.white)
                                             : null,
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
-                                          borderRadius: BorderRadius.circular(18),
+                                          color: isDark
+                                              ? const Color(0xFF2A1A1A)
+                                              : const Color(0xFFFFD2DD),
+                                          borderRadius:
+                                              BorderRadius.circular(18),
                                         ),
-                                        child: Text(
-                                          "正在输入...", 
-                                          style: TextStyle(
-                                            fontSize: 16, 
-                                            color: isDark ? Colors.white : Colors.black87, 
-                                            height: 1.4
-                                          )
-                                        ),
+                                        child: Text("正在输入...",
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                                height: 1.4)),
                                       ),
                                     ],
                                   ),
@@ -933,7 +975,10 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                               );
                             }
 
-                            final msgIndex = _messages.length - 1 - index + (_isLoading ? 1 : 0);
+                            final msgIndex = _messages.length -
+                                1 -
+                                index +
+                                (_isLoading ? 1 : 0);
                             if (msgIndex < 0 || msgIndex >= _messages.length) {
                               return const SizedBox.shrink();
                             }
@@ -945,14 +990,13 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                                 onLongPress: () => _showDeleteDialog(msgIndex),
                                 child: _buildMessageWidget(msg),
                               ),
-                            );  
+                            );
                           },
                           childCount: _messages.length + (_isLoading ? 1 : 0),
                         ),
                       ),
                     ],
                   ),
-                  
                   if (_showScrollToBottomButton)
                     Positioned(
                       bottom: 90,
@@ -962,18 +1006,20 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                          color:
+                              isDark ? const Color(0xFF1A1A1A) : Colors.white,
                           border: Border.all(
-                            color: isDark ? const Color(0xFF333333) : AppTheme.aiBubbleBorderLight, 
-                            width: 1
-                          ),
+                              color: isDark
+                                  ? const Color(0xFF333333)
+                                  : AppTheme.aiBubbleBorderLight,
+                              width: 1),
                         ),
                         child: IconButton(
-                          icon: Icon(
-                            Icons.arrow_downward, 
-                            color: isDark ? const Color(0xFFF95685) : const Color(0xFFFF5A7E), 
-                            size: 20
-                          ),
+                          icon: Icon(Icons.arrow_downward,
+                              color: isDark
+                                  ? const Color(0xFFF95685)
+                                  : const Color(0xFFFF5A7E),
+                              size: 20),
                           onPressed: () {
                             _scrollToBottom(animate: true);
                           },
@@ -984,10 +1030,11 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
               ),
             ),
           ),
-          
           AnimatedContainer(
             duration: const Duration(milliseconds: 2),
-            color: isDark ? AppTheme.messageInputBackgroundDark : AppTheme.messageInputBackgroundLight,
+            color: isDark
+                ? AppTheme.messageInputBackgroundDark
+                : AppTheme.messageInputBackgroundLight,
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
@@ -999,11 +1046,9 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: Icon(
-                        Icons.add_circle_outline, 
-                        size: 22,
-                        color: isDark ? Colors.grey[400] : Colors.grey[700]
-                      ),
+                      icon: Icon(Icons.add_circle_outline,
+                          size: 22,
+                          color: isDark ? Colors.grey[400] : Colors.grey[700]),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () {},
@@ -1013,14 +1058,18 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                       child: Container(
                         constraints: const BoxConstraints(minHeight: 36),
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.messageFieldBackgroundDark : AppTheme.messageFieldBackgroundLight,
+                          color: isDark
+                              ? AppTheme.messageFieldBackgroundDark
+                              : AppTheme.messageFieldBackgroundLight,
                           borderRadius: BorderRadius.circular(36),
                           border: Border.all(
-                            color: isDark ? AppTheme.messageFieldBorderDark : AppTheme.messageFieldBorderLight, 
-                            width: 1
-                          ),
+                              color: isDark
+                                  ? AppTheme.messageFieldBorderDark
+                                  : AppTheme.messageFieldBorderLight,
+                              width: 1),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
@@ -1029,9 +1078,8 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                           textInputAction: TextInputAction.send,
                           keyboardType: TextInputType.multiline,
                           style: TextStyle(
-                            fontSize: 15,
-                            color: isDark ? Colors.white : Colors.black
-                          ),
+                              fontSize: 15,
+                              color: isDark ? Colors.white : Colors.black),
                           decoration: InputDecoration(
                             hintText: "输入消息...",
                             border: InputBorder.none,
@@ -1039,8 +1087,9 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                             focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
                             hintStyle: TextStyle(
-                              color: isDark ? Colors.grey[500] : const Color(0xFF8E8E93)
-                            ),
+                                color: isDark
+                                    ? Colors.grey[500]
+                                    : const Color(0xFF8E8E93)),
                           ),
                           onSubmitted: (value) {
                             final text = _controller.text.trim();
@@ -1067,9 +1116,11 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
+                          gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
                         ),
-                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                        child: const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 18),
                       ),
                     ),
                   ],
@@ -1084,7 +1135,7 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
 
   void _showAISetting(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1104,30 +1155,26 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
                 width: 36,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[700] : const Color(0xFFC7C7CC), 
-                  borderRadius: BorderRadius.circular(2.5)
-                ),
+                    color: isDark ? Colors.grey[700] : const Color(0xFFC7C7CC),
+                    borderRadius: BorderRadius.circular(2.5)),
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              "$_characterName 人物设定", 
-              style: TextStyle(
-                fontSize: 20, 
-                fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : Colors.black
-              )
-            ),
+            Text("$_characterName 人物设定",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black)),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   _systemPrompt,
                   style: TextStyle(
-                    fontSize: 15, 
-                    height: 1.6, 
-                    color: isDark ? Colors.grey[300] : const Color(0xFF3C3C43)
-                  ),
+                      fontSize: 15,
+                      height: 1.6,
+                      color:
+                          isDark ? Colors.grey[300] : const Color(0xFF3C3C43)),
                 ),
               ),
             ),
@@ -1137,10 +1184,15 @@ if (result is ServiceRequestSuccess) {  // ← 改成 is 类型检查
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF5A7E),
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text("关闭", style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
+              child: const Text("关闭",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600)),
             ),
           ],
         ),

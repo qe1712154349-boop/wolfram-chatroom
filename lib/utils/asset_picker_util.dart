@@ -1,7 +1,6 @@
 // lib/utils/asset_picker_util.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -16,6 +15,9 @@ class AssetPickerUtil {
     if (ps != PermissionState.authorized && ps != PermissionState.limited) {
       return null;
     }
+
+    // await 前检查：避免在已 dispose 的页面上 push picker
+    if (!context.mounted) return null;
 
     final result = await AssetPicker.pickAssets(
       context,
@@ -36,6 +38,10 @@ class AssetPickerUtil {
         ),
       ),
     );
+
+    // await 后检查：确保返回后 context 还活着（虽然这里你没后续用 context，但养成习惯防未来改动）
+    if (!context.mounted) return null;
+
     return result?.first;
   }
 
@@ -49,7 +55,9 @@ class AssetPickerUtil {
       return null;
     }
 
-    return await AssetPicker.pickAssets(
+    if (!context.mounted) return null;
+
+    final result = await AssetPicker.pickAssets(
       context,
       pickerConfig: AssetPickerConfig(
         requestType: RequestType.image,
@@ -65,6 +73,10 @@ class AssetPickerUtil {
         ),
       ),
     );
+
+    if (!context.mounted) return null;
+
+    return result;
   }
 
   /// 从 AssetEntity 获取 File（兼容旧代码）

@@ -247,11 +247,17 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
       // 2. 如果存在，询问是否覆盖
       final type = includeCharacter ? '全部配置' : '聊天记录';
       final fileName = '${widget.characterName}-$type.json';
+
+      if (!context.mounted) return;
+
       final shouldOverwrite = await _showOverwriteDialog(context, fileName);
+
+      if (!context.mounted) return;
 
       if (!shouldOverwrite) return; // 用户取消覆盖
 
       // 3. 覆盖导出
+      if (!context.mounted) return;
       await _performExport(
         context,
         includeCharacter: includeCharacter,
@@ -259,6 +265,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
       );
     } else {
       // 4. 直接导出（新文件）
+      if (!context.mounted) return;
       await _performExport(
         context,
         includeCharacter: includeCharacter,
