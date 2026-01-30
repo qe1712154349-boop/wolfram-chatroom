@@ -1,6 +1,5 @@
-// lib/utils/logger.dart  新建这个文件
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import 'package:flutter/foundation.dart'; // 包含 kReleaseMode、kDebugMode
 
 final log = Logger(
   printer: PrettyPrinter(
@@ -9,7 +8,8 @@ final log = Logger(
     lineLength: 90,
     colors: true,
     printEmojis: true,
-    printTime: true,
+    dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart, // 推荐：时间 + 自启动 ms
+    // 如果不要时间：DateTimeFormat.none
   ),
-  level: kReleaseMode ? Level.warning : Level.verbose, // release只输出warning以上
+  level: kReleaseMode ? Level.warning : Level.trace,
 );

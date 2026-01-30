@@ -195,8 +195,9 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
       if (character.avatarPath != null && character.avatarPath!.isNotEmpty) {
         final file = File(character.avatarPath!);
         if (await file.exists()) {
-          if (!mounted)
-            return; // ← 用 mounted（State 的 mounted），不是 context.mounted
+          if (!mounted) {
+            return;
+          }
           await precacheImage(FileImage(file), context);
           log.i('✅ 头像预缓存成功: ${character.avatarPath}');
         }
@@ -390,28 +391,30 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     }
 
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      showSemanticsDebugger: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: _themeMode,
-      navigatorKey: _navigatorKey,
-      home: const MainScreen(initialIndex: 1),
-      routes: {
-        '/character-edit': (context) => const ChatCharacterEditPage(),
-        '/profile-settings': (context) => const ProfileSettingsPage(),
-      },
-      // 408行 textScaler
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(
-              MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.5),
+        debugShowCheckedModeBanner: false,
+        showSemanticsDebugger: false,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: _themeMode,
+        navigatorKey: _navigatorKey,
+        home: const MainScreen(initialIndex: 1),
+        routes: {
+          '/character-edit': (context) => const ChatCharacterEditPage(),
+          '/profile-settings': (context) => const ProfileSettingsPage(),
+        },
+        // 408行 textScaler
+        builder: (context, child) {
+          final currentScaler =
+              MediaQuery.textScalerOf(context); // ← 正确获取当前 TextScaler
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(
+                currentScaler.scale(1.0).clamp(0.8,
+                    1.5), // scale(1.0) 得到当前缩放因子（double），等价旧 textScaleFactor
+              ),
             ),
-          ),
-          child: child!,
-        );
-      },
-    );
+            child: child!,
+          );
+        });
   }
 }
