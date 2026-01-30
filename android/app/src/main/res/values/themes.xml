@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 主 App 主题 - 关键改这里 -->
+    <!-- 主 App 主题（保持不变） -->
     <style name="Theme.MyBunnyApp" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- 如果你有自定义（如 colorPrimary），保留在这里 -->
+        <!-- 保留你的自定义 -->
     </style>
 
-    <!-- Splash 亮色（不变） -->
-    <style name="Theme.MyBunnyApp.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_background_light</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="postSplashScreenTheme">@style/Theme.MyBunnyApp</item>
-        <item name="android:windowIsTranslucent">true</item>
+    <!-- Splash 亮色主题（已修正） -->
+    <style name="Theme.MyBunnyApp.Splash" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background_light</item>
+        <item name="android:windowFullscreen">true</item>
+        <!-- 已删除所有 windowSplashScreen... 等无效属性 -->
     </style>
 
-    <!-- Splash 暗色（不变） -->
-    <style name="Theme.MyBunnyApp.Splash.Dark" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_background_dark</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="postSplashScreenTheme">@style/Theme.MyBunnyApp</item>
-        <item name="android:windowIsTranslucent">true</item>
+    <!-- Splash 暗色主题（可选修正）-->
+    <style name="Theme.MyBunnyApp.Splash.Dark" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background_dark</item>
+        <item name="android:windowFullscreen">true</item>
+        <!-- 已删除所有 windowSplashScreen... 等无效属性 -->
     </style>
 
 </resources>
