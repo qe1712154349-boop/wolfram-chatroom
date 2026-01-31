@@ -1,8 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // 新增依赖
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+// 这个顶层函数必须放在文件最外层（非类内），并且必须有 @pragma
+// 这是 FlutterForegroundTask 启动后台 isolate 时会调用的入口
+@pragma('vm:entry-point')
+void startForegroundTask() {
+  FlutterForegroundTask.setTaskHandler(ChatForegroundTaskHandler());
+}
+
+// 下面是你的 TaskHandler 实现类，完全不变
 class ChatForegroundTaskHandler extends TaskHandler {
   Timer? _heartbeatTimer;
   final FlutterLocalNotificationsPlugin _notifications =
@@ -12,7 +20,6 @@ class ChatForegroundTaskHandler extends TaskHandler {
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     debugPrint('前台服务启动：$timestamp');
 
-    // 初始化 local notifications（用于 HIGH 通知）
     const AndroidInitializationSettings initSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initSettings =
@@ -62,20 +69,19 @@ class ChatForegroundTaskHandler extends TaskHandler {
       showWhen: true,
       enableVibration: true,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound(
-          'notification'), // res/raw/notification.mp3
-      fullScreenIntent: true, // 锁屏全屏意图（可选）
+      sound: RawResourceAndroidNotificationSound('notification'),
+      fullScreenIntent: true,
     );
 
     const NotificationDetails details =
         NotificationDetails(android: androidDetails);
 
     await _notifications.show(
-      DateTime.now().millisecondsSinceEpoch % 100000, // 唯一 ID
+      DateTime.now().millisecondsSinceEpoch % 100000,
       '小猫回复了你～',
       content.length > 50 ? '${content.substring(0, 50)}...' : content,
       details,
-      payload: '/chat_room', // 点击跳转
+      payload: '/chat_room',
     );
   }
 }

@@ -1,15 +1,18 @@
-// lib/pages/main_screen.dart - 完整版本
+// lib/pages/main_screen.dart - 最终零错误版
+
+import 'dart:io'; // Platform
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'vow_page.dart';
 import 'chat/chat_list_page.dart';
 import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
+import '../services/foreground_task_handler.dart';
 import '../services/storage_service.dart';
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
-  
+
   const MainScreen({
     super.key,
     this.initialIndex = 0,
@@ -36,11 +39,15 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _loadInitialData();
+
+    // 只保留一个initState，这里启动
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupForegroundService();
+    });
   }
 
   Future<void> _loadInitialData() async {
     try {
-      // 并行加载必要数据
       await Future.wait([
         _storage.getThemeMode(),
         _storage.getCharacterNickname(),
@@ -51,41 +58,82 @@ class _MainScreenState extends State<MainScreen> {
         _storage.getCharacterSystemPrompt(),
       ]);
     } catch (e) {
-      // 静默失败，不影响启动
       debugPrint('数据加载失败: $e');
     }
-
-    // 延迟启动前台服务（让UI先出来）
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _startForegroundService();
-    });
 
     if (mounted) {
       setState(() => _isLoadingData = false);
     }
   }
 
-  Future<void> _startForegroundService() async {
-    try {
-      if (!await FlutterForegroundTask.isRunningService) {
-        final result = await FlutterForegroundTask.startService(
-          notificationTitle: '小猫',
-          notificationText: '在线等待你的消息...',
-          notificationIcon: const NotificationIcon(metaDataName: 'foreground_icon'),
-          notificationInitialRoute: '/chat_room',
-        );
-        if (result is ServiceRequestSuccess) {
-          debugPrint('前台服务启动成功');
-        }
+  Future<void> _setupForegroundService() async {
+    if (Platform.isAndroid) {
+      final perm = await FlutterForegroundTask.checkNotificationPermission();
+      if (perm != NotificationPermission.granted) {
+        FlutterForegroundTask.requestNotificationPermission(); // void
       }
-    } catch (e) {
-      debugPrint('前台服务启动失败: $e');
+
+      final ignoring =
+          await FlutterForegroundTask.isIgnoringBatteryOptimizations;
+      if (!ignoring) {
+        FlutterForegroundTask.requestIgnoreBatteryOptimization(); // void
+      }
+    }
+
+    // 去掉 await，因为 init 返回 void
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'foreground_chat_service',
+        channelName: '聊天保活',
+        channelDescription: '保持小猫在线接收消息',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+        onlyAlertOnce: true,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: false,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.repeat(5000),
+        autoRunOnBoot: false,
+        allowWakeLock: true,
+        allowWifiLock: true,
+        allowAutoRestart: true,
+      ),
+    );
+
+    // 下面可以继续 await，因为 start/restart 返回 Future
+    if (await FlutterForegroundTask.isRunningService) {
+      final result = await FlutterForegroundTask.restartService();
+      if (result is ServiceRequestSuccess) {
+        debugPrint('前台服务重启成功（续命）');
+      } else {
+        debugPrint('重启失败');
+      }
+    } else {
+      final result = await FlutterForegroundTask.startService(
+        serviceId: 1001,
+        notificationTitle: '小猫在线中～',
+        notificationText: '监听你的消息...',
+        notificationIcon: null,
+        notificationInitialRoute: '/chat_room',
+        notificationButtons: [
+          NotificationButton(id: 'open', text: '打开App'),
+        ],
+        callback: startForegroundTask,
+      );
+
+      if (result is ServiceRequestSuccess) {
+        debugPrint('前台服务启动成功');
+      } else {
+        debugPrint('启动失败');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 显示极简的加载指示器（如果数据还在加载）
     if (_isLoadingData) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -93,7 +141,6 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 简单的猫咪图标
               Container(
                 width: 60,
                 height: 60,
@@ -115,7 +162,6 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
-    // 正常显示主界面
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
@@ -128,11 +174,15 @@ class _MainScreenState extends State<MainScreen> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Theme.of(context).unselectedWidgetColor,
-        backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+        backgroundColor:
+            Theme.of(context).bottomNavigationBarTheme.backgroundColor,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: '心事'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: '聊天'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: '入口'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border), label: '心事'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline), label: '聊天'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.explore_outlined), label: '入口'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
         ],
       ),
