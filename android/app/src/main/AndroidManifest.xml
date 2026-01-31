@@ -43,30 +43,24 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
        android:theme="@style/Theme.MyBunnyApp.Splash">
-<!-- flutter_foreground_task 9.x 要求的 service - 临时注释以消除冷启动阻塞 -->
-<!-- 
+<!-- 1. 前台服务 Service -->
 <service
     android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
     android:enabled="true"
     android:exported="false"
     android:foregroundServiceType="dataSync"
     android:stopWithTask="false"/>
--->
 
-<!-- 前台广播接收器（9.x 必须） - 临时注释 -->
-<!-- 
+<!-- 2. 广播接收器 -->
 <receiver
     android:name="com.pravera.flutter_foreground_task.receiver.ForegroundBroadcastReceiver"
     android:enabled="true"
     android:exported="false"/>
--->
 
-<!-- 前台服务通知图标 meta-data（9.2.0 必须） - 临时注释 -->
-<!-- 
+<!-- 3. 通知图标 meta-data -->
 <meta-data
     android:name="foreground_icon"
     android:resource="@mipmap/ic_launcher" />
--->
         <!-- 主 Activity -->
         <activity
             android:name=".MainActivity"

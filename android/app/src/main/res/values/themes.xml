@@ -7,13 +7,14 @@
     </style>
 
     <!-- Splash 亮色主题（已修正） -->
+    <!-- 修改点：将背景从“颜色”改为指向你创建的“图层文件” -->
     <style name="Theme.MyBunnyApp.Splash" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/splash_background_light</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowFullscreen">true</item>
         <!-- 已删除所有 windowSplashScreen... 等无效属性 -->
     </style>
 
-    <!-- Splash 暗色主题（可选修正）-->
+    <!-- Splash 暗色主题（保持原样，因未创建暗色drawable文件）-->
     <style name="Theme.MyBunnyApp.Splash.Dark" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/splash_background_dark</item>
         <item name="android:windowFullscreen">true</item>

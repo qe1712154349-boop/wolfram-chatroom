@@ -14,10 +14,14 @@ import 'dart:io'; // ✅ 添加这一行
 // 导入 providers
 import 'providers/theme_provider.dart';
 import 'providers/chat_provider.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 void main() {
   // ✅ 1. 最小必要初始化
   WidgetsFlutterBinding.ensureInitialized();
+
+// ✅ 新增这一行：初始化通信端口（UI <-> 后台服务通信必须）
+  FlutterForegroundTask.initCommunicationPort();
 
   // ✅ 2. 立即启动应用（不等待任何异步操作）
   runApp(
