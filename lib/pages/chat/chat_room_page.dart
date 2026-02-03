@@ -1,6 +1,8 @@
 // lib/pages/chat/chat_room_page.dart
-// 已适配 flutter_foreground_task: ^9.2.0 的完整修复版
-// 修复所有报错 + 保留原有保活引导逻辑
+// 彻底迁移到新主题系统（context.themeColor + ColorSemantic）
+// 已删除所有旧 AppTheme / Theme.of(context) / cs.xxx 调用
+// 保留保活、权限引导、消息解析、滚动、历史恢复等原有逻辑
+// 气泡完全用新扩展（context.userBubbleBackground / aiBubbleBackground 等）
 
 import 'dart:async';
 import 'dart:io';
@@ -12,11 +14,11 @@ import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/message.dart';
-import '../../app/theme.dart';
+import '../../theme/theme.dart' as app_theme; // 新系统入口（as app_theme 避免冲突）
 import 'chat_components.dart';
 import 'chat_room_settings_page.dart';
-import 'package:permission_handler/permission_handler.dart'; // 新增
-import '../../utils/logger.dart'; // 因为第245行使用了 log.d 和 log.w
+import 'package:permission_handler/permission_handler.dart';
+import '../../utils/logger.dart';
 
 class ChatRoomPage extends StatefulWidget {
   const ChatRoomPage({super.key});
@@ -37,7 +39,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   final StorageService _storage = StorageService();
 
   final FocusNode _focusNode = FocusNode();
-  // ✅ 新增：标记前台服务是否正在初始化
   bool _isInitializingForegroundService = false;
 
   String _characterName = 'name';
@@ -58,11 +59,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   AxisDirection _lastDirection = AxisDirection.down;
 
-  // 新增：记录是否已引导过（防止重复弹窗）
   bool _hasShownPermissionGuide = false;
   bool _hasShownBatteryGuide = false;
 
-  // ✅ 新增：前台服务数据回调引用
   void Function(dynamic)? _taskDataCallback;
 
   @override
@@ -70,13 +69,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // ✅ 新的（延迟调用，不阻塞UI）：
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 延迟一点，让UI先完全显示出来
       Future.delayed(const Duration(milliseconds: 300), () {
         _initializeForegroundService();
       });
     });
+
     _restoreAppState();
     _loadCharacterData();
     _loadNarrationCentered();
@@ -129,7 +127,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
   @override
   void dispose() {
-    // ✅ 新增：移除前台服务数据回调
     if (_taskDataCallback != null) {
       FlutterForegroundTask.removeTaskDataCallback(_taskDataCallback!);
     }
@@ -175,7 +172,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
-  /// ✅ 新增：异步初始化前台服务（不阻塞UI）
   Future<void> _initializeForegroundService() async {
     if (_isInitializingForegroundService) return;
 
@@ -184,7 +180,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     try {
       await _startForegroundServiceWithPermissions();
     } catch (e) {
-      debugPrint('前台服务初始化失败: $e');
+      log.e('前台服务初始化失败: $e');
     } finally {
       _isInitializingForegroundService = false;
     }
@@ -210,7 +206,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       if (!mounted) return;
       final isRunning = await FlutterForegroundTask.isRunningService;
       if (!isRunning) {
-        debugPrint('⚠️ 前台服务停止，尝试重启...');
+        log.w('前台服务停止，尝试重启...');
         _startForegroundServiceWithPermissions();
       }
     });
@@ -360,12 +356,11 @@ class _ChatRoomPageState extends State<ChatRoomPage>
 
       // 2. 检查服务是否运行
       if (await FlutterForegroundTask.isRunningService) {
-        debugPrint('前台服务已在运行');
+        log.d('前台服务已在运行');
         return;
       }
 
-// 3. 启动服务（9.2.0 标准写法）
-// 替换这段：
+      // 3. 启动服务（9.2.0 标准写法）
       final result = await FlutterForegroundTask.startService(
         notificationTitle: '小猫在线',
         notificationText: '一直陪着你，等你的消息～',
@@ -375,8 +370,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       );
 
       if (result is ServiceRequestSuccess) {
-        // ← 改成 is 类型检查
-        debugPrint('前台服务启动成功！通知已显示');
+        log.d('前台服务启动成功！通知已显示');
 
         // 监听服务数据
         _setupReceivePortListener();
@@ -386,7 +380,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           if (mounted) _handleBatteryOptimizationGuide();
         });
       } else {
-        debugPrint('启动失败: $result');
+        log.e('启动失败: $result');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('服务启动失败 ($result)，请检查通知权限')),
@@ -394,7 +388,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
         }
       }
     } catch (e, st) {
-      debugPrint('前台服务异常: $e\n$st');
+      log.e('前台服务异常: $e\n$st');
     }
   }
 
@@ -426,7 +420,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
-                await openAppSettings(); // permission_handler 打开应用设置页
+                await openAppSettings();
               },
               child: const Text('去开启'),
             ),
@@ -449,7 +443,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       builder: (ctx) => AlertDialog(
         title: const Text('让小猫一直在线～'),
         content: const Text(
-          '请在电池优化中选择“小猫”为“不优化”或“无限制”，否则小猫可能会被系统偷偷杀掉哦～',
+          '请在电池优化中选择"小猫"为"不优化"或"无限制"，否则小猫可能会被系统偷偷杀掉哦～',
         ),
         actions: [
           TextButton(
@@ -460,7 +454,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             onPressed: () async {
               Navigator.pop(ctx);
               await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-              // 可选：再弹一次确认已设置
             },
             child: const Text('去设置'),
           ),
@@ -470,8 +463,6 @@ class _ChatRoomPageState extends State<ChatRoomPage>
   }
 
   /// 监听服务数据（心跳、停止重启等）
-  // 官方推荐方式（2025-2026 FlutterForegroundTask 文档路径）
-  /// ✅ 替换旧的 _setupReceivePortListener 方法
   void _setupReceivePortListener() {
     // 先移除旧 callback（防重复注册）
     if (_taskDataCallback != null) {
@@ -511,7 +502,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       _savedInputText = state['inputText'];
       _savedScrollOffset = state['scrollOffset'] ?? 0.0;
       _controller.text = _savedInputText ?? '';
-      debugPrint('恢复：滚动 $_savedScrollOffset px，输入 ${_controller.text}');
+      log.d('恢复：滚动 $_savedScrollOffset px，输入 ${_controller.text}');
     }
   }
 
@@ -637,22 +628,38 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: context.themeColor(app_theme.ColorSemantic.surface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text("删除消息",
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-        content: const Text("确定要删除这条消息吗？", style: TextStyle(fontSize: 14)),
+        title: Text("删除消息",
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: context.themeColor(app_theme.ColorSemantic.onSurface),
+            )),
+        content: Text("确定要删除这条消息吗？",
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  context.themeColor(app_theme.ColorSemantic.onSurfaceVariant),
+            )),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("取消", style: TextStyle(color: Colors.grey)),
+            child: Text("取消",
+                style: TextStyle(
+                  color:
+                      context.themeColor(app_theme.ColorSemantic.textSecondary),
+                )),
           ),
           TextButton(
             onPressed: () {
               _deleteMessage(index);
               Navigator.pop(context);
             },
-            child: const Text("删除", style: TextStyle(color: Colors.red)),
+            child: Text("删除",
+                style: TextStyle(
+                  color: context.themeColor(app_theme.ColorSemantic.error),
+                )),
           ),
         ],
       ),
@@ -833,15 +840,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     }
   }
 
+  // 重点替换：build 方法的所有旧颜色调用 → 新语义
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor:
+          context.themeColor(app_theme.ColorSemantic.chatRoomBackground),
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.grey[900] : AppTheme.chatRoomTopLight,
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
+        foregroundColor: context.themeColor(app_theme.ColorSemantic.appBarText),
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -853,13 +862,17 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor:
-                    isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFD2DD),
+                backgroundColor: context
+                    .themeColor(app_theme.ColorSemantic.primaryContainer),
                 backgroundImage:
                     _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
                 child: _avatarPath == null
-                    ? Icon(Icons.person,
-                        size: 18, color: isDark ? Colors.white : Colors.white)
+                    ? Icon(
+                        Icons.person,
+                        size: 18,
+                        color: context.themeColor(
+                            app_theme.ColorSemantic.onPrimaryContainer),
+                      )
                     : null,
               ),
               const SizedBox(width: 10),
@@ -869,7 +882,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                   Text(
                     _characterName,
                     style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
+                      color:
+                          context.themeColor(app_theme.ColorSemantic.onSurface),
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
@@ -877,8 +891,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                   Text(
                     '状态：$_currentStatus',
                     style: TextStyle(
-                        color: isDark ? Colors.grey[400] : Colors.grey,
-                        fontSize: 12),
+                      color: context
+                          .themeColor(app_theme.ColorSemantic.onSurfaceVariant),
+                      fontSize: 12,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -937,37 +953,41 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                                     children: [
                                       CircleAvatar(
                                         radius: 18,
-                                        backgroundColor: isDark
-                                            ? const Color(0xFF2A1A1A)
-                                            : const Color(0xFFFFD2DD),
+                                        backgroundColor: context.themeColor(
+                                            app_theme.ColorSemantic
+                                                .primaryContainer),
                                         backgroundImage: _avatarPath != null
                                             ? FileImage(File(_avatarPath!))
                                             : null,
                                         child: _avatarPath == null
-                                            ? Icon(Icons.person,
+                                            ? Icon(
+                                                Icons.person,
                                                 size: 20,
-                                                color: isDark
-                                                    ? Colors.white
-                                                    : Colors.white)
+                                                color: context.themeColor(
+                                                    app_theme.ColorSemantic
+                                                        .onPrimaryContainer),
+                                              )
                                             : null,
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: isDark
-                                              ? const Color(0xFF2A1A1A)
-                                              : const Color(0xFFFFD2DD),
+                                          color: context.themeColor(app_theme
+                                              .ColorSemantic
+                                              .surfaceContainerHighest),
                                           borderRadius:
                                               BorderRadius.circular(18),
                                         ),
-                                        child: Text("正在输入...",
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                color: isDark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                                height: 1.4)),
+                                        child: Text(
+                                          "正在输入...",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: context.themeColor(app_theme
+                                                .ColorSemantic.onSurface),
+                                            height: 1.4,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1006,20 +1026,21 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         height: 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color:
-                              isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                          color: context.themeColor(
+                              app_theme.ColorSemantic.surfaceContainerHighest),
                           border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF333333)
-                                  : AppTheme.aiBubbleBorderLight,
-                              width: 1),
+                            color: context
+                                .themeColor(app_theme.ColorSemantic.border),
+                            width: 1,
+                          ),
                         ),
                         child: IconButton(
-                          icon: Icon(Icons.arrow_downward,
-                              color: isDark
-                                  ? const Color(0xFFF95685)
-                                  : const Color(0xFFFF5A7E),
-                              size: 20),
+                          icon: Icon(
+                            Icons.arrow_downward,
+                            color: context
+                                .themeColor(app_theme.ColorSemantic.primary),
+                            size: 20,
+                          ),
                           onPressed: () {
                             _scrollToBottom(animate: true);
                           },
@@ -1032,9 +1053,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 2),
-            color: isDark
-                ? AppTheme.messageInputBackgroundDark
-                : AppTheme.messageInputBackgroundLight,
+            color: context
+                .themeColor(app_theme.ColorSemantic.messageInputBackground),
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
@@ -1046,9 +1066,12 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.add_circle_outline,
-                          size: 22,
-                          color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                      icon: Icon(
+                        Icons.add_circle_outline,
+                        size: 22,
+                        color: context
+                            .themeColor(app_theme.ColorSemantic.textSecondary),
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () {},
@@ -1058,15 +1081,14 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                       child: Container(
                         constraints: const BoxConstraints(minHeight: 36),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? AppTheme.messageFieldBackgroundDark
-                              : AppTheme.messageFieldBackgroundLight,
+                          color: context.themeColor(
+                              app_theme.ColorSemantic.inputBackground),
                           borderRadius: BorderRadius.circular(36),
                           border: Border.all(
-                              color: isDark
-                                  ? AppTheme.messageFieldBorderDark
-                                  : AppTheme.messageFieldBorderLight,
-                              width: 1),
+                            color: context.themeColor(
+                                app_theme.ColorSemantic.inputBorder),
+                            width: 1,
+                          ),
                         ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 6),
@@ -1078,8 +1100,10 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                           textInputAction: TextInputAction.send,
                           keyboardType: TextInputType.multiline,
                           style: TextStyle(
-                              fontSize: 15,
-                              color: isDark ? Colors.white : Colors.black),
+                            fontSize: 15,
+                            color: context
+                                .themeColor(app_theme.ColorSemantic.inputText),
+                          ),
                           decoration: InputDecoration(
                             hintText: "输入消息...",
                             border: InputBorder.none,
@@ -1087,9 +1111,9 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                             focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
                             hintStyle: TextStyle(
-                                color: isDark
-                                    ? Colors.grey[500]
-                                    : const Color(0xFF8E8E93)),
+                              color: context
+                                  .themeColor(app_theme.ColorSemantic.textHint),
+                            ),
                           ),
                           onSubmitted: (value) {
                             final text = _controller.text.trim();
@@ -1116,8 +1140,15 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                              colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
+                          gradient: LinearGradient(
+                            colors: [
+                              context
+                                  .themeColor(app_theme.ColorSemantic.primary),
+                              context
+                                  .themeColor(app_theme.ColorSemantic.primary)
+                                  .withOpacity(0.8),
+                            ],
+                          ),
                         ),
                         child: const Icon(Icons.send_rounded,
                             color: Colors.white, size: 18),
@@ -1133,9 +1164,8 @@ class _ChatRoomPageState extends State<ChatRoomPage>
     );
   }
 
+  // _showAISetting 弹窗也迁移颜色
   void _showAISetting(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1143,7 +1173,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          color: context.themeColor(app_theme.ColorSemantic.surface),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
@@ -1155,26 +1185,31 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 width: 36,
                 height: 5,
                 decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[700] : const Color(0xFFC7C7CC),
-                    borderRadius: BorderRadius.circular(2.5)),
+                  color: context.themeColor(app_theme.ColorSemantic.divider),
+                  borderRadius: BorderRadius.circular(2.5),
+                ),
               ),
             ),
             const SizedBox(height: 20),
-            Text("$_characterName 人物设定",
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black)),
+            Text(
+              "$_characterName 人物设定",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: context.themeColor(app_theme.ColorSemantic.onSurface),
+              ),
+            ),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   _systemPrompt,
                   style: TextStyle(
-                      fontSize: 15,
-                      height: 1.6,
-                      color:
-                          isDark ? Colors.grey[300] : const Color(0xFF3C3C43)),
+                    fontSize: 15,
+                    height: 1.6,
+                    color:
+                        context.themeColor(app_theme.ColorSemantic.textPrimary),
+                  ),
                 ),
               ),
             ),
@@ -1182,17 +1217,21 @@ class _ChatRoomPageState extends State<ChatRoomPage>
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF5A7E),
+                backgroundColor:
+                    context.themeColor(app_theme.ColorSemantic.primary),
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text("关闭",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600)),
+              child: const Text(
+                "关闭",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),

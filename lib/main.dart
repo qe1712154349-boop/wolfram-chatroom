@@ -4,17 +4,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'app/theme.dart';
 import 'pages/main_screen.dart';
 import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'utils/logger.dart';
 import 'dart:io'; // ✅ 添加这一行
+import 'theme/theme.dart' as appTheme; // ← 用 as 前缀，避免 Theme 冲突
 // 导入 providers
-import 'providers/theme_provider.dart';
 import 'providers/chat_provider.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'theme/core/color_semantics.dart' show ExtractedColorType;
 
 void main() {
   // ✅ 1. 最小必要初始化
@@ -79,9 +79,6 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
   ThemeMode _themeMode = ThemeMode.system;
   final StorageService _storage = StorageService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
-  // 用于主题颜色变化跟踪
-  Map<String, Color>? _lastCustomColors;
 
   @override
   void initState() {
@@ -218,127 +215,68 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 监听自定义颜色变化
-    final customColors = ref.watch(customColorsProvider);
+    // 监听完整主题状态
+    final themeState = ref.watch(appTheme.appThemeProvider);
+    final effectiveBrightness = themeState.effectiveBrightness;
 
-    // ✅ 调试信息：只在颜色变化时打印
-    if (kDebugMode && customColors != _lastCustomColors) {
-      log.d('🎨 主题颜色变化: ${customColors != null ? "自定义" : "默认"}');
-      _lastCustomColors = customColors;
+    // 动态取主色（优先提取色 > UI主题默认 > 固定粉色）
+    Color primaryColor = const Color(0xFFFF5A7E); // 保底
+
+    if (themeState.hasExtractedColors && themeState.extractedColors != null) {
+      primaryColor = themeState.extractedColors![ExtractedColorType.dominant] ??
+          primaryColor;
+    } else if (themeState.uiTheme != appTheme.UIThemeType.defaultTheme) {
+      // 从 ColorResolver 静态方法取主色（最优调用方式）
+      primaryColor = appTheme.ColorResolver.resolve(
+        themeState: themeState,
+        semantic: appTheme.ColorSemantic.primary,
+      );
     }
 
-    // ✅ 根据自定义颜色动态调整主题
-    ThemeData lightTheme =
-        _applyCustomColors(AppTheme.lightTheme, customColors);
-    ThemeData darkTheme = _applyCustomColors(AppTheme.darkTheme, customColors);
+    // 动态构建 ThemeData
+    final lightTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryColor,
+        brightness: Brightness.light,
+      ),
+    );
 
-    // ✅ 直接返回主应用，没有任何加载判断
+    final darkTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryColor,
+        brightness: Brightness.dark,
+      ),
+    );
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       showSemanticsDebugger: false,
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: _themeMode,
+      themeMode: switch (effectiveBrightness) {
+        Brightness.light => ThemeMode.light,
+        Brightness.dark => ThemeMode.dark,
+        _ => ThemeMode.system,
+      },
       navigatorKey: _navigatorKey,
-
-      // ✅ 立即显示聊天界面
       home: const MainScreen(initialIndex: 1),
-
-      // 路由配置
       routes: {
         '/character-edit': (context) => const ChatCharacterEditPage(),
         '/profile-settings': (context) => const ProfileSettingsPage(),
       },
-
-      // ✅ 文本缩放限制
       builder: (context, child) {
-        final currentScaler = MediaQuery.textScalerOf(context);
+        final scaler = MediaQuery.textScalerOf(context);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(
-              currentScaler.scale(1.0).clamp(0.8, 1.5),
-            ),
+            textScaler: TextScaler.linear(scaler.scale(1.0).clamp(0.8, 1.5)),
           ),
           child: child!,
         );
       },
     );
   }
-
-  // ✅ 应用自定义颜色的辅助方法
-  ThemeData _applyCustomColors(
-      ThemeData baseTheme, Map<String, Color>? customColors) {
-    if (customColors == null || customColors['primary'] == null) {
-      return baseTheme;
-    }
-
-    final primaryColor = customColors['primary']!;
-
-    return baseTheme.copyWith(
-      colorScheme: baseTheme.colorScheme.copyWith(
-        primary: primaryColor,
-        secondary: primaryColor.withValues(alpha: 0.8),
-        surface: primaryColor.withValues(
-            alpha: baseTheme.brightness == Brightness.light ? 0.05 : 0.1),
-        primaryContainer: primaryColor.withValues(
-            alpha: baseTheme.brightness == Brightness.light ? 0.1 : 0.2),
-        onPrimaryContainer: Colors.white,
-        surfaceContainerHighest: primaryColor.withValues(
-          alpha: baseTheme.brightness == Brightness.light ? 0.08 : 0.15,
-        ),
-      ),
-      primaryColor: primaryColor,
-      appBarTheme: baseTheme.appBarTheme.copyWith(
-        backgroundColor: primaryColor.withValues(
-          alpha: baseTheme.brightness == Brightness.light ? 0.05 : 0.1,
-        ),
-        foregroundColor: primaryColor,
-        titleTextStyle: TextStyle(
-          color: primaryColor,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      switchTheme: baseTheme.switchTheme.copyWith(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? primaryColor
-              : Colors.grey;
-        }),
-        trackColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? primaryColor.withValues(alpha: 0.5)
-              : Colors.grey.withValues(alpha: 0.5);
-        }),
-      ),
-      iconTheme: baseTheme.iconTheme.copyWith(
-        color: primaryColor,
-      ),
-    );
-  }
-}
-
-// ✅ 后台服务初始化（如果需要的话）
-Future<void> _initializeBackgroundServices() async {
-  // 如果你需要其他后台服务，在这里初始化
-  // 比如：推送通知、分析工具、数据库等
-
-  // 示例：
-  /*
-  await Future.wait([
-    Firebase.initializeApp(),
-    setupAnalytics(),
-    initializeDatabase(),
-  ]);
-  */
 }

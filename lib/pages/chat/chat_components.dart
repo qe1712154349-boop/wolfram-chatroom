@@ -1,6 +1,8 @@
 // lib/pages/chat/chat_components.dart - 完整修复版（Material 3 规范 + 动态主题响应）
 import 'package:flutter/material.dart';
 import 'dart:io';
+// 添加这行导入
+import '../../theme/extensions/context_extensions.dart';
 
 class ReceivedMessage extends StatelessWidget {
   final String text;
@@ -135,9 +137,10 @@ class SentMessage extends StatelessWidget {
               ),
               child: Text(
                 text,
+// 修改后：
                 style: TextStyle(
                   fontSize: 16,
-                  color: cs.onPrimaryContainer,
+                  color: context.userBubbleText, // ← 使用新系统
                   height: 1.4,
                   fontWeight: FontWeight.normal,
                 ),
@@ -198,7 +201,7 @@ class SystemTimeMessage extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
+            color: context.aiBubbleBackground, // ← 使用新系统
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
