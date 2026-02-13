@@ -7,6 +7,7 @@ import '../providers/theme_manager.dart';
 import '../providers/brightness_provider.dart';
 import '../core/theme_state.dart'; // 添加这行
 import '../providers/color_override.dart'; // 添加这行
+import '../extensions/semantic_colors_extension.dart'; // ← 加这一行
 
 /// 上下文颜色扩展 - 在Widget中直接获取颜色
 extension ThemeColors on BuildContext {
@@ -169,6 +170,14 @@ extension ThemeColors on BuildContext {
       borderRadius: BorderRadius.circular(borderRadius),
     );
   }
+
+  // 新增：直接获取 AppSemanticColors 对象（放在 extension 内部末尾）
+  AppSemanticColors get semanticColors {
+    return Theme.of(this).extension<AppSemanticColors>()!;
+  }
+
+  // 更短的别名（推荐用这个）
+  AppSemanticColors get sem => semanticColors;
 }
 
 /// WidgetRef扩展 - 在ConsumerWidget中直接获取颜色

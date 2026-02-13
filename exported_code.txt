@@ -3,75 +3,94 @@
 
 File: D:\D\my_new_app\lib\theme\theme.dart
 
-Size: 1706 bytes
+Size: 1285 bytes
 
-Modified: 02/01/2026 12:50:03
+Modified: 02/03/2026 15:08:49
 
 ========================================
 
-/// 新主题系统的统一入口文件
-/// 只需导入此文件即可使用所有主题功能
+// lib/theme/theme.dart （完整推荐 export 列表）
+export 'providers/app_theme_provider.dart' show appThemeProvider;
+export 'core/theme_state.dart' show UIThemeType;
 
-// 核心
-export 'core/color_semantics.dart';
-export 'core/theme_state.dart';
-export 'core/color_resolver.dart';
+// 核心类型与语义
+export 'core/color_semantics.dart' show ColorSemantic, ExtractedColorType;
+// 改成这样（补上 UIThemeTypeExtension）：
+export 'core/theme_state.dart'; // 完整 export，让所有 extension 自动可见
+
+export 'core/color_resolver.dart' show ColorResolver;
 
 // 令牌
-export 'tokens/base_tokens.dart';
+export 'tokens/base_tokens.dart'
+    show BaseColorTokens, ColorUtils, ColorPalettes, ColorExtensions;
+
 export 'tokens/semantic_mapper.dart';
 
-// 定义
+// 主题定义
 export 'definitions/default_theme.dart';
 export 'definitions/strawberry_candy.dart';
 export 'definitions/pickle_milk.dart';
-export 'definitions/theme_registry.dart';
+export 'definitions/theme_registry.dart'
+    show ThemeDefinition, ThemeRegistry, ThemePreview, ThemeUtils;
 
-// Provider
-export 'providers/app_theme_provider.dart';
+// Providers
+export 'providers/app_theme_provider.dart' show appThemeProvider;
+export 'providers/brightness_provider.dart' show BrightnessUtils;
 export 'providers/color_override.dart';
-export 'providers/brightness_provider.dart';
 export 'providers/theme_manager.dart';
 
-// 扩展
-export 'extensions/context_extensions.dart';
+// 扩展（关键！）
+export 'extensions/context_extensions.dart'; // ← 加这个，让 context.themeColor 可用
 
-/// 主题系统初始化器
+// facade
+export 'theme_facade.dart';
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\theme_facade.dart
+
+Size: 1002 bytes
+
+Modified: 02/01/2026 22:14:52
+
+========================================
+
+// lib/theme/theme_facade.dart
+// 主题系统的友好 facade - 只 import barrel，不直接 import 具体文件
+
+import 'theme.dart' as theme; // import 自己的 barrel
+
 class ThemeSystem {
-  /// 验证整个主题系统
   static Map<String, List<String>> validate() {
-    return ThemeUtils.validateThemeSystem();
+    return theme.ThemeUtils.validateThemeSystem();
   }
 
-  /// 打印所有主题信息
   static void debugPrintAllThemes() {
-    ThemeRegistry.debugPrintAllThemes();
+    theme.ThemeRegistry().debugPrintAllThemes();
   }
 
-  /// 打印所有主题颜色
-  static void debugPrintAllColors(bool isDark) {
-    ThemeUtils.debugPrintAllThemeColors(isDark);
+  static void debugPrintAllColors({bool isDark = false}) {
+    theme.ThemeUtils.debugPrintAllThemeColors(isDark);
   }
 
-  /// 获取所有可用主题
-  static List<ThemeDefinition> getAllThemes() {
-    return ThemeRegistry.getAllThemes();
+  static List<theme.ThemeDefinition> getAllThemes() {
+    return theme.ThemeRegistry().getAllThemes();
   }
 }
 
-/// 快速访问主题系统的静态方法
 class Theme {
-  /// 获取颜色解析器
-  static ColorResolver get resolver => ColorResolver();
+  static theme.ColorResolver get resolver => theme.ColorResolver();
 
-  /// 获取颜色工具
-  static ColorUtils get colors => ColorUtils();
+  static theme.ColorUtils get colors => theme.ColorUtils();
 
-  /// 获取亮度工具
-  static BrightnessUtils get brightness => BrightnessUtils();
+  static theme.BrightnessUtils get brightness => theme.BrightnessUtils();
 
-  /// 获取主题工具
-  static ThemeUtils get utils => ThemeUtils();
+  static theme.ThemeUtils get utils => theme.ThemeUtils();
+
+  static theme.ThemeRegistry get registry => theme.ThemeRegistry();
 }
 
 
@@ -486,14 +505,16 @@ class ColorResolverNotifier {
 
 File: D:\D\my_new_app\lib\theme\core\color_semantics.dart
 
-Size: 8636 bytes
+Size: 12212 bytes
 
-Modified: 02/01/2026 01:31:48
+Modified: 02/03/2026 15:10:38
 
 ========================================
 
 /// color_semantics.dart
 /// 添加必要的导入
+library;
+
 import 'package:flutter/material.dart';
 
 /// 颜色语义枚举 - 定义颜色的用途而不是具体值
@@ -544,6 +565,28 @@ enum ColorSemantic {
   warning, // 警告色
   error, // 错误色
   info, // 信息色
+// 新增（解决 undefined_enum_constant，覆盖 Material 3 常见语义）
+  surfaceContainerHighest,
+  primaryContainer,
+  onPrimaryContainer,
+  onSurface,
+  onSurfaceVariant,
+  cardBackground, // 编辑页卡片背景
+  cardBorder, // 编辑页卡片边框
+  textFieldFill, // 输入框填充色
+  textFieldHint, // 输入框提示文字
+  buttonBackground, // 保存按钮背景
+  buttonText, // 保存按钮文字
+
+  // 新增（聊天室专用，确保覆盖所有使用场景）
+  chatRoomBackground, // 聊天室整体背景（原 scaffoldBackgroundColor）
+  messageInputBackground, // 输入框背景
+  messageInputBorder, // 输入框边框
+  messageInputText, // 输入框文字
+  messageInputHint, // 输入框提示文字
+  scrollToBottomButton, // 滚动到底部按钮背景
+  scrollToBottomIcon, // 滚动到底部图标
+  loadingIndicator, // 正在输入... 指示器
 }
 
 /// 图片提取的颜色语义 - 从图片中提取的5个主要颜色
@@ -704,10 +747,42 @@ extension ColorSemanticName on ColorSemantic {
         return '错误色';
       case ColorSemantic.info:
         return '信息色';
+
+      // 新增（补全你加的所有语义常量）
+      case ColorSemantic.surfaceContainerHighest:
+        return '高亮表面容器';
+      case ColorSemantic.primaryContainer:
+        return '主色容器';
+      case ColorSemantic.onPrimaryContainer:
+        return '主色容器上的文字';
+      case ColorSemantic.onSurface:
+        return '表面上的文字';
+      case ColorSemantic.onSurfaceVariant:
+        return '表面变体上的文字';
+      case ColorSemantic.chatRoomBackground:
+        return '聊天室整体背景';
+      case ColorSemantic.messageInputBackground:
+        return '消息输入框背景';
+      case ColorSemantic.messageInputBorder:
+        return '消息输入框边框';
+      case ColorSemantic.messageInputText:
+        return '消息输入框文字';
+      case ColorSemantic.messageInputHint:
+        return '消息输入框提示文字';
+      case ColorSemantic.scrollToBottomButton:
+        return '滚动到底部按钮背景';
+      case ColorSemantic.scrollToBottomIcon:
+        return '滚动到底部图标';
+      case ColorSemantic.loadingIndicator:
+        return '加载/正在输入指示器';
+
+      // 兜底（防止未来加新枚举值时忘记补 case）
+      default:
+        return name.toString().split('.').last; // 自动转成驼峰名
     }
   }
 
-  /// 获取颜色描述
+  /// 获取颜色描述（也补全，避免未来扩展时漏）
   String get description {
     switch (this) {
       case ColorSemantic.userBubbleBackground:
@@ -722,8 +797,37 @@ extension ColorSemanticName on ColorSemantic {
         return '应用的主要品牌色，用于重要操作和焦点状态';
       case ColorSemantic.background:
         return '页面的背景颜色';
+
+      // 新增描述
+      case ColorSemantic.surfaceContainerHighest:
+        return '高亮表面容器，用于卡片/对话框等';
+      case ColorSemantic.primaryContainer:
+        return '主色容器，用于强调区域背景';
+      case ColorSemantic.onPrimaryContainer:
+        return '主色容器上的文字/图标';
+      case ColorSemantic.onSurface:
+        return '表面上的主要文字';
+      case ColorSemantic.onSurfaceVariant:
+        return '表面上的次要文字/变体';
+      case ColorSemantic.chatRoomBackground:
+        return '聊天室整体背景色';
+      case ColorSemantic.messageInputBackground:
+        return '消息输入框背景色';
+      case ColorSemantic.messageInputBorder:
+        return '消息输入框边框色';
+      case ColorSemantic.messageInputText:
+        return '消息输入框文字色';
+      case ColorSemantic.messageInputHint:
+        return '消息输入框提示文字色';
+      case ColorSemantic.scrollToBottomButton:
+        return '滚动到底部按钮背景色';
+      case ColorSemantic.scrollToBottomIcon:
+        return '滚动到底部图标色';
+      case ColorSemantic.loadingIndicator:
+        return '加载/正在输入指示器颜色';
+
       default:
-        return '颜色语义：${name}';
+        return '颜色语义：$name';
     }
   }
 }
@@ -1444,13 +1548,14 @@ class StrawberryCandyTheme {
 
 File: D:\D\my_new_app\lib\theme\definitions\theme_registry.dart
 
-Size: 9648 bytes
+Size: 9654 bytes
 
-Modified: 02/01/2026 12:34:01
+Modified: 02/01/2026 22:14:52
 
 ========================================
 
 /// theme_registry.dart - 结构化版本
+library;
 import 'package:flutter/material.dart';
 import '../core/color_semantics.dart';
 import '../tokens/semantic_mapper.dart';
@@ -1521,14 +1626,14 @@ abstract class BaseThemeDefinition implements ThemeDefinition {
     final lightMissing = SemanticMapper.validateMapping(lightMapping);
     if (lightMissing.isNotEmpty) {
       errors
-          .add('${name}亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
+          .add('$name亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
     }
 
     // 检查暗色模式
     final darkMapping = getColors(true);
     final darkMissing = SemanticMapper.validateMapping(darkMapping);
     if (darkMissing.isNotEmpty) {
-      errors.add('${name}暗色模式缺少: ${darkMissing.map((e) => e.name).join(', ')}');
+      errors.add('$name暗色模式缺少: ${darkMissing.map((e) => e.name).join(', ')}');
     }
 
     return errors;
@@ -1797,9 +1902,9 @@ extension ColorExtensions on Color {
 
 File: D:\D\my_new_app\lib\theme\extensions\context_extensions.dart
 
-Size: 14511 bytes
+Size: 15241 bytes
 
-Modified: 02/01/2026 12:29:33
+Modified: 02/06/2026 17:32:52
 
 ========================================
 
@@ -2291,6 +2396,30 @@ extension ColorToHexExtension on Color {
   }
 }
 
+/// 输入框边框扩展（全局默认边框）
+extension ThemeInput on BuildContext {
+  InputBorder get inputBorder {
+    // 默认边框：圆角 12，1px 主题边框色
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: themeColor(ColorSemantic.inputBorder),
+        width: 1,
+      ),
+    );
+  }
+
+  InputBorder get noBorder {
+    return InputBorder.none;
+  }
+
+  // 如果你想为不同主题定义不同默认边框，可在这里加逻辑
+  // 例如：
+  // final uiTheme = ref.read(appThemeProvider).uiTheme;
+  // if (uiTheme == UIThemeType.strawberryCandy) return InputBorder.none;
+  // return OutlineInputBorder(...);
+}
+
 
 
 
@@ -2755,9 +2884,9 @@ extension BrightnessExtensions on Brightness {
 
 File: D:\D\my_new_app\lib\theme\providers\color_override.dart
 
-Size: 3004 bytes
+Size: 2968 bytes
 
-Modified: 02/01/2026 12:26:45
+Modified: 02/01/2026 22:14:52
 
 ========================================
 
@@ -2765,7 +2894,6 @@ Modified: 02/01/2026 12:26:45
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/color_semantics.dart';
-import '../core/theme_state.dart';
 
 /// 图片提取颜色Provider
 final extractedColorsProvider =
@@ -2871,9 +2999,9 @@ class ExtractedColorsUtils {
 
 File: D:\D\my_new_app\lib\theme\providers\theme_manager.dart
 
-Size: 9577 bytes
+Size: 9541 bytes
 
-Modified: 02/01/2026 12:41:34
+Modified: 02/01/2026 22:14:52
 
 ========================================
 
@@ -2884,7 +3012,6 @@ import '../core/theme_state.dart';
 import '../definitions/theme_registry.dart';
 import 'app_theme_provider.dart';
 import 'color_override.dart';
-import 'brightness_provider.dart';
 import '../core/color_semantics.dart'; // 添加这行
 
 /// 主题管理器 - 提供高级主题操作

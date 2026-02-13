@@ -1,40 +1,44 @@
-// lib/pages/vow_page.dart - 完整替换
+// lib/pages/vow_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../theme/theme.dart';
 import '../components/mood_day.dart';
 import '../components/order_card.dart';
 
-class VowPage extends StatelessWidget {
+class VowPage extends ConsumerWidget {
   const VowPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sem = context.sem;
+
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor, // 使用主题背景色
+      color: sem.background,
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
           const SizedBox(height: 60),
           _buildTopHeader(context),
           const SizedBox(height: 25),
-          Text("MOOD CALENDAR",
-              style: TextStyle(
-                letterSpacing: 1.5, 
-                color: isDark ? Colors.grey[400] : Colors.grey, 
-                fontSize: 12, 
-                fontWeight: FontWeight.bold
-              )),
+          Text(
+            "MOOD CALENDAR",
+            style: TextStyle(
+              letterSpacing: 1.5,
+              color: sem.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1A1A) : Colors.white, 
-              borderRadius: BorderRadius.circular(20)
+              color: sem.surface,
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
+              children: [
                 MoodDay(day: "Mon", emoji: "😊", hasMood: true),
                 MoodDay(day: "Tue", emoji: "😴", hasMood: false),
                 MoodDay(day: "Wed", emoji: "💖", hasMood: true),
@@ -44,18 +48,26 @@ class VowPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 30),
-          Text("ORDERS", 
-              style: TextStyle(
-                letterSpacing: 1.5, 
-                color: isDark ? Colors.grey[400] : Colors.grey, 
-                fontSize: 12, 
-                fontWeight: FontWeight.bold
-              )),
+          Text(
+            "ORDERS",
+            style: TextStyle(
+              letterSpacing: 1.5,
+              color: sem.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 15),
-          const OrderCard(title: "Wear the collar for 1 hour", subtitle: "Or else: No dessert", isLocked: true),
-          const OrderCard(title: "Drink 2L of water", subtitle: "Stay hydrated", isLocked: false),
+          const OrderCard(
+              title: "Wear the collar for 1 hour",
+              subtitle: "Or else: No dessert",
+              isLocked: true),
+          const OrderCard(
+              title: "Drink 2L of water",
+              subtitle: "Stay hydrated",
+              isLocked: false),
           const SizedBox(height: 20),
-          _buildRewardsAccumulator(),
+          _buildRewardsAccumulator(context), // ← 加 (context)
           const SizedBox(height: 30),
         ],
       ),
@@ -63,58 +75,91 @@ class VowPage extends StatelessWidget {
   }
 
   Widget _buildTopHeader(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final sem = context.sem;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("The Vow", 
-                style: TextStyle(
-                  fontSize: 28, 
-                  fontWeight: FontWeight.bold, 
-                  color: isDark ? Colors.white : const Color(0xFF4A4A4A)
-                )),
-            Text("☁ Collar Time: 12 days", 
-                style: TextStyle(color: Theme.of(context).primaryColor)),
+            Text(
+              "The Vow",
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: sem.textPrimary,
+              ),
+            ),
+            Text(
+              "☁ Collar Time: 12 days",
+              style: TextStyle(color: sem.primary),
+            ),
           ],
         ),
         SizedBox(
           width: 120,
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text("MASTER'S STATUS\nWorking late.", 
-                style: TextStyle(
-                  fontSize: 10, 
-                  color: isDark ? Colors.grey[400] : Colors.grey
-                )),
+            child: Text(
+              "MASTER'S STATUS\nWorking late.",
+              style: TextStyle(
+                fontSize: 10,
+                color: sem.textSecondary,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRewardsAccumulator() {
+  Widget _buildRewardsAccumulator(BuildContext context) {
+    final sem = context.sem;
+
+    final startColor = sem.primary;
+    final endColor = startColor
+        .withAlpha((255 * 0.85).round()); // 用 withAlpha 替换 withBrightness（如果冲突）
+
     return Container(
       height: 100,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),
+        gradient: LinearGradient(
+          colors: [startColor, endColor],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.all(20),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("REWARDS ACCUMULATOR", style: TextStyle(color: Colors.white70, fontSize: 10)),
-              Text("0 Kisses Owed", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                "REWARDS ACCUMULATOR",
+                style: TextStyle(
+                  color: Colors.white.withAlpha((255 * 0.7).round()),
+                  fontSize: 10,
+                ),
+              ),
+              Text(
+                "0 Kisses Owed",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
-          Icon(Icons.favorite, color: Colors.white30, size: 40),
+          Icon(
+            Icons.favorite,
+            color: Colors.white.withAlpha((255 * 0.3).round()),
+            size: 40,
+          ),
         ],
       ),
     );

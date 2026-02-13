@@ -10,11 +10,14 @@ import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'utils/logger.dart';
 import 'dart:io'; // ✅ 添加这一行
-import 'theme/theme.dart' as appTheme; // ← 用 as 前缀，避免 Theme 冲突
 // 导入 providers
 import 'providers/chat_provider.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'theme/core/color_semantics.dart' show ExtractedColorType;
+// 主题相关（直接 import 需要的具体文件，不要用 as）
+import 'theme/core/color_resolver.dart';
+import 'theme/core/color_semantics.dart';
+import 'theme/providers/app_theme_provider.dart';
+import 'theme/extensions/semantic_colors_extension.dart'; // 新加的 extension
 
 void main() {
   // ✅ 1. 最小必要初始化
@@ -215,25 +218,19 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
 
   @override
   Widget build(BuildContext context) {
-    // 监听完整主题状态
-    final themeState = ref.watch(appTheme.appThemeProvider);
+    final themeState = ref.watch(appThemeProvider);
     final effectiveBrightness = themeState.effectiveBrightness;
 
-    // 动态取主色（优先提取色 > UI主题默认 > 固定粉色）
-    Color primaryColor = const Color(0xFFFF5A7E); // 保底
+    // 彻底版：primaryColor 完全来自 ColorResolver（跟随主题定义 / 提取色）
+    // 没有写死保底颜色，fallback 由 ColorResolver 内部处理（你的 default_theme.dart）
+    final primaryColor = ColorResolver.resolve(
+      themeState: themeState,
+      semantic: ColorSemantic.primary,
+    );
 
-    if (themeState.hasExtractedColors && themeState.extractedColors != null) {
-      primaryColor = themeState.extractedColors![ExtractedColorType.dominant] ??
-          primaryColor;
-    } else if (themeState.uiTheme != appTheme.UIThemeType.defaultTheme) {
-      // 从 ColorResolver 静态方法取主色（最优调用方式）
-      primaryColor = appTheme.ColorResolver.resolve(
-        themeState: themeState,
-        semantic: appTheme.ColorSemantic.primary,
-      );
-    }
+    // 创建 semantic colors extension
+    final semanticColors = AppSemanticColors.fromThemeState(themeState);
 
-    // 动态构建 ThemeData
     final lightTheme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -241,6 +238,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         seedColor: primaryColor,
         brightness: Brightness.light,
       ),
+      extensions: <ThemeExtension<dynamic>>[semanticColors],
     );
 
     final darkTheme = ThemeData(
@@ -250,6 +248,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         seedColor: primaryColor,
         brightness: Brightness.dark,
       ),
+      extensions: <ThemeExtension<dynamic>>[semanticColors],
     );
 
     return MaterialApp(

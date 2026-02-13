@@ -1,0 +1,1941 @@
+[
+  {
+    "FilePath": "lib\\main.dart",
+    "Line": 223,
+    "Code": "Color primaryColor = const Color(0xFFFF5A7E); // 保底",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\image_placeholder.dart",
+    "Line": 12,
+    "Code": "this.color = const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\image_placeholder.dart",
+    "Line": 31,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\image_placeholder.dart",
+    "Line": 38,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\mood_day.dart",
+    "Line": 19,
+    "Code": "Text(day, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\mood_day.dart",
+    "Line": 25,
+    "Code": "color: hasMood ? const Color(0xFFFFD1DC) : Colors.grey[200],",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\order_card.dart",
+    "Line": 21,
+    "Code": "color: isLocked ? Colors.white : Colors.white.withValues(alpha:0.5),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\order_card.dart",
+    "Line": 23,
+    "Code": "border: Border.all(color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\order_card.dart",
+    "Line": 27,
+    "Code": "Icon(isLocked ? Icons.lock_outline : Icons.check_circle, color: const Color(0xFFFFD1DC)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\order_card.dart",
+    "Line": 38,
+    "Code": "color: isLocked ? Colors.black87 : Colors.grey,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\order_card.dart",
+    "Line": 41,
+    "Code": "Text(subtitle, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\components\\order_card.dart",
+    "Line": 45,
+    "Code": "const Icon(Icons.radio_button_unchecked, color: Color(0xFFF2F2F2)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\main_screen.dart",
+    "Line": 143,
+    "Code": "colors: [Color(0xFFFFD2DD), Color(0xFFFFB6C1)],",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\main_screen.dart",
+    "Line": 149,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\main_screen.dart",
+    "Line": 169,
+    "Code": "selectedItemColor: Theme.of(context).primaryColor,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 24,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 32,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 50,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 78,
+    "Code": "color: isDark ? Colors.white : const Color(0xFF4A4A4A)",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 81,
+    "Code": "style: TextStyle(color: Theme.of(context).primaryColor)),",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 91,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 103,
+    "Code": "gradient: const LinearGradient(colors: [Color(0xFFFF5A7E), Color(0xFFFF8E9E)]),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 113,
+    "Code": "Text(\"REWARDS ACCUMULATOR\", style: TextStyle(color: Colors.white70, fontSize: 10)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 114,
+    "Code": "Text(\"0 Kisses Owed\", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\vow_page.dart",
+    "Line": 117,
+    "Code": "Icon(Icons.favorite, color: Colors.white30, size: 40),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 23,
+    "Code": "final primaryPink = const Color(0xFFFF5A7E);",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 24,
+    "Code": "final lightPinkBg = const Color(0xFFFFF0F5);",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 25,
+    "Code": "final cardBg = isDark ? const Color(0xFF1A1A1A) : Colors.white;",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 28,
+    "Code": "backgroundColor: isDark ? const Color(0xFF0A0A0A) : lightPinkBg,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 30,
+    "Code": "backgroundColor: isDark ? const Color(0xFF111111) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 34,
+    "Code": "color: isDark ? Colors.white : Colors.black87),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 40,
+    "Code": "color: isDark ? Colors.white : Colors.black87,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 61,
+    "Code": "? Colors.black.withValues(alpha: 0.3)",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 84,
+    "Code": "color: isDark ? Colors.white : Colors.black87,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 91,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[600],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 95,
+    "Code": "size: 16, color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 111,
+    "Code": "? Colors.black.withValues(alpha: 0.2)",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 112,
+    "Code": ": Colors.grey.withValues(alpha: 0.1),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 122,
+    "Code": "color: Colors.grey.withValues(alpha: 0.12),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 126,
+    "Code": "color: Colors.grey, size: 28),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 133,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 138,
+    "Code": "style: TextStyle(fontSize: 13, color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 141,
+    "Code": "size: 16, color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 155,
+    "Code": "? Colors.black.withValues(alpha: 0.4)",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 156,
+    "Code": ": Colors.grey.withValues(alpha: 0.12),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 170,
+    "Code": "color: isDark ? Colors.white : primaryPink,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 182,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 312,
+    "Code": "backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 315,
+    "Code": "icon: const Icon(Icons.warning_rounded, color: Colors.orange),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 334,
+    "Code": "TextStyle(fontSize: 14, color: Colors.orange), // 调整为14px",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 366,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 370,
+    "Code": "color: Colors.black.withValues(alpha: 0.1),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 386,
+    "Code": "color: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 393,
+    "Code": "color: Colors.black87,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 406,
+    "Code": "color: Colors.black54,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 416,
+    "Code": "color: Colors.grey,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 439,
+    "Code": "backgroundColor: const Color(0xFFF5F5F5),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 448,
+    "Code": "color: Colors.blue,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 456,
+    "Code": "backgroundColor: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_backup_migrate_page.dart",
+    "Line": 477,
+    "Code": "backgroundColor: Colors.red,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 107,
+    "Code": "SnackBar(content: Text('操作失败: $e'), backgroundColor: Colors.red),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 142,
+    "Code": "backgroundColor: Colors.red),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 155,
+    "Code": "color: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 182,
+    "Code": "color: Colors.black54,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 187,
+    "Code": "CircularProgressIndicator(color: Colors.white)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 255,
+    "Code": "TextStyle(color: Colors.red, fontWeight: FontWeight.bold),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 261,
+    "Code": "color: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 333,
+    "Code": "thumbColor: const WidgetStatePropertyAll(Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 340,
+    "Code": "trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 350,
+    "Code": "color: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 463,
+    "Code": "color: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 531,
+    "Code": "color: Colors.white, strokeWidth: 3),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_character_edit_page.dart",
+    "Line": 537,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_components.dart",
+    "Line": 43,
+    "Code": "backgroundColor: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_components.dart",
+    "Line": 166,
+    "Code": "backgroundColor: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 21,
+    "Code": "backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 26,
+    "Code": "color: isDark ? Colors.white : const Color(0xFF4A4A4A),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 32,
+    "Code": "Icon(Icons.search, color: Theme.of(context).primaryColor),",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 59,
+    "Code": "backgroundColor: Theme.of(context).primaryColor,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 66,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 83,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 99,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 106,
+    "Code": "backgroundColor: Theme.of(context).primaryColor,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 118,
+    "Code": "color: isDark ? Colors.grey[800] : Colors.grey[200],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_list_page.dart",
+    "Line": 130,
+    "Code": "color: Theme.of(context).colorScheme.error,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_room_page.dart",
+    "Line": 1154,
+    "Code": "color: Colors.white, size: 18),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_room_page.dart",
+    "Line": 1172,
+    "Code": "backgroundColor: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\chat\\chat_room_page.dart",
+    "Line": 1230,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 21,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 25,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 34,
+    "Code": "icon: const Icon(Icons.refresh, color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 48,
+    "Code": "child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 56,
+    "Code": "const Icon(Icons.error_outline, size: 80, color: Colors.red),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 68,
+    "Code": "style: const TextStyle(color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 76,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 77,
+    "Code": "foregroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 87,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 88,
+    "Code": "foregroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 112,
+    "Code": "Icon(Icons.menu_book_outlined, size: 120, color: Colors.grey[400]),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 116,
+    "Code": "style: TextStyle(fontSize: 22, color: Colors.grey[700], fontWeight: FontWeight.w500),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 121,
+    "Code": "style: TextStyle(fontSize: 16, color: Colors.grey[600]),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 128,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 129,
+    "Code": "foregroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 182,
+    "Code": "border: Border.all(color: Colors.black, width: 3),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 185,
+    "Code": "BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(4, 6)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 214,
+    "Code": "if (hex == null || hex.isEmpty) return const Color(0xFFBAE1FF);",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 238,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 240,
+    "Code": "shadows: [Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(2, 2))],",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_bookshelf_page.dart",
+    "Line": 246,
+    "Code": "style: const TextStyle(fontSize: 18, color: Colors.white70),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 30,
+    "Code": "style: TextStyle(color: Colors.red),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 50,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 54,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 62,
+    "Code": "icon: const Icon(Icons.edit, color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 74,
+    "Code": "icon: const Icon(Icons.delete_outline, color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 93,
+    "Code": "color: Colors.grey,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 102,
+    "Code": "color: Colors.grey,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 108,
+    "Code": "color: Colors.grey,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 116,
+    "Code": "color: Colors.grey,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 145,
+    "Code": ": const Color(0xFFBAE1FF);",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 148,
+    "Code": ": const Color(0xFFFFB3BA);",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 155,
+    "Code": "border: Border.all(color: Colors.grey[300]!, width: 1),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 158,
+    "Code": "color: Colors.grey.withValues(alpha: 0.3),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 184,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_detail_page.dart",
+    "Line": 189,
+    "Code": "color: Colors.black38,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 73,
+    "Code": "backgroundColor: Colors.orange,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 106,
+    "Code": "backgroundColor: const Color(0xFF4CAF50),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 119,
+    "Code": "backgroundColor: Colors.red,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 136,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 140,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 157,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 164,
+    "Code": "icon: const Icon(Icons.save, color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 177,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 179,
+    "Code": "border: Border.all(color: Colors.grey[300]!),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 193,
+    "Code": "hintStyle: TextStyle(color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 208,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 209,
+    "Code": "foregroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\diary\\diary_editor_page.dart",
+    "Line": 222,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\entrance_main_page.dart",
+    "Line": 18,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFFE4E9),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\entrance_main_page.dart",
+    "Line": 24,
+    "Code": "Icon(Icons.search, color: isDark ? Colors.grey[400] : Colors.white70, size: 28),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\entrance_main_page.dart",
+    "Line": 34,
+    "Code": "color: isDark ? Colors.white : Colors.black87,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\entrance_main_page.dart",
+    "Line": 39,
+    "Code": "Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.black54),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\entrance_main_page.dart",
+    "Line": 55,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 74,
+    "Code": "isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 94,
+    "Code": "color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 99,
+    "Code": "color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 114,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 118,
+    "Code": "Shadow(blurRadius: 10, color: Colors.black45)",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 127,
+    "Code": "border: Border.all(color: Colors.white, width: 3),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 158,
+    "Code": "color: Colors.black.withAlpha(",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 172,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 176,
+    "Code": "color: Colors.black.withAlpha(26),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 211,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 215,
+    "Code": "color: Colors.black.withAlpha(26),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 250,
+    "Code": "color: Colors.transparent,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 261,
+    "Code": "color: isCancel ? Colors.red : const Color(0xFF333333),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 277,
+    "Code": "isCancel ? Colors.red : const Color(0xFF333333),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 286,
+    "Code": "fontSize: 13, color: Color(0xFF888888)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 301,
+    "Code": "color: const Color(0xFFE0E0E0),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 318,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 333,
+    "Code": "color: Theme.of(context).primaryColor,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 343,
+    "Code": "color: isDark ? Colors.white : Colors.black),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 377,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\entrance\\moments_detail_page.dart",
+    "Line": 384,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 82,
+    "Code": "backgroundColor: Colors.black,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 95,
+    "Code": "style: TextStyle(color: Colors.white)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 121,
+    "Code": "color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 129,
+    "Code": "backgroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 132,
+    "Code": "color: Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 136,
+    "Code": "color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 150,
+    "Code": "style: const TextStyle(color: Colors.white)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\camera_capture_page.dart",
+    "Line": 155,
+    "Code": "valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 78,
+    "Code": "backgroundColor: const Color(0xFFFFF0F5),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 80,
+    "Code": "backgroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 100,
+    "Code": "color: Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 117,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 127,
+    "Code": "hintStyle: TextStyle(color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 138,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 176,
+    "Code": "backgroundColor: Colors.black54,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 178,
+    "Code": "size: 16, color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 195,
+    "Code": "color: Colors.grey.shade100,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 197,
+    "Code": "border: Border.all(color: Colors.grey.shade300),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 200,
+    "Code": "size: 40, color: Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\friends_circle\\publish_moment_page.dart",
+    "Line": 209,
+    "Code": "color: Colors.white, borderRadius: BorderRadius.circular(12)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 85,
+    "Code": "backgroundColor: Colors.red,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 109,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 119,
+    "Code": "backgroundColor: Theme.of(context).primaryColor,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 124,
+    "Code": "? const Icon(Icons.person, size: 36, color: Colors.white)",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 131,
+    "Code": "color: Colors.black54,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 135,
+    "Code": "child: CircularProgressIndicator(color: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 154,
+    "Code": "style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey, fontSize: 14),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 159,
+    "Code": "Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 167,
+    "Code": "_buildListTile(Icons.wechat_outlined, \"记录\", Colors.green, context),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 168,
+    "Code": "Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 169,
+    "Code": "_buildListTile(Icons.collections_bookmark_outlined, \"收藏·碎碎念\", Colors.orange, context),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 170,
+    "Code": "Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 171,
+    "Code": "_buildListTile(Icons.photo_outlined, \"书架\", Colors.blue, context),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 172,
+    "Code": "Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 173,
+    "Code": "_buildListTile(Icons.credit_card_outlined, \"结婚纪念日\", Colors.blueAccent, context),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 174,
+    "Code": "Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 175,
+    "Code": "_buildListTile(Icons.sentiment_satisfied_alt_outlined, \"心情不好·日记本\", Colors.amber, context),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 181,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 183,
+    "Code": "leading: Icon(Icons.settings_outlined, color: isDark ? Colors.grey[400] : Colors.blueGrey),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 184,
+    "Code": "title: Text(\"设置\", style: TextStyle(color: isDark ? Colors.white : Colors.black)),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 185,
+    "Code": "trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 202,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 205,
+    "Code": "title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 206,
+    "Code": "trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\me_page.dart",
+    "Line": 244,
+    "Code": "backgroundColor: Colors.red,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 120,
+    "Code": "backgroundColor: isSuccess ? null : Colors.red,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 287,
+    "Code": "final testColor = Colors.deepPurple;",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 290,
+    "Code": "app_theme.ExtractedColorType.vibrant: Color.fromRGBO(",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 296,
+    "Code": "app_theme.ExtractedColorType.lightVibrant: Color.fromRGBO(",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 302,
+    "Code": "app_theme.ExtractedColorType.darkVibrant: Color.fromRGBO(",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 329,
+    "Code": "if (rawColors == null || rawColors.isEmpty) {",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\profile_settings_page.dart",
+    "Line": 340,
+    "Code": "if (convertedColors.isEmpty) {",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 242,
+    "Code": "color: Theme.of(context).colorScheme.surfaceContainerHighest,",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 264,
+    "Code": "? Theme.of(context).colorScheme.primary",
+    "Cat": "C3",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 273,
+    "Code": "color: isSelected ? Colors.white : null),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 277,
+    "Code": "color: isSelected ? Colors.white : null)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 341,
+    "Code": "color: isDark ? Colors.white : Colors.black,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 369,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 374,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 378,
+    "Code": "isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 381,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 391,
+    "Code": "color: isDark ? Colors.white : Colors.black,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 440,
+    "Code": "style: TextStyle(color: isDark ? Colors.white : Colors.black),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 444,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 447,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 451,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 454,
+    "Code": "borderSide: BorderSide(color: const Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 458,
+    "Code": "color: isDark ? Colors.grey[500] : Colors.grey[600]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 460,
+    "Code": "fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 469,
+    "Code": "style: TextStyle(color: isDark ? Colors.white : Colors.black),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 473,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 476,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 480,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 483,
+    "Code": "borderSide: BorderSide(color: const Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 486,
+    "Code": "fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 495,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[600])),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 497,
+    "Code": "dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 498,
+    "Code": "style: TextStyle(color: isDark ? Colors.white : Colors.black),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 502,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 506,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 508,
+    "Code": "fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 511,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 519,
+    "Code": "color: isDark ? Colors.white : Colors.black)),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 529,
+    "Code": "style: TextStyle(color: isDark ? Colors.white : Colors.black),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 533,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[700]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 536,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 540,
+    "Code": "color: isDark ? Colors.grey[700]! : Colors.grey[400]!),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 543,
+    "Code": "borderSide: BorderSide(color: const Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 547,
+    "Code": "color: isDark ? Colors.grey[500] : Colors.grey[600]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 549,
+    "Code": "fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 557,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[600]),",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 564,
+    "Code": "backgroundColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 569,
+    "Code": "style: TextStyle(fontSize: 16, color: Colors.white)),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 579,
+    "Code": "style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 588,
+    "Code": "? Colors.green",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 589,
+    "Code": ": (_testStatus == 'invalid' ? Colors.red : Colors.grey),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 598,
+    "Code": "? Colors.green",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 599,
+    "Code": ": (_testStatus == 'invalid' ? Colors.red : null),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 644,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 692,
+    "Code": "color: isDark ? const Color(0xFF1A1A1A) : Colors.white,",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 704,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[600],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\pages\\me\\settings_page.dart",
+    "Line": 710,
+    "Code": "color: isDark ? Colors.grey[400] : Colors.grey[600],",
+    "Cat": "C4",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\providers\\diary_provider.dart",
+    "Line": 114,
+    "Code": "color: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 30,
+    "Code": "primaryColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 31,
+    "Code": "colorScheme: const ColorScheme.light(primary: Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 33,
+    "Code": "backgroundColor: Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 34,
+    "Code": "foregroundColor: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 35,
+    "Code": "scaffoldBackgroundColor: Colors.white,",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 37,
+    "Code": "const BottomSheetThemeData(backgroundColor: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 68,
+    "Code": "primaryColor: const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 69,
+    "Code": "colorScheme: const ColorScheme.light(primary: Color(0xFFFF5A7E)),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 71,
+    "Code": "backgroundColor: Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 72,
+    "Code": "foregroundColor: Colors.white),",
+    "Cat": "C2",
+    "Confirmed": false
+  },
+  {
+    "FilePath": "lib\\utils\\asset_picker_util.dart",
+    "Line": 133,
+    "Code": "'primary': palette.dominantColor?.color ?? const Color(0xFFFF5A7E),",
+    "Cat": "C1",
+    "Confirmed": false
+  }
+]
