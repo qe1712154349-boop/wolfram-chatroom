@@ -69,15 +69,9 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _setupForegroundService() async {
     if (Platform.isAndroid) {
       final perm = await FlutterForegroundTask.checkNotificationPermission();
-      if (perm != NotificationPermission.granted) {
-        FlutterForegroundTask.requestNotificationPermission(); // void
-      }
 
       final ignoring =
           await FlutterForegroundTask.isIgnoringBatteryOptimizations;
-      if (!ignoring) {
-        FlutterForegroundTask.requestIgnoreBatteryOptimization(); // void
-      }
     }
 
     // 去掉 await，因为 init 返回 void

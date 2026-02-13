@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/api_config.dart';
 import '../../services/storage_service.dart';
 import '../../theme/theme.dart' as app_theme; // 小写下划线，符合 lint
+import 'package:permission_handler/permission_handler.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -624,13 +625,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ----- 1. API 配置 -----
           _buildApiConfigSection(),
+
+          // ----- 2. 外观设置 -----
           Text("外观设置", style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           _buildUIThemeSelector(),
           const SizedBox(height: 24),
           _buildColorModeSelector(),
           const SizedBox(height: 16),
+
+          // ----- 3. 界面设置（旁白居中 + 开发者模式）-----
           Text("界面设置", style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Container(
@@ -640,18 +646,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             child: Column(
               children: [
-                SwitchListTile(
-                  title: const Text("开发者模式"),
-                  subtitle: const Text("开启后可查看详细错误信息"),
-                  value: _developerMode,
-                  onChanged: (value) async {
-                    setState(() => _developerMode = value);
-                    await _storage.saveDeveloperMode(value);
-                  },
-                  activeThumbColor:
-                      context.themeColor(app_theme.ColorSemantic.switchActive),
-                ),
-                const Divider(height: 1),
+                // 旁白居中开关（在上）
                 if (_narrationCentered == null)
                   const ListTile(
                     title: Text("旁白居中显示"),
@@ -670,9 +665,59 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     activeThumbColor: context
                         .themeColor(app_theme.ColorSemantic.switchActive),
                   ),
+                const Divider(height: 1),
+                // 开发者模式开关（在下）
+                SwitchListTile(
+                  title: const Text("开发者模式"),
+                  subtitle: const Text("开启后可查看详细错误信息"),
+                  value: _developerMode,
+                  onChanged: (value) async {
+                    setState(() => _developerMode = value);
+                    await _storage.saveDeveloperMode(value);
+                  },
+                  activeThumbColor:
+                      context.themeColor(app_theme.ColorSemantic.switchActive),
+                ),
               ],
             ),
           ),
+
+          const SizedBox(height: 24),
+
+          // ----- 4. 消息通知（新增独立卡片）-----
+          Text("消息通知", style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.notifications_outlined),
+              title: const Text("新消息通知"),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "前往系统设置",
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ],
+              ),
+              onTap: () async {
+                await openAppSettings(); // 跳转系统设置
+              },
+            ),
+          ),
+
+          const SizedBox(height: 24), // 底部留白
         ],
       ),
     );
