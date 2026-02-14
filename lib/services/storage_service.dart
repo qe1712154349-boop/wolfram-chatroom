@@ -14,9 +14,9 @@ class StorageService {
 
   // 🔥 添加这行！
   static const String kDefaultRoomId = 'default';
-  
 
-  Future<SharedPreferences> get _prefs async => await SharedPreferences.getInstance();
+  Future<SharedPreferences> get _prefs async =>
+      await SharedPreferences.getInstance();
 
   // ── 开发者模式相关 ──
   Future<void> saveDeveloperMode(bool enabled) async {
@@ -41,21 +41,23 @@ class StorageService {
   }
 
   // ── 聊天记录相关 ──（必须保留）- 已添加 roomId 参数
-  Future<void> saveChatHistory(List<Message> history, {String roomId = kDefaultRoomId}) async {
+  Future<void> saveChatHistory(List<Message> history,
+      {String roomId = kDefaultRoomId}) async {
     final prefs = await _prefs;
-    final List<Map<String, dynamic>> serializableHistory = 
+    final List<Map<String, dynamic>> serializableHistory =
         history.map((msg) => msg.toMap()).toList();
     final jsonString = jsonEncode(serializableHistory);
-    final key = 'chat_history_$roomId';  // 使用动态key
+    final key = 'chat_history_$roomId'; // 使用动态key
     await prefs.setString(key, jsonString);
     if (kDebugMode) print('保存聊天历史到 $key，消息数: ${history.length}');
   }
 
-  Future<List<Message>> loadChatHistory({String roomId = kDefaultRoomId}) async {
+  Future<List<Message>> loadChatHistory(
+      {String roomId = kDefaultRoomId}) async {
     final prefs = await _prefs;
-    final key = 'chat_history_$roomId';  // 使用动态key
+    final key = 'chat_history_$roomId'; // 使用动态key
     String? jsonString = prefs.getString(key);
-    
+
     // 🔥 零感知旧数据迁移（仅执行一次：旧 master → 新 default）
     if (jsonString == null && roomId == kDefaultRoomId) {
       final legacyKey = 'chat_history_master';
@@ -64,20 +66,23 @@ class StorageService {
         try {
           final List<dynamic> decoded = jsonDecode(jsonString);
           final count = decoded.length;
-          await prefs.setString(key, jsonString);  // 复制到新 key
-          await prefs.remove(legacyKey);           // 删除旧 key（安全清理）
-          if (kDebugMode) print('✅ 旧数据迁移完成: $count 条消息 from $legacyKey to $key');
+          await prefs.setString(key, jsonString); // 复制到新 key
+          await prefs.remove(legacyKey); // 删除旧 key（安全清理）
+          if (kDebugMode)
+            print('✅ 旧数据迁移完成: $count 条消息 from $legacyKey to $key');
         } catch (e) {
           if (kDebugMode) print('迁移解析失败: $e，保留原数据');
         }
       }
     }
-    
+
     if (jsonString == null || jsonString.isEmpty) return [];
-    
+
     try {
       final List<dynamic> decoded = jsonDecode(jsonString);
-      return decoded.map((e) => Message.fromMap(e as Map<String, dynamic>)).toList();
+      return decoded
+          .map((e) => Message.fromMap(e as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       if (kDebugMode) print('聊天记录解析失败: $e');
       return [];
@@ -119,42 +124,42 @@ class StorageService {
 
   Future<String> getCharacterSystemPrompt({String? currentTime}) async {
     final data = await loadCharacterData();
-    
+
     // 读取基础字段
     final nickname = data['nickname'] ?? 'Master';
     final intro = data['intro'] ?? '';
     final privateSetting = data['private_setting'] ?? '';
     final opening = data['opening'] ?? '';
-    
+
     // 读取自定义格式相关字段
     final enableCustomFormat = data['enable_custom_format'] == 'true';
     final customFormat = data['custom_format'] ?? '';
-    
+
     String prompt = '';
-    
+
     // 1. 拼接基础设定
     if (nickname.isNotEmpty) {
       prompt += '角色名称：$nickname\n\n';
     }
-    
+
     if (intro.isNotEmpty) {
       prompt += '角色设定：$intro\n\n';
     }
-    
+
     if (privateSetting.isNotEmpty) {
       prompt += '附加设定（私密，不对外展示）：$privateSetting\n\n';
     }
-    
+
     if (opening.isNotEmpty) {
       prompt += '开场白示例：$opening\n\n';
     }
-    
+
     // 2. 如果启用自定义格式且有内容，作为单独段落追加
     if (enableCustomFormat && customFormat.isNotEmpty) {
       prompt += '\n=== 以下为格式要求 ===\n';
       prompt += '$customFormat\n';
     }
-    
+
     return prompt.trim();
   }
 
@@ -167,7 +172,7 @@ class StorageService {
     final prefs = await _prefs;
     return prefs.getString('last_valid_status') ?? '空白';
   }
-  
+
   Future<String> getCharacterNickname() async {
     final data = await loadCharacterData();
     return data['nickname'] ?? '';
@@ -229,7 +234,8 @@ class StorageService {
   Future<String> copyUserAvatarToAppDir(String sourcePath) async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final fileName =
+          'user_avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
       final newPath = '${appDir.path}/$fileName';
       final sourceFile = File(sourcePath);
       if (await sourceFile.exists()) {
@@ -268,7 +274,7 @@ class StorageService {
     final name = await getUserName();
     final avatarPath = await getUserAvatarPath();
     final showAvatar = await getShowUserAvatar();
-    
+
     return {
       'name': name,
       'avatarPath': avatarPath,
@@ -278,14 +284,17 @@ class StorageService {
 
   Future<void> saveUserProfile(Map<String, dynamic> profile) async {
     if (profile['name'] != null) await saveUserName(profile['name'] as String);
-    if (profile['avatarPath'] != null) await saveUserAvatarPath(profile['avatarPath'] as String);
-    if (profile['showAvatar'] != null) await saveShowUserAvatar(profile['showAvatar'] as bool);
+    if (profile['avatarPath'] != null)
+      await saveUserAvatarPath(profile['avatarPath'] as String);
+    if (profile['showAvatar'] != null)
+      await saveShowUserAvatar(profile['showAvatar'] as bool);
   }
 
   Future<String> copyFileToAppDir(String sourcePath) async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
+      final fileName =
+          'avatar_${DateTime.now().millisecondsSinceEpoch}${path_lib.extension(sourcePath)}';
       final newPath = '${appDir.path}/$fileName';
       final sourceFile = File(sourcePath);
       if (await sourceFile.exists()) {
@@ -299,7 +308,7 @@ class StorageService {
       rethrow;
     }
   }
-  
+
   // 保存旁白居中设置（使用 SharedPreferences）
   Future<void> saveNarrationCentered(bool centered) async {
     final prefs = await SharedPreferences.getInstance();
@@ -309,7 +318,7 @@ class StorageService {
   // 读取旁白居中设置
   Future<bool> getNarrationCentered() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('narration_centered') ?? true;  // 默认 true（居中）
+    return prefs.getBool('narration_centered') ?? true; // 默认 true（居中）
   }
 
   // ── 新增：UI主题相关 ──
@@ -336,47 +345,48 @@ class StorageService {
 
   // ── 新增：App 状态快照（防进程杀） ──
   Future<void> saveAppState({
-    List<Message>? messages,  // 聊天历史
-    double? scrollOffset,     // 滚动位置
-    String? inputText,        // 输入框内容
-    String? currentRoute,     // 当前页面
+    List<Message>? messages, // 聊天历史
+    double? scrollOffset, // 滚动位置
+    String? inputText, // 输入框内容
+    String? currentRoute, // 当前页面
   }) async {
     final prefs = await _prefs;
-    
+
     // 1. 保存聊天历史（如果传入）
     if (messages != null && messages.isNotEmpty) {
-      await saveChatHistory(messages);  // 使用默认roomId
+      await saveChatHistory(messages); // 使用默认roomId
     }
-    
+
     // 2. 保存滚动位置
     if (scrollOffset != null) {
       await prefs.setDouble('chat_scroll_offset', scrollOffset);
     }
-    
+
     // 3. 保存输入框内容
     if (inputText != null) {
       await prefs.setString('chat_input_text', inputText);
     }
-    
+
     // 4. 保存当前路由（快速恢复页面）
     if (currentRoute != null) {
       await prefs.setString('last_route', currentRoute);
     }
-    
+
     // 5. 时间戳（判断是否过期）
-    await prefs.setInt('last_state_time', DateTime.now().millisecondsSinceEpoch);
+    await prefs.setInt(
+        'last_state_time', DateTime.now().millisecondsSinceEpoch);
   }
 
   Future<Map<String, dynamic>> loadAppState() async {
     final prefs = await _prefs;
     final lastTime = prefs.getInt('last_state_time') ?? 0;
     final now = DateTime.now().millisecondsSinceEpoch;
-    
+
     // 状态过期阈值：30分钟
     if (now - lastTime > 30 * 60 * 1000) {
       return {}; // 过期，返回空
     }
-    
+
     return {
       'scrollOffset': prefs.getDouble('chat_scroll_offset') ?? 0.0,
       'inputText': prefs.getString('chat_input_text') ?? '',
@@ -391,5 +401,17 @@ class StorageService {
     await prefs.remove('chat_input_text');
     await prefs.remove('last_route');
     await prefs.remove('last_state_time');
+  }
+
+  /// 保存字符串
+  Future<void> saveString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
+  /// 获取字符串
+  Future<String?> getString(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key);
   }
 }

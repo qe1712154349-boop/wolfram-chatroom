@@ -3,12 +3,11 @@ import 'color_semantics.dart';
 
 /// 主题模式：亮色、暗色、跟随系统
 enum AppThemeMode {
-  light, // 强制亮色
-  dark, // 强制暗色
-  system, // 跟随系统
+  light,
+  dark,
+  system,
 }
 
-/// 扩展方法：方便地获取枚举属性
 extension AppThemeModeExtensions on AppThemeMode {
   String get displayName {
     switch (this) {
@@ -33,14 +32,13 @@ extension AppThemeModeExtensions on AppThemeMode {
   }
 }
 
-/// UI主题类型：用户选择的视觉风格
+/// UI主题类型
 enum UIThemeType {
-  defaultTheme, // 默认主题（你的粉色系）
-  strawberryCandy, // 草莓糖心🍓
-  pickleMilk, // 酸菜牛奶🥛
+  defaultTheme,
+  strawberryCandy,
+  pickleMilk,
 }
 
-/// 扩展方法：方便地获取枚举属性
 extension UIThemeTypeExtensions on UIThemeType {
   String get id {
     switch (this) {
@@ -86,7 +84,6 @@ extension UIThemeTypeExtensions on UIThemeType {
     }
   }
 
-  /// 从字符串转换
   static UIThemeType fromString(String value) {
     switch (value) {
       case 'strawberryCandy':
@@ -97,182 +94,171 @@ extension UIThemeTypeExtensions on UIThemeType {
         return UIThemeType.defaultTheme;
     }
   }
-} // <--- 这里添加这个 } 来关闭 UIThemeTypeExtensions 扩展
+}
 
-/// 主题状态 - 包含所有主题相关的状态
+/// ============ 新增：独立的主题记忆对象 ============
+
+/// 【核心】单个 Brightness 下的主题记忆
+/// 记录：最后选的主题 / 最后提取的图片色 / 最后操作类型
 @immutable
-class ThemeState {
-  final UIThemeType uiTheme; // 用户选择的UI主题
-  final AppThemeMode themeMode; // 亮/暗/系统模式
-  final Map<ExtractedColorType, Color>? extractedColors; // 图片提取的颜色
-  final Brightness effectiveBrightness; // 实际生效的亮度模式
+class ThemeMemory {
+  final UIThemeType uiTheme; // 最后选的主题
+  final Map<ExtractedColorType, Color>? extractedColors; // 最后提取的图片色
+  final ThemeMemoryOperationType lastOperationType; // 最后操作类型
 
-  const ThemeState({
+  const ThemeMemory({
     required this.uiTheme,
-    required this.themeMode,
     this.extractedColors,
-    required this.effectiveBrightness,
+    required this.lastOperationType,
   });
 
-  /// 创建初始状态
-  factory ThemeState.initial() {
-    return ThemeState(
+  factory ThemeMemory.initial() {
+    return ThemeMemory(
       uiTheme: UIThemeType.defaultTheme,
-      themeMode: AppThemeMode.system,
       extractedColors: null,
-      effectiveBrightness: Brightness.light, // 默认为亮色
+      lastOperationType: ThemeMemoryOperationType.themeSwitch,
     );
   }
 
-  /// 复制并更新部分属性
-  ThemeState copyWith({
+  ThemeMemory copyWith({
     UIThemeType? uiTheme,
-    AppThemeMode? themeMode,
     Map<ExtractedColorType, Color>? extractedColors,
-    Brightness? effectiveBrightness,
+    ThemeMemoryOperationType? lastOperationType,
   }) {
-    return ThemeState(
+    return ThemeMemory(
       uiTheme: uiTheme ?? this.uiTheme,
-      themeMode: themeMode ?? this.themeMode,
       extractedColors: extractedColors ?? this.extractedColors,
-      effectiveBrightness: effectiveBrightness ?? this.effectiveBrightness,
+      lastOperationType: lastOperationType ?? this.lastOperationType,
     );
   }
 
-  /// 判断是否有图片提取的颜色
   bool get hasExtractedColors =>
       extractedColors != null && extractedColors!.isNotEmpty;
-
-  /// 判断是否为暗色模式
-  bool get isDarkMode => effectiveBrightness == Brightness.dark;
-
-  /// 获取当前主题ID
-  String get themeId => uiTheme.id;
-
-  /// 获取显示名称
-  String get displayName {
-    if (hasExtractedColors) {
-      return '图片主题 🎨';
-    }
-    return uiTheme.displayName;
-  }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-
-    return other is ThemeState &&
+    return other is ThemeMemory &&
         other.uiTheme == uiTheme &&
-        other.themeMode == themeMode &&
-        other.effectiveBrightness == effectiveBrightness &&
+        other.lastOperationType == lastOperationType &&
         _mapsEqual(other.extractedColors, extractedColors);
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      uiTheme,
-      themeMode,
-      effectiveBrightness,
-      _mapHashCode(extractedColors),
-    );
-  }
+  int get hashCode => Object.hash(
+        uiTheme,
+        lastOperationType,
+        _mapHashCode(extractedColors),
+      );
 
-  @override
-  String toString() {
-    return 'ThemeState(uiTheme: $uiTheme, themeMode: $themeMode, '
-        'hasExtractedColors: $hasExtractedColors, isDarkMode: $isDarkMode)';
-  }
-
-  /// 比较两个颜色Map是否相等
   static bool _mapsEqual(
       Map<ExtractedColorType, Color>? a, Map<ExtractedColorType, Color>? b) {
     if (a == null && b == null) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
-
     for (final key in a.keys) {
       if (b[key] != a[key]) return false;
     }
     return true;
   }
 
-  /// 计算颜色Map的hashCode
   static int _mapHashCode(Map<ExtractedColorType, Color>? map) {
     if (map == null) return 0;
-
     int hash = 0;
     for (final entry in map.entries) {
       hash ^= entry.key.hashCode ^ entry.value.hashCode;
     }
     return hash;
   }
+
+  @override
+  String toString() {
+    return 'ThemeMemory(uiTheme: $uiTheme, hasExtracted: $hasExtractedColors, lastOp: $lastOperationType)';
+  }
 }
 
-/// 主题状态变化监听器
-typedef ThemeStateListener = void Function(ThemeState state);
+/// 最后操作类型（核心：用这个决定"记住什么"）
+enum ThemeMemoryOperationType {
+  themeSwitch, // 最后一次是切主题
+  imageExtract, // 最后一次是提取图片
+}
 
-/// 主题状态变化通知
-class ThemeStateNotifier {
-  ThemeState _state;
-  final List<ThemeStateListener> _listeners = [];
+/// ============ 新增：全局主题总状态 ============
 
-  ThemeStateNotifier([ThemeState? initialState])
-      : _state = initialState ?? ThemeState.initial();
+/// 【核心】应用的完整主题状态
+/// 包含：亮色记忆、暗色记忆、当前 brightness、主题模式
+@immutable
+class ThemeState {
+  final ThemeMemory lightMemory; // 亮色模式下的记忆
+  final ThemeMemory darkMemory; // 暗色模式下的记忆
+  final AppThemeMode themeMode; // 亮/暗/系统
+  final Brightness effectiveBrightness; // 实际生效的亮度
 
-  ThemeState get state => _state;
+  const ThemeState({
+    required this.lightMemory,
+    required this.darkMemory,
+    required this.themeMode,
+    required this.effectiveBrightness,
+  });
 
-  /// 更新UI主题
-  void updateUITheme(UIThemeType uiTheme) {
-    _state = _state.copyWith(uiTheme: uiTheme);
-    _notifyListeners();
+  factory ThemeState.initial() {
+    return ThemeState(
+      lightMemory: ThemeMemory.initial(),
+      darkMemory: ThemeMemory.initial(),
+      themeMode: AppThemeMode.system,
+      effectiveBrightness: Brightness.light,
+    );
   }
 
-  /// 更新主题模式（亮/暗/系统）
-  void updateThemeMode(AppThemeMode themeMode) {
-    _state = _state.copyWith(themeMode: themeMode);
-    _notifyListeners();
+  ThemeState copyWith({
+    ThemeMemory? lightMemory,
+    ThemeMemory? darkMemory,
+    AppThemeMode? themeMode,
+    Brightness? effectiveBrightness,
+  }) {
+    return ThemeState(
+      lightMemory: lightMemory ?? this.lightMemory,
+      darkMemory: darkMemory ?? this.darkMemory,
+      themeMode: themeMode ?? this.themeMode,
+      effectiveBrightness: effectiveBrightness ?? this.effectiveBrightness,
+    );
   }
 
-  /// 更新图片提取的颜色
-  void updateExtractedColors(Map<ExtractedColorType, Color> colors) {
-    _state = _state.copyWith(extractedColors: colors);
-    _notifyListeners();
+  /// 获取当前 brightness 对应的 memory
+  ThemeMemory get currentMemory =>
+      isDarkMode ? darkMemory : lightMemory;
+
+  bool get isDarkMode => effectiveBrightness == Brightness.dark;
+
+  /// 获取当前生效的主题配置
+  UIThemeType get currentUITheme => currentMemory.uiTheme;
+
+  Map<ExtractedColorType, Color>? get currentExtractedColors =>
+      currentMemory.extractedColors;
+
+  bool get hasExtractedColors => currentMemory.hasExtractedColors;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ThemeState &&
+        other.lightMemory == lightMemory &&
+        other.darkMemory == darkMemory &&
+        other.themeMode == themeMode &&
+        other.effectiveBrightness == effectiveBrightness;
   }
 
-  /// 清空图片提取的颜色
-  void clearExtractedColors() {
-    _state = _state.copyWith(extractedColors: null);
-    _notifyListeners();
-  }
+  @override
+  int get hashCode => Object.hash(
+        lightMemory,
+        darkMemory,
+        themeMode,
+        effectiveBrightness,
+      );
 
-  /// 更新实际亮度模式
-  void updateEffectiveBrightness(Brightness brightness) {
-    _state = _state.copyWith(effectiveBrightness: brightness);
-    _notifyListeners();
-  }
-
-  /// 重置所有设置
-  void reset() {
-    _state = ThemeState.initial();
-    _notifyListeners();
-  }
-
-  /// 添加监听器
-  void addListener(ThemeStateListener listener) {
-    _listeners.add(listener);
-  }
-
-  /// 移除监听器
-  void removeListener(ThemeStateListener listener) {
-    _listeners.remove(listener);
-  }
-
-  /// 通知所有监听器
-  void _notifyListeners() {
-    for (final listener in _listeners) {
-      listener(_state);
-    }
+  @override
+  String toString() {
+    return 'ThemeState(isDark: $isDarkMode, light: $lightMemory, dark: $darkMemory)';
   }
 }
 

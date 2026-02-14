@@ -23,7 +23,7 @@ class ColorResolver {
     // 2. 图片提取色
     if (themeState.hasExtractedColors) {
       final extractedColor = _resolveFromExtractedColors(
-        extractedColors: themeState.extractedColors!,
+        extractedColors: themeState.currentExtractedColors!,
         semantic: semantic,
         isDarkMode: themeState.isDarkMode,
       );
@@ -32,9 +32,9 @@ class ColorResolver {
       }
     }
 
-    // 3. UI主题色
+// 3. UI主题色
     final themeColor = _resolveFromUITheme(
-      uiTheme: themeState.uiTheme,
+      uiTheme: themeState.currentUITheme,
       semantic: semantic,
       isDarkMode: themeState.isDarkMode,
     );
@@ -62,15 +62,10 @@ class ColorResolver {
     required bool isDarkMode,
   }) {
     try {
-      // 使用映射器将提取的颜色转换为语义颜色
+      // 🔑 关键改动：直接用提取色，不做任何 dim 处理！
       final semanticColors =
           ExtractedColorMapper.mapToSemantics(extractedColors);
-      final color = semanticColors[semantic];
-
-      if (color != null) {
-        // 如果是暗色模式，适当调整颜色
-        return isDarkMode ? _adjustColorForDarkMode(color) : color;
-      }
+      return semanticColors[semantic];
     } catch (e) {
       debugPrint('从提取色解析失败: $e');
     }
@@ -307,7 +302,7 @@ class ColorResolver {
   /// 调试方法：打印当前所有颜色
   static void debugPrintColors(ThemeState themeState) {
     debugPrint('=== 主题状态 ===');
-    debugPrint('UI主题: ${themeState.uiTheme.displayName}');
+    debugPrint('UI主题: ${themeState.currentUITheme.displayName}');
     debugPrint('主题模式: ${themeState.themeMode.displayName}');
     debugPrint('暗色模式: ${themeState.isDarkMode}');
     debugPrint('有提取色: ${themeState.hasExtractedColors}');

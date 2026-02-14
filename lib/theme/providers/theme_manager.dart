@@ -18,7 +18,7 @@ class ThemeManager {
 
   /// 获取当前主题定义
   ThemeDefinition get currentTheme {
-    return ThemeRegistry().getThemeByType(currentState.uiTheme); // 正确
+    return ThemeRegistry().getThemeByType(currentState.currentUITheme);
   }
 
   /// 获取当前气泡颜色
@@ -51,7 +51,7 @@ class ThemeManager {
 
   /// 重置所有主题设置
   Future<void> resetAll() async {
-    await _ref.read(appThemeProvider.notifier).reset();
+    await _ref.read(appThemeProvider.notifier).resetAll();
   }
 
   /// 切换亮暗模式
@@ -142,7 +142,7 @@ class ThemeManager {
   bool get isDarkMode => currentState.isDarkMode;
 
   /// 获取当前主题ID
-  String get currentThemeId => currentState.themeId;
+  String get currentThemeId => currentState.currentUITheme.id;
 
   /// 获取当前主题名称
   String get currentThemeName {
@@ -293,14 +293,14 @@ class ThemeSystemUtils {
 
     // 应用测试颜色
     final utils = ref.read(extractedColorsUtilsProvider);
-    await utils.applyTestColor(Colors.deepPurple);
+    await utils.applyTestColor(const Color.fromARGB(255, 217, 77, 136));
 
     debugPrint('测试主题已应用');
   }
 
   /// 重置主题
   static Future<void> resetTheme(WidgetRef ref) async {
-    await ref.read(appThemeProvider.notifier).reset();
+    await ref.read(appThemeProvider.notifier).resetAll();
     debugPrint('主题已重置');
   }
 

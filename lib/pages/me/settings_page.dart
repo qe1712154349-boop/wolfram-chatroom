@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/api_config.dart';
 import '../../services/storage_service.dart';
-import '../../theme/theme.dart' as app_theme; // 小写下划线，符合 lint
+import '../../theme/theme.dart' as app_theme;
 import 'package:permission_handler/permission_handler.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -288,8 +288,131 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// ============ 新增：主题操作面板 ============
+  Widget _buildThemeControlPanel() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCurrentlyDark = ref.watch(app_theme.appThemeProvider).isDarkMode;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '主题操作',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+
+        // 重置当前模式
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Icon(
+              Icons.refresh,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text('重置当前模式'),
+            subtitle: Text(
+              isCurrentlyDark ? '将暗色主题恢复为默认' : '将亮色主题恢复为默认',
+            ),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('确认重置?'),
+                  content: Text(
+                    isCurrentlyDark
+                        ? '暗色主题将恢复为默认，亮色主题不受影响'
+                        : '亮色主题将恢复为默认，暗色主题不受影响',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(app_theme.appThemeProvider.notifier)
+                            .resetCurrentBrightness();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isCurrentlyDark ? '已重置暗色模式' : '已重置亮色模式',
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('重置'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // 重置所有主题
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Icon(
+              Icons.settings_backup_restore,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text('重置所有主题'),
+            subtitle: const Text('亮色和暗色都恢复为默认'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('确认重置所有?'),
+                  content: const Text('亮色和暗色主题都将恢复为默认'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(app_theme.appThemeProvider.notifier)
+                            .resetAll();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('已重置所有主题'),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('重置所有'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildUIThemeSelector() {
-    final currentTheme = ref.watch(app_theme.appThemeProvider).uiTheme;
+    final currentTheme = ref.watch(app_theme.appThemeProvider).currentUITheme;
 
     return DropdownButtonFormField<app_theme.UIThemeType>(
       initialValue: currentTheme,
@@ -634,7 +757,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildUIThemeSelector(),
           const SizedBox(height: 24),
           _buildColorModeSelector(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+
+          // ----- 2.5. 主题操作（新增）-----
+          _buildThemeControlPanel(),
+          const SizedBox(height: 24),
 
           // ----- 3. 界面设置（旁白居中 + 开发者模式）-----
           Text("界面设置", style: Theme.of(context).textTheme.titleLarge),
@@ -684,7 +811,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
           const SizedBox(height: 24),
 
-          // ----- 4. 消息通知（新增独立卡片）-----
+          // ----- 4. 消息通知-----
           Text("消息通知", style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Container(
@@ -712,7 +839,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               onTap: () async {
-                await openAppSettings(); // 跳转系统设置
+                await openAppSettings();
               },
             ),
           ),

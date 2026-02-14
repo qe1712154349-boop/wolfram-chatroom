@@ -221,41 +221,40 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     final themeState = ref.watch(appThemeProvider);
     final effectiveBrightness = themeState.effectiveBrightness;
 
-    // 彻底版：primaryColor 完全来自 ColorResolver（跟随主题定义 / 提取色）
-    // 没有写死保底颜色，fallback 由 ColorResolver 内部处理（你的 default_theme.dart）
+    // 实时计算 primaryColor（跟随提取 / 主题）
     final primaryColor = ColorResolver.resolve(
       themeState: themeState,
       semantic: ColorSemantic.primary,
     );
 
-    // 创建 semantic colors extension
     final semanticColors = AppSemanticColors.fromThemeState(themeState);
 
-    final lightTheme = ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.light,
-      ),
-      extensions: <ThemeExtension<dynamic>>[semanticColors],
-    );
-
-    final darkTheme = ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.dark,
-      ),
-      extensions: <ThemeExtension<dynamic>>[semanticColors],
-    );
+    // 动态生成完整 ThemeData（亮暗分离）
+    final currentTheme = effectiveBrightness == Brightness.light
+        ? ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.light,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primaryColor,
+              brightness: Brightness.light,
+            ),
+            extensions: <ThemeExtension<dynamic>>[semanticColors],
+          )
+        : ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primaryColor,
+              brightness: Brightness.dark,
+            ),
+            extensions: <ThemeExtension<dynamic>>[semanticColors],
+          );
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       showSemanticsDebugger: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
+      theme: currentTheme,
+      darkTheme: currentTheme, // 关键：亮暗用同一份动态计算的，避免不跟随
       themeMode: switch (effectiveBrightness) {
         Brightness.light => ThemeMode.light,
         Brightness.dark => ThemeMode.dark,

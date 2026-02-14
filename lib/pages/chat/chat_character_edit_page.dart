@@ -206,7 +206,7 @@ class _ChatCharacterEditPageState extends ConsumerState<ChatCharacterEditPage> {
 
   // 焦点逻辑 100% 保持原样（用户禁止修改）
   InputBorder _getBorderForTheme() {
-    final uiTheme = ref.watch(app_theme.appThemeProvider).uiTheme;
+    final uiTheme = ref.watch(app_theme.appThemeProvider).currentUITheme;
     if (uiTheme == app_theme.UIThemeType.strawberryCandy) {
       return context.inputBorder;
     } else if (uiTheme == app_theme.UIThemeType.pickleMilk) {
@@ -217,7 +217,7 @@ class _ChatCharacterEditPageState extends ConsumerState<ChatCharacterEditPage> {
   }
 
   InputBorder _getFocusedBorderForTheme() {
-    final uiTheme = ref.watch(app_theme.appThemeProvider).uiTheme;
+    final uiTheme = ref.watch(app_theme.appThemeProvider).currentUITheme;
     if (uiTheme == app_theme.UIThemeType.strawberryCandy) {
       return _getBorderForTheme();
     } else if (uiTheme == app_theme.UIThemeType.pickleMilk) {

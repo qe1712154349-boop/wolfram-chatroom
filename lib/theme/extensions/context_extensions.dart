@@ -313,10 +313,18 @@ extension ThemeColorsRef on WidgetRef {
     await notifier.updateColors(extractedColors);
   }
 
-  /// 重置主题
-  Future<void> resetTheme() async {
+  /// 重置当前 brightness 模式的主题
+  /// （在暗色就重置暗色，在亮色就重置亮色）
+  Future<void> resetCurrentTheme() async {
     final notifier = read(appThemeProvider.notifier);
-    await notifier.reset();
+    await notifier.resetCurrentBrightness();
+  }
+
+  /// 重置所有主题
+  /// （亮色和暗色都恢复为默认）
+  Future<void> resetAllThemes() async {
+    final notifier = read(appThemeProvider.notifier);
+    await notifier.resetAll();
   }
 
   /// 调试打印主题信息
