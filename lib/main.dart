@@ -18,6 +18,7 @@ import 'theme/core/color_resolver.dart';
 import 'theme/core/color_semantics.dart';
 import 'theme/providers/app_theme_provider.dart';
 import 'theme/extensions/semantic_colors_extension.dart'; // 新加的 extension
+import 'theme/providers/brightness_provider.dart';
 
 void main() {
   // ✅ 1. 最小必要初始化
@@ -89,6 +90,12 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
 
     // 监听应用生命周期（用于自动保存等）
     WidgetsBinding.instance.addObserver(this);
+
+    // 🆕 添加这段：初始化平台亮度
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final platformBrightness = MediaQuery.of(context).platformBrightness;
+      ref.read(platformBrightnessProvider.notifier).state = platformBrightness;
+    });
 
     // ✅ 在后台异步加载用户设置（不阻塞UI）
     _loadUserPreferencesInBackground();
