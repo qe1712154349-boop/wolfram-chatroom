@@ -1,9 +1,10 @@
-// lib/pages/entrance/moments_detail_page.dart - 终极修复版
+// lib/pages/entrance/moments_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:my_new_app/pages/friends_circle/publish_moment_page.dart';
 import 'package:my_new_app/pages/friends_circle/camera_capture_page.dart';
 import 'package:my_new_app/utils/asset_picker_util.dart';
-import 'package:image_picker/image_picker.dart'; // XFile 来自这里
+import 'package:image_picker/image_picker.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class MomentsDetailPage extends StatefulWidget {
   const MomentsDetailPage({super.key});
@@ -65,13 +66,12 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sem = context.sem;
 
     return Stack(
       children: [
         Scaffold(
-          backgroundColor:
-              isDark ? const Color(0xFF060405) : const Color(0xFFF5F5F5),
+          backgroundColor: sem.background,
           body: ListView(
             children: [
               Stack(
@@ -155,8 +155,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
             onTap: _hideActionSheet,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              color: Colors.black.withAlpha(
-                  _showActionSheet ? 102 : 0), // 替换 withValues(alpha: ...)
+              color: Colors.black.withAlpha(_showActionSheet ? 102 : 0),
               width: double.infinity,
               height: double.infinity,
               child: Column(
@@ -169,7 +168,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                         0, _showActionSheet ? 0 : 200, 0),
                     margin: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: sem.surface,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -208,7 +207,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     margin:
                         const EdgeInsets.only(left: 12, right: 12, bottom: 24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: sem.surface,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -244,6 +243,8 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     required bool showDivider,
     bool isCancel = false,
   }) {
+    final sem = context.sem;
+
     return Column(
       children: [
         Material(
@@ -258,7 +259,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                   if (icon != null) ...[
                     Icon(
                       icon,
-                      color: isCancel ? Colors.red : const Color(0xFF333333),
+                      color: isCancel ? sem.error : sem.textPrimary,
                       size: 24,
                     ),
                     const SizedBox(width: 12),
@@ -273,8 +274,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                             fontSize: 17,
                             fontWeight:
                                 isCancel ? FontWeight.w400 : FontWeight.w500,
-                            color:
-                                isCancel ? Colors.red : const Color(0xFF333333),
+                            color: isCancel ? sem.error : sem.textPrimary,
                           ),
                         ),
                         if (subtitle != null)
@@ -282,8 +282,8 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
                               subtitle,
-                              style: const TextStyle(
-                                  fontSize: 13, color: Color(0xFF888888)),
+                              style: TextStyle(
+                                  fontSize: 13, color: sem.textSecondary),
                             ),
                           ),
                       ],
@@ -298,7 +298,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
             height: 0.5,
-            color: const Color(0xFFE0E0E0),
+            color: sem.divider,
           ),
       ],
     );
@@ -312,10 +312,10 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
     required List<String> images,
     required String time,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sem = context.sem;
 
     return Container(
-      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      color: sem.surface,
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -330,7 +330,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                 Text(
                   name,
                   style: TextStyle(
-                    color: Theme.of(context).primaryColor,
+                    color: sem.primary,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -338,9 +338,7 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                 const SizedBox(height: 8),
                 Text(
                   content,
-                  style: TextStyle(
-                      fontSize: 15,
-                      color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(fontSize: 15, color: sem.textPrimary),
                 ),
                 if (images.isNotEmpty) ...[
                   const SizedBox(height: 10),
@@ -374,14 +372,14 @@ class _MomentsDetailPageState extends State<MomentsDetailPage> {
                     Text(
                       time,
                       style: TextStyle(
-                        color: isDark ? Colors.grey[400] : Colors.grey,
+                        color: sem.textSecondary,
                         fontSize: 13,
                       ),
                     ),
                     IconButton(
                       icon: Icon(
                         Icons.more_horiz,
-                        color: isDark ? Colors.grey[400] : Colors.grey,
+                        color: sem.textSecondary,
                       ),
                       onPressed: () {},
                     ),

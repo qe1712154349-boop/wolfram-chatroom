@@ -22,7 +22,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _developerMode = false;
   bool? _narrationCentered;
 
-  // API 配置变量（不变）
+  // API 配置变量
   bool _isCustomMode = true;
   final _baseUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
@@ -223,6 +223,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildColorModeSelector() {
+    final sem = context.sem;
     final currentMode = ref.watch(app_theme.appThemeProvider).themeMode;
 
     final modes = ['light', 'dark', 'system'];
@@ -239,7 +240,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: sem.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -260,9 +261,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+                      color: isSelected ? sem.primary : null,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
@@ -270,11 +269,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(icons[index],
-                              color: isSelected ? Colors.white : null),
+                              color: isSelected
+                                  ? Colors.white
+                                  : sem.textSecondary),
                           const SizedBox(width: 8),
                           Text(modeLabels[index],
                               style: TextStyle(
-                                  color: isSelected ? Colors.white : null)),
+                                  color: isSelected
+                                      ? Colors.white
+                                      : sem.textSecondary)),
                         ],
                       ),
                     ),
@@ -288,9 +291,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  /// ============ 新增：主题操作面板 ============
   Widget _buildThemeControlPanel() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sem = context.sem;
     final isCurrentlyDark = ref.watch(app_theme.appThemeProvider).isDarkMode;
 
     return Column(
@@ -305,17 +307,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         // 重置当前模式
         Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            color: sem.surface,
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
             leading: Icon(
               Icons.refresh,
-              color: Theme.of(context).colorScheme.primary,
+              color: sem.primary,
             ),
-            title: const Text('重置当前模式'),
+            title: Text('重置当前模式', style: TextStyle(color: sem.textPrimary)),
             subtitle: Text(
               isCurrentlyDark ? '将暗色主题恢复为默认' : '将亮色主题恢复为默认',
+              style: TextStyle(color: sem.textSecondary),
             ),
             onTap: () {
               showDialog(
@@ -347,9 +350,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: sem.error,
                       ),
-                      child: const Text('重置'),
+                      child: const Text('重置',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -363,16 +367,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         // 重置所有主题
         Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            color: sem.surface,
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
             leading: Icon(
               Icons.settings_backup_restore,
-              color: Theme.of(context).colorScheme.primary,
+              color: sem.primary,
             ),
-            title: const Text('重置所有主题'),
-            subtitle: const Text('亮色和暗色都恢复为默认'),
+            title: Text('重置所有主题', style: TextStyle(color: sem.textPrimary)),
+            subtitle:
+                Text('亮色和暗色都恢复为默认', style: TextStyle(color: sem.textSecondary)),
             onTap: () {
               showDialog(
                 context: context,
@@ -397,9 +402,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: sem.error,
                       ),
-                      child: const Text('重置所有'),
+                      child: const Text('重置所有',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -449,7 +455,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _buildApiConfigSection() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sem = context.sem;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
@@ -461,7 +467,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+              color: sem.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -488,21 +494,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     isExpanded: true,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
-                        ),
+                        borderSide: BorderSide(color: sem.border),
                       ),
                       labelText: 'API 来源',
-                      labelStyle: TextStyle(
-                        color: isDark ? Colors.grey[400] : Colors.grey[700],
-                      ),
+                      labelStyle: TextStyle(color: sem.textSecondary),
                       filled: true,
-                      fillColor:
-                          isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                      fillColor: sem.surface,
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
-                        ),
+                        borderSide: BorderSide(color: sem.border),
                       ),
                     ),
                     items: [
@@ -510,14 +509,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             value: p.id,
                             child: Text(
                               p.name,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black,
-                              ),
+                              style: TextStyle(color: sem.textPrimary),
                             ),
                           )),
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: 'custom',
-                        child: Text('自定义 (兼容 OpenAI)'),
+                        child: Text('自定义 (兼容 OpenAI)',
+                            style: TextStyle(color: sem.textPrimary)),
                       ),
                     ],
                     onChanged: (newValue) async {
@@ -560,27 +558,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           const SizedBox(height: 16),
           TextField(
             controller: _baseUrlController,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            style: TextStyle(color: sem.textPrimary),
             decoration: InputDecoration(
               labelText: 'Base URL',
-              labelStyle: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[700]),
+              labelStyle: TextStyle(color: sem.textSecondary),
               border: OutlineInputBorder(
-                borderSide: BorderSide(
-                    color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                borderSide: BorderSide(color: sem.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(
-                    color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                borderSide: BorderSide(color: sem.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
+                borderSide: BorderSide(color: sem.primary),
               ),
               hintText: 'https://api.example.com/v1',
-              hintStyle: TextStyle(
-                  color: isDark ? Colors.grey[500] : Colors.grey[600]),
+              hintStyle: TextStyle(color: sem.textHint),
               filled: true,
-              fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              fillColor: sem.surface,
             ),
             enabled: _isCustomMode,
             readOnly: !_isCustomMode,
@@ -589,57 +583,48 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           TextField(
             controller: _apiKeyController,
             obscureText: true,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            style: TextStyle(color: sem.textPrimary),
             decoration: InputDecoration(
               labelText: 'API Key',
-              labelStyle: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[700]),
+              labelStyle: TextStyle(color: sem.textSecondary),
               border: OutlineInputBorder(
-                borderSide: BorderSide(
-                    color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                borderSide: BorderSide(color: sem.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(
-                    color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                borderSide: BorderSide(color: sem.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
+                borderSide: BorderSide(color: sem.primary),
               ),
               filled: true,
-              fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              fillColor: sem.surface,
             ),
           ),
           const SizedBox(height: 12),
           if (_availableModels.isNotEmpty)
             DropdownButtonFormField<String>(
               initialValue: _selectedModel.isNotEmpty ? _selectedModel : null,
-              hint: Text('选择模型',
-                  style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey[600])),
+              hint: Text('选择模型', style: TextStyle(color: sem.textHint)),
               isExpanded: true,
-              dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              dropdownColor: sem.surface,
+              style: TextStyle(color: sem.textPrimary),
               decoration: InputDecoration(
                 border: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                  borderSide: BorderSide(color: sem.border),
                 ),
                 labelText: '模型',
-                labelStyle: TextStyle(
-                    color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                labelStyle: TextStyle(color: sem.textSecondary),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                fillColor: sem.surface,
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                  borderSide: BorderSide(color: sem.border),
                 ),
               ),
               items: _availableModels
                   .map((m) => DropdownMenuItem(
                         value: m,
-                        child: Text(m,
-                            style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black)),
+                        child:
+                            Text(m, style: TextStyle(color: sem.textPrimary)),
                       ))
                   .toList(),
               onChanged: (value) {
@@ -649,42 +634,37 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           else if (_isCustomMode)
             TextField(
               controller: _modelController,
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              style: TextStyle(color: sem.textPrimary),
               decoration: InputDecoration(
                 labelText: '模型名（手动输入）',
-                labelStyle: TextStyle(
-                    color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                labelStyle: TextStyle(color: sem.textSecondary),
                 border: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                  borderSide: BorderSide(color: sem.border),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: isDark ? Colors.grey[700]! : Colors.grey[400]!),
+                  borderSide: BorderSide(color: sem.border),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: const Color(0xFFFF5A7E)),
+                  borderSide: BorderSide(color: sem.primary),
                 ),
                 helperText: '如 deepseek-chat',
-                helperStyle: TextStyle(
-                    color: isDark ? Colors.grey[500] : Colors.grey[600]),
+                helperStyle: TextStyle(color: sem.textHint),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                fillColor: sem.surface,
               ),
               onChanged: (val) => setState(() => _selectedModel = val),
             )
           else
             Text(
               '请选择 API 来源后自动加载模型',
-              style: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[600]),
+              style: TextStyle(color: sem.textSecondary),
             ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF5A7E),
+                backgroundColor: sem.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: _saveConfig,
@@ -698,8 +678,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             children: [
               TextButton(
                 onPressed: _testConnection,
-                child: const Text('测试连接',
-                    style: TextStyle(color: Color(0xFFFF5A7E), fontSize: 16)),
+                child: Text('测试连接',
+                    style: TextStyle(color: sem.primary, fontSize: 16)),
               ),
               const SizedBox(width: 12),
               Container(
@@ -708,8 +688,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _testStatus == 'valid'
-                      ? Colors.green
-                      : (_testStatus == 'invalid' ? Colors.red : Colors.grey),
+                      ? context.themeColor(app_theme.ColorSemantic.success)
+                      : (_testStatus == 'invalid'
+                          ? sem.error
+                          : sem.textSecondary),
                 ),
               ),
               const SizedBox(width: 16),
@@ -718,8 +700,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _testMessage,
                   style: TextStyle(
                     color: _testStatus == 'valid'
-                        ? Colors.green
-                        : (_testStatus == 'invalid' ? Colors.red : null),
+                        ? context.themeColor(app_theme.ColorSemantic.success)
+                        : (_testStatus == 'invalid' ? sem.error : null),
                     fontSize: 15,
                   ),
                   textAlign: TextAlign.right,
@@ -735,7 +717,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sem = context.sem;
 
     return Scaffold(
       backgroundColor: context.themeColor(app_theme.ColorSemantic.background),
@@ -759,21 +741,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildColorModeSelector(),
           const SizedBox(height: 24),
 
-          // ----- 2.5. 主题操作（新增）-----
+          // ----- 2.5. 主题操作 -----
           _buildThemeControlPanel(),
           const SizedBox(height: 24),
 
-          // ----- 3. 界面设置（旁白居中 + 开发者模式）-----
+          // ----- 3. 界面设置 -----
           Text("界面设置", style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              color: sem.surface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [
-                // 旁白居中开关（在上）
                 if (_narrationCentered == null)
                   const ListTile(
                     title: Text("旁白居中显示"),
@@ -793,7 +774,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         .themeColor(app_theme.ColorSemantic.switchActive),
                   ),
                 const Divider(height: 1),
-                // 开发者模式开关（在下）
                 SwitchListTile(
                   title: const Text("开发者模式"),
                   subtitle: const Text("开启后可查看详细错误信息"),
@@ -811,30 +791,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
           const SizedBox(height: 24),
 
-          // ----- 4. 消息通知-----
+          // ----- 4. 消息通知 -----
           Text("消息通知", style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              color: sem.surface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: ListTile(
-              leading: const Icon(Icons.notifications_outlined),
-              title: const Text("新消息通知"),
+              leading:
+                  Icon(Icons.notifications_outlined, color: sem.textSecondary),
+              title: Text("新消息通知", style: TextStyle(color: sem.textPrimary)),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     "前往系统设置",
                     style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      color: sem.textSecondary,
                       fontSize: 14,
                     ),
                   ),
                   Icon(
                     Icons.chevron_right,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    color: sem.textSecondary,
                   ),
                 ],
               ),
@@ -844,7 +825,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
           ),
 
-          const SizedBox(height: 24), // 底部留白
+          const SizedBox(height: 24),
         ],
       ),
     );

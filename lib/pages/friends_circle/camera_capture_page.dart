@@ -1,6 +1,7 @@
 // lib/pages/friends_circle/camera_capture_page.dart
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import '../../theme/theme.dart' as app_theme;
 import 'publish_moment_page.dart';
 
 class CameraCapturePage extends StatefulWidget {
@@ -52,7 +53,6 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
       final XFile photo = await _controller!.takePicture();
       if (!mounted) return;
 
-      // 修复：显式提供两个类型参数
       final success = await Navigator.pushReplacement<bool, void>(
         context,
         MaterialPageRoute(
@@ -60,10 +60,8 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
         ),
       );
 
-      // 可选：处理发布结果（success 为 PublishMomentPage pop 时返回的 bool?）
       if (success == true) {
         debugPrint('发布成功');
-        // 如果需要，可以在这里 pop 或刷新上层朋友圈
       }
     } catch (e) {
       debugPrint('拍照失败: $e');
@@ -78,8 +76,10 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
 
   @override
   Widget build(BuildContext context) {
+    final sem = context.sem;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: sem.background,
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
         builder: (context, snapshot) {
@@ -91,8 +91,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('相机初始化失败',
-                        style: TextStyle(color: Colors.white)),
+                    Text('相机初始化失败', style: TextStyle(color: sem.textPrimary)),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _initCamera,
@@ -107,7 +106,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
               fit: StackFit.expand,
               children: [
                 CameraPreview(_controller!),
-                // 控制栏（微信式底部）
+                // 控制栏（微信式底部）— 覆盖在相机预览上，保留白色
                 Positioned(
                   bottom: 40,
                   left: 0,
@@ -128,8 +127,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
                       FloatingActionButton(
                         backgroundColor: Colors.white,
                         onPressed: _takePicture,
-                        child: const Icon(Icons.camera_alt,
-                            color: Color(0xFFFF5A7E)),
+                        child: Icon(Icons.camera_alt, color: sem.primary),
                       ),
                       IconButton(
                         icon: const Icon(Icons.flip_camera_ios,
@@ -147,12 +145,12 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
           } else if (snapshot.hasError) {
             return Center(
               child: Text('相机初始化失败: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: sem.textPrimary)),
             );
           } else {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                  valueColor: AlwaysStoppedAnimation<Color>(sem.primary)),
             );
           }
         },

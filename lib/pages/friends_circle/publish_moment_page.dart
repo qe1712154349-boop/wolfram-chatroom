@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:image_picker/image_picker.dart'; // ← 必须导入！XFile 来自这里
+import 'package:image_picker/image_picker.dart';
 import '../../utils/asset_picker_util.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class PublishMomentPage extends StatefulWidget {
   final List<XFile>? initialImages;
@@ -74,10 +75,14 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final sem = context.sem;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF0F5),
+      backgroundColor: sem.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
+        foregroundColor: context.themeColor(app_theme.ColorSemantic.appBarText),
         elevation: 0,
         title: const Text('朋友圈'),
         actions: [
@@ -85,19 +90,22 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: _isCompressing
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 28,
                       height: 28,
-                      child: CircularProgressIndicator(strokeWidth: 3),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(sem.primary),
+                      ),
                     )
                   : TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
+                      child: Text(
                         '发布',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF5A7E),
+                          color: sem.primary,
                         ),
                       ),
                     ),
@@ -114,17 +122,18 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: sem.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
                 controller: _textController,
                 maxLines: null,
                 autofocus: true,
-                style: const TextStyle(fontSize: 17, height: 1.6),
-                decoration: const InputDecoration.collapsed(
+                style: TextStyle(
+                    fontSize: 17, height: 1.6, color: sem.textPrimary),
+                decoration: InputDecoration.collapsed(
                   hintText: '这一刻的想法...',
-                  hintStyle: TextStyle(color: Colors.grey),
+                  hintStyle: TextStyle(color: sem.textHint),
                 ),
               ),
             ),
@@ -135,14 +144,17 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: sem.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: _isCompressing && _imagePaths.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(),
+                          padding: const EdgeInsets.all(32),
+                          child: CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(sem.primary),
+                          ),
                         ),
                       )
                     : MasonryGridView.count(
@@ -192,37 +204,44 @@ class _PublishMomentPageState extends State<PublishMomentPage> {
                 child: Container(
                   height: 100,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: sem.surfaceVariant,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: sem.border),
                   ),
-                  child: const Icon(Icons.add_photo_alternate_outlined,
-                      size: 40, color: Colors.grey),
+                  child: Icon(Icons.add_photo_alternate_outlined,
+                      size: 40, color: sem.textSecondary),
                 ),
               ),
 
             const SizedBox(height: 24),
 
-            // 谁可以看 等（保持原样）
+            // 谁可以看 等
             Container(
               decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                  color: sem.surface, borderRadius: BorderRadius.circular(12)),
               child: Column(
                 children: [
                   ListTile(
-                      leading: const Icon(Icons.lock_outline),
-                      title: const Text('谁可以看'),
-                      trailing: const Text('公开'),
+                      leading:
+                          Icon(Icons.lock_outline, color: sem.textSecondary),
+                      title: Text('谁可以看',
+                          style: TextStyle(color: sem.textPrimary)),
+                      trailing: Text('公开',
+                          style: TextStyle(color: sem.textSecondary)),
                       onTap: () {}),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: sem.divider),
                   ListTile(
-                      leading: const Icon(Icons.location_on_outlined),
-                      title: const Text('添加位置'),
+                      leading: Icon(Icons.location_on_outlined,
+                          color: sem.textSecondary),
+                      title: Text('添加位置',
+                          style: TextStyle(color: sem.textPrimary)),
                       onTap: () {}),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: sem.divider),
                   ListTile(
-                      leading: const Icon(Icons.notifications_none_outlined),
-                      title: const Text('提醒谁看'),
+                      leading: Icon(Icons.notifications_none_outlined,
+                          color: sem.textSecondary),
+                      title: Text('提醒谁看',
+                          style: TextStyle(color: sem.textPrimary)),
                       onTap: () {}),
                 ],
               ),

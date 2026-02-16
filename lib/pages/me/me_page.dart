@@ -6,7 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'settings_page.dart';
 import 'profile_settings_page.dart';
 import '../../services/storage_service.dart';
-import '../diary/diary_bookshelf_page.dart'; // ✅ 已修正路径
+import '../diary/diary_bookshelf_page.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class MePage extends StatefulWidget {
   const MePage({super.key});
@@ -31,7 +32,7 @@ class _MePageState extends State<MePage> {
   Future<void> _loadUserData() async {
     final avatarPath = await _storage.getUserAvatarPath();
     final name = await _storage.getUserName();
-    
+
     setState(() {
       _userAvatarPath = avatarPath;
       _userName = name;
@@ -46,21 +47,21 @@ class _MePageState extends State<MePage> {
         maxHeight: 800,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         setState(() {
           _isLoadingAvatar = true;
         });
-        
+
         final newPath = await _storage.copyUserAvatarToAppDir(image.path);
-        
+
         await _storage.saveUserAvatarPath(newPath);
-        
+
         setState(() {
           _userAvatarPath = newPath;
           _isLoadingAvatar = false;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -77,12 +78,12 @@ class _MePageState extends State<MePage> {
       setState(() {
         _isLoadingAvatar = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('选择头像失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.themeColor(app_theme.ColorSemantic.error),
           ),
         );
       }
@@ -91,8 +92,8 @@ class _MePageState extends State<MePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final sem = context.sem;
+
     return ListView(
       children: [
         // 用户信息卡片
@@ -106,7 +107,7 @@ class _MePageState extends State<MePage> {
             });
           },
           child: Container(
-            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            color: sem.surface,
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
             child: Row(
               children: [
@@ -116,12 +117,13 @@ class _MePageState extends State<MePage> {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor: sem.primary,
                         backgroundImage: _userAvatarPath != null
                             ? FileImage(File(_userAvatarPath!))
                             : null,
                         child: _userAvatarPath == null
-                            ? const Icon(Icons.person, size: 36, color: Colors.white)
+                            ? const Icon(Icons.person,
+                                size: 36, color: Colors.white)
                             : null,
                       ),
                       if (_isLoadingAvatar)
@@ -132,7 +134,8 @@ class _MePageState extends State<MePage> {
                               borderRadius: BorderRadius.circular(32),
                             ),
                             child: const Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
                             ),
                           ),
                         ),
@@ -146,43 +149,50 @@ class _MePageState extends State<MePage> {
                     children: [
                       Text(
                         _userName,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: sem.textPrimary),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         "ID: likeme",
-                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey, fontSize: 14),
+                        style:
+                            TextStyle(color: sem.textSecondary, fontSize: 14),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey),
+                Icon(Icons.chevron_right, color: sem.textSecondary),
               ],
             ),
           ),
         ),
         const SizedBox(height: 10),
-      
+
         // 功能列表
-        _buildListTile(Icons.wechat_outlined, "记录", Colors.green, context),
-        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.collections_bookmark_outlined, "收藏·碎碎念", Colors.orange, context),
-        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.photo_outlined, "书架", Colors.blue, context),
-        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.credit_card_outlined, "结婚纪念日", Colors.blueAccent, context),
-        Divider(height: 1, indent: 60, color: isDark ? Colors.grey[800] : Colors.grey[200]),
-        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情不好·日记本", Colors.amber, context),
-        
+        _buildListTile(Icons.wechat_outlined, "记录", sem.success, context),
+        Divider(height: 1, indent: 60, color: sem.divider),
+        _buildListTile(Icons.collections_bookmark_outlined, "收藏·碎碎念",
+            sem.warning, context),
+        Divider(height: 1, indent: 60, color: sem.divider),
+        _buildListTile(Icons.photo_outlined, "书架", sem.info, context),
+        Divider(height: 1, indent: 60, color: sem.divider),
+        _buildListTile(Icons.credit_card_outlined, "结婚纪念日", sem.info, context),
+        Divider(height: 1, indent: 60, color: sem.divider),
+        _buildListTile(Icons.sentiment_satisfied_alt_outlined, "心情不好·日记本",
+            sem.warning, context),
+
         const SizedBox(height: 10),
-      
+
         // 设置入口
         Container(
-          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          color: sem.surface,
           child: ListTile(
-            leading: Icon(Icons.settings_outlined, color: isDark ? Colors.grey[400] : Colors.blueGrey),
-            title: Text("设置", style: TextStyle(color: isDark ? Colors.white : Colors.black)),
-            trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
+            leading: Icon(Icons.settings_outlined, color: sem.textSecondary),
+            title: Text("设置", style: TextStyle(color: sem.textPrimary)),
+            trailing:
+                Icon(Icons.chevron_right, color: sem.textSecondary, size: 20),
             onTap: () {
               Navigator.push(
                 context,
@@ -195,24 +205,23 @@ class _MePageState extends State<MePage> {
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, Color iconColor, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildListTile(
+      IconData icon, String title, Color iconColor, BuildContext context) {
+    final sem = context.sem;
+
     return Container(
-      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      color: sem.surface,
       child: ListTile(
         leading: Icon(icon, color: iconColor),
-        title: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
-        trailing: Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.grey, size: 20),
+        title: Text(title, style: TextStyle(color: sem.textPrimary)),
+        trailing: Icon(Icons.chevron_right, color: sem.textSecondary, size: 20),
         onTap: () {
-          // 🎯 只针对"心情不好·日记本"跳转，并添加错误捕获
           if (title == "心情不好·日记本") {
             try {
-              // 添加调试输出
               if (kDebugMode) {
                 print('🎯 正在跳转到日记书架页面...');
               }
-              
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -227,27 +236,23 @@ class _MePageState extends State<MePage> {
                   print('❌ 跳转过程出错: $error');
                 }
               });
-              
             } catch (e, stackTrace) {
-              // 捕获并打印详细错误
               if (kDebugMode) {
                 print('💥 点击日记本时发生异常:');
                 print('错误类型: ${e.runtimeType}');
                 print('错误信息: $e');
                 print('堆栈跟踪: $stackTrace');
               }
-              
-              // 在界面上显示错误（红色提示）
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('打开日记本时出错: ${e.toString().split('\n').first}'),
-                  backgroundColor: Colors.red,
+                  backgroundColor: sem.error,
                   duration: const Duration(seconds: 5),
                 ),
               );
             }
           } else {
-            // 其他功能保持开发中提示
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('$title 功能开发中...'),

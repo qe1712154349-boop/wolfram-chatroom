@@ -6,6 +6,7 @@ import '../../providers/diary_provider.dart';
 import '../../models/diary_entry.dart';
 import 'diary_editor_page.dart';
 import 'diary_detail_page.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class DiaryBookshelfPage extends ConsumerWidget {
   const DiaryBookshelfPage({super.key});
@@ -18,11 +19,12 @@ class DiaryBookshelfPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFF5A7E),
-        title: const Text(
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
+        title: Text(
           '我的日记书架',
           style: TextStyle(
-            color: Colors.white,
+            color: context.themeColor(app_theme.ColorSemantic.appBarText),
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -31,7 +33,10 @@ class DiaryBookshelfPage extends ConsumerWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(
+              Icons.refresh,
+              color: context.themeColor(app_theme.ColorSemantic.appBarText),
+            ),
             onPressed: () => ref.invalidate(diaryListProvider),
             tooltip: '刷新',
           ),
@@ -39,13 +44,15 @@ class DiaryBookshelfPage extends ConsumerWidget {
       ),
       body: diariesAsync.when(
         data: (diaries) {
-          debugPrint('✅ 成功获取日记数据，数量: ${diaries.length}');
+          debugPrint('✅ 成功获取日记数据,数量: ${diaries.length}');
           return diaries.isEmpty
               ? _buildEmptyState(context, ref)
               : _buildBookshelfGrid(context, ref, diaries);
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF5A7E)),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: context.themeColor(app_theme.ColorSemantic.primary),
+          ),
         ),
         error: (error, stackTrace) {
           debugPrint('日记加载错误: $error\n$stackTrace');
@@ -53,11 +60,20 @@ class DiaryBookshelfPage extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: context.themeColor(app_theme.ColorSemantic.error),
+                ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   '加载日记失败',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        context.themeColor(app_theme.ColorSemantic.textPrimary),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Padding(
@@ -65,7 +81,10 @@ class DiaryBookshelfPage extends ConsumerWidget {
                   child: Text(
                     error.toString(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: context
+                          .themeColor(app_theme.ColorSemantic.textSecondary),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -73,8 +92,10 @@ class DiaryBookshelfPage extends ConsumerWidget {
                   icon: const Icon(Icons.refresh),
                   label: const Text('重试'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF5A7E),
-                    foregroundColor: Colors.white,
+                    backgroundColor: context
+                        .themeColor(app_theme.ColorSemantic.buttonPrimary),
+                    foregroundColor: context
+                        .themeColor(app_theme.ColorSemantic.buttonPrimaryText),
                   ),
                   onPressed: () => ref.invalidate(diaryListProvider),
                 ),
@@ -84,8 +105,10 @@ class DiaryBookshelfPage extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFFF5A7E),
-        foregroundColor: Colors.white,
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.buttonPrimary),
+        foregroundColor:
+            context.themeColor(app_theme.ColorSemantic.buttonPrimaryText),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         elevation: 6,
         onPressed: () {
@@ -93,7 +116,6 @@ class DiaryBookshelfPage extends ConsumerWidget {
             context,
             MaterialPageRoute(builder: (_) => const DiaryEditorPage()),
           ).then((_) {
-            // 修复点1: 使用闭包捕获 ref + mounted 检查
             if (context.mounted) {
               ref.invalidate(diaryListProvider);
             }
@@ -109,33 +131,46 @@ class DiaryBookshelfPage extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.menu_book_outlined, size: 120, color: Colors.grey[400]),
+          Icon(
+            Icons.menu_book_outlined,
+            size: 120,
+            color: context.themeColor(app_theme.ColorSemantic.textHint),
+          ),
           const SizedBox(height: 24),
           Text(
             '日记书架空空如也',
-            style: TextStyle(fontSize: 22, color: Colors.grey[700], fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 22,
+              color: context.themeColor(app_theme.ColorSemantic.textSecondary),
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
             '点击右下角 + 开始记录你的心情吧',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 16,
+              color: context.themeColor(app_theme.ColorSemantic.textSecondary),
+            ),
           ),
           const SizedBox(height: 40),
           ElevatedButton.icon(
             icon: const Icon(Icons.edit),
             label: const Text('写第一篇日记'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5A7E),
-              foregroundColor: Colors.white,
+              backgroundColor:
+                  context.themeColor(app_theme.ColorSemantic.buttonPrimary),
+              foregroundColor:
+                  context.themeColor(app_theme.ColorSemantic.buttonPrimaryText),
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
             ),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DiaryEditorPage()),
               ).then((_) {
-                // 修复点2: 同上，捕获 ref + mounted
                 if (context.mounted) {
                   ref.invalidate(diaryListProvider);
                 }
@@ -147,7 +182,8 @@ class DiaryBookshelfPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildBookshelfGrid(BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
+  Widget _buildBookshelfGrid(
+      BuildContext context, WidgetRef ref, List<DiaryEntry> diaries) {
     return GridView.builder(
       padding: const EdgeInsets.all(20),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -164,14 +200,14 @@ class DiaryBookshelfPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildDiaryCard(BuildContext context, WidgetRef ref, DiaryEntry entry) {
+  Widget _buildDiaryCard(
+      BuildContext context, WidgetRef ref, DiaryEntry entry) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => DiaryDetailPage(entry: entry)),
         ).then((_) {
-          // 修复点3: 同上，捕获 ref + mounted
           if (context.mounted) {
             ref.invalidate(diaryListProvider);
           }
@@ -179,10 +215,19 @@ class DiaryBookshelfPage extends ConsumerWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.black, width: 3),
+          border: Border.all(
+            color: context.themeColor(app_theme.ColorSemantic.border),
+            width: 3,
+          ),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(4, 6)),
+          boxShadow: [
+            BoxShadow(
+              color: context
+                  .themeColor(app_theme.ColorSemantic.border)
+                  .withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(4, 6),
+            ),
           ],
         ),
         child: ClipRRect(
@@ -198,10 +243,11 @@ class DiaryBookshelfPage extends ConsumerWidget {
                 return Image.file(
                   File(snapshot.data!),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _buildFallbackCover(entry),
+                  errorBuilder: (_, __, ___) =>
+                      _buildFallbackCover(context, entry),
                 );
               }
-              return _buildFallbackCover(entry);
+              return _buildFallbackCover(context, entry);
             },
           ),
         ),
@@ -209,9 +255,11 @@ class DiaryBookshelfPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildFallbackCover(DiaryEntry entry) {
+  Widget _buildFallbackCover(BuildContext context, DiaryEntry entry) {
     Color parseColor(String? hex) {
-      if (hex == null || hex.isEmpty) return const Color(0xFFBAE1FF);
+      if (hex == null || hex.isEmpty) {
+        return context.themeColor(app_theme.ColorSemantic.primaryContainer);
+      }
       final clean = hex.replaceAll('#', '');
       return Color(int.parse(clean, radix: 16) | 0xFF000000);
     }
@@ -237,7 +285,13 @@ class DiaryBookshelfPage extends ConsumerWidget {
                 fontSize: 36,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                shadows: [Shadow(blurRadius: 6, color: Colors.black45, offset: Offset(2, 2))],
+                shadows: [
+                  Shadow(
+                    blurRadius: 6,
+                    color: Colors.black45,
+                    offset: Offset(2, 2),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 8),

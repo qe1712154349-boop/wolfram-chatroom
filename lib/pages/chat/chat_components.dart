@@ -1,8 +1,7 @@
-// lib/pages/chat/chat_components.dart - 完整修复版（Material 3 规范 + 动态主题响应）
+// lib/pages/chat/chat_components.dart - 完整迁移到新主题系统
 import 'package:flutter/material.dart';
 import 'dart:io';
-// 添加这行导入
-import '../../theme/extensions/context_extensions.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class ReceivedMessage extends StatelessWidget {
   final String text;
@@ -16,10 +15,6 @@ class ReceivedMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
@@ -32,9 +27,12 @@ class ReceivedMessage extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: cs.surfaceContainerHighest,
+              color: context
+                  .themeColor(app_theme.ColorSemantic.surfaceContainerHighest),
               border: Border.all(
-                color: cs.outline.withAlpha(77), // 0.3 透明
+                color: context
+                    .themeColor(app_theme.ColorSemantic.border)
+                    .withOpacity(0.3),
                 width: 1,
               ),
             ),
@@ -47,7 +45,8 @@ class ReceivedMessage extends StatelessWidget {
                   ? Icon(
                       Icons.person,
                       size: 18,
-                      color: cs.primary,
+                      color:
+                          context.themeColor(app_theme.ColorSemantic.primary),
                     )
                   : null,
             ),
@@ -61,7 +60,7 @@ class ReceivedMessage extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest,
+                color: context.aiBubbleBackground,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(18),
@@ -69,7 +68,7 @@ class ReceivedMessage extends StatelessWidget {
                   bottomRight: Radius.circular(18),
                 ),
                 border: Border.all(
-                  color: cs.outline.withAlpha(77),
+                  color: context.aiBubbleBorder,
                   width: 1,
                 ),
               ),
@@ -77,7 +76,7 @@ class ReceivedMessage extends StatelessWidget {
                 text,
                 style: TextStyle(
                   fontSize: 16,
-                  color: cs.onSurface,
+                  color: context.aiBubbleText,
                   height: 1.4,
                   fontWeight: FontWeight.normal,
                 ),
@@ -104,10 +103,6 @@ class SentMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
@@ -123,7 +118,7 @@ class SentMessage extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: cs.primaryContainer,
+                color: context.userBubbleBackground,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(18),
                   topRight: Radius.circular(4),
@@ -131,16 +126,15 @@ class SentMessage extends StatelessWidget {
                   bottomRight: Radius.circular(18),
                 ),
                 border: Border.all(
-                  color: cs.outline.withAlpha(77),
+                  color: context.userBubbleBorder,
                   width: 1,
                 ),
               ),
               child: Text(
                 text,
-// 修改后：
                 style: TextStyle(
                   fontSize: 16,
-                  color: context.userBubbleText, // ← 使用新系统
+                  color: context.userBubbleText,
                   height: 1.4,
                   fontWeight: FontWeight.normal,
                 ),
@@ -148,16 +142,19 @@ class SentMessage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // 用户头像（根据设置显示或隐藏）
+          // 用户头像
           if (showUserAvatar)
             Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: cs.surfaceContainerHighest,
+                color: context.themeColor(
+                    app_theme.ColorSemantic.surfaceContainerHighest),
                 border: Border.all(
-                  color: cs.outline.withAlpha(77),
+                  color: context
+                      .themeColor(app_theme.ColorSemantic.border)
+                      .withOpacity(0.3),
                   width: 1,
                 ),
               ),
@@ -171,7 +168,8 @@ class SentMessage extends StatelessWidget {
                     ? Icon(
                         Icons.person_outline,
                         size: 18,
-                        color: cs.primary,
+                        color:
+                            context.themeColor(app_theme.ColorSemantic.primary),
                       )
                     : null,
               ),
@@ -192,23 +190,21 @@ class SystemTimeMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: context.aiBubbleBackground, // ← 使用新系统
+            color: context
+                .themeColor(app_theme.ColorSemantic.surfaceContainerHighest),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: cs.onSurfaceVariant,
+              color: context.themeColor(app_theme.ColorSemantic.textSecondary),
               fontWeight: FontWeight.w500,
               letterSpacing: 0.3,
             ),
@@ -233,9 +229,6 @@ class NarrationMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
       child: Align(
@@ -253,10 +246,15 @@ class NarrationMessage extends StatelessWidget {
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: isAI ? cs.primaryContainer : cs.surfaceContainerHighest,
+            color: isAI
+                ? context.themeColor(app_theme.ColorSemantic.primaryContainer)
+                : context.themeColor(
+                    app_theme.ColorSemantic.surfaceContainerHighest),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: cs.outline.withAlpha(77),
+              color: context
+                  .themeColor(app_theme.ColorSemantic.border)
+                  .withOpacity(0.3),
               width: 1,
             ),
           ),
@@ -264,7 +262,10 @@ class NarrationMessage extends StatelessWidget {
             text.trim(),
             style: TextStyle(
               fontSize: 13,
-              color: isAI ? cs.onPrimaryContainer : cs.onSurfaceVariant,
+              color: isAI
+                  ? context
+                      .themeColor(app_theme.ColorSemantic.onPrimaryContainer)
+                  : context.themeColor(app_theme.ColorSemantic.textSecondary),
               fontStyle: FontStyle.italic,
               height: 1.4,
               fontWeight: FontWeight.w400,

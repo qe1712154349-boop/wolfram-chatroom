@@ -1,5 +1,6 @@
-// lib/pages/entrance/entrance_main_page.dart - 完整替换
+// lib/pages/entrance/entrance_main_page.dart
 import 'package:flutter/material.dart';
+import '../../theme/theme.dart' as app_theme;
 import 'moments_detail_page.dart';
 
 class EntranceMainPage extends StatelessWidget {
@@ -7,36 +8,39 @@ class EntranceMainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final sem = context.sem;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: sem.background,
       body: Column(
         children: [
           Container(
             height: MediaQuery.of(context).padding.top + 100,
-            color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFFE4E9),
+            color: sem.primary.withOpacity(0.15),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    Icon(Icons.search, color: isDark ? Colors.grey[400] : Colors.white70, size: 28),
+                    Icon(Icons.search, color: sem.textSecondary, size: 28),
                     const Spacer(),
                     InkWell(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MomentsDetailPage()));
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const MomentsDetailPage()));
                       },
                       child: Row(
                         children: [
-                          Text("朋友圈", 
+                          Text("朋友圈",
                               style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black87, 
-                                fontSize: 18, 
-                                fontWeight: FontWeight.bold
+                                color: sem.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               )),
                           const SizedBox(width: 8),
-                          Icon(Icons.chevron_right, color: isDark ? Colors.grey[400] : Colors.black54),
+                          Icon(Icons.chevron_right, color: sem.textSecondary),
                         ],
                       ),
                     ),
@@ -51,8 +55,8 @@ class EntranceMainPage extends StatelessWidget {
                 "这里是入口页面\n后续功能可以在这里添加",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 18, 
-                  color: isDark ? Colors.grey[400] : Colors.grey
+                  fontSize: 18,
+                  color: sem.textSecondary,
                 ),
               ),
             ),

@@ -1,10 +1,11 @@
-// lib/pages/chat/chat_list_page.dart - 完整 Riverpod 版本
+// lib/pages/chat/chat_list_page.dart - 完整迁移到新主题系统
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'chat_room_page.dart';
 import 'chat_character_edit_page.dart';
 import '../../providers/chat_provider.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class ChatListPage extends ConsumerWidget {
   const ChatListPage({super.key});
@@ -13,23 +14,26 @@ class ChatListPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final characterAsync = ref.watch(chatCharacterProvider);
     final lastMsgAsync = ref.watch(lastMessageProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: context.themeColor(app_theme.ColorSemantic.background),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
         elevation: 0,
         title: Text(
           "聊天",
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF4A4A4A),
+            color: context.themeColor(app_theme.ColorSemantic.appBarText),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          Icon(Icons.search, color: Theme.of(context).primaryColor),
+          Icon(
+            Icons.search,
+            color: context.themeColor(app_theme.ColorSemantic.primary),
+          ),
         ],
       ),
       body: characterAsync.when(
@@ -40,7 +44,6 @@ class ChatListPage extends ConsumerWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const ChatRoomPage()),
               ).then((_) {
-                // 返回时刷新数据
                 ref.invalidate(chatCharacterProvider);
                 ref.invalidate(lastMessageProvider);
                 ref.invalidate(chatMessagesProvider);
@@ -51,19 +54,20 @@ class ChatListPage extends ConsumerWidget {
                   MaterialPageRoute(
                       builder: (_) => const ChatCharacterEditPage()),
                 ).then((_) {
-                  // 返回时刷新角色数据
                   ref.invalidate(chatCharacterProvider);
                 }),
                 child: CircleAvatar(
                   radius: 28,
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: context
+                      .themeColor(app_theme.ColorSemantic.primaryContainer),
                   backgroundImage: character.avatarPath != null
                       ? FileImage(File(character.avatarPath!))
                       : null,
                   child: character.avatarPath == null
-                      ? const Icon(
+                      ? Icon(
                           Icons.person,
-                          color: Colors.white,
+                          color: context.themeColor(
+                              app_theme.ColorSemantic.onPrimaryContainer),
                           size: 32,
                         )
                       : null,
@@ -71,7 +75,11 @@ class ChatListPage extends ConsumerWidget {
               ),
               title: Text(
                 character.name,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color:
+                      context.themeColor(app_theme.ColorSemantic.textPrimary),
+                ),
               ),
               subtitle: lastMsgAsync.when(
                 data: (msg) => msg != null && msg.displayContent.isNotEmpty
@@ -80,7 +88,9 @@ class ChatListPage extends ConsumerWidget {
                             ? '${msg.displayContent.substring(0, 30)}...'
                             : msg.displayContent,
                         style: TextStyle(
-                            color: isDark ? Colors.grey[400] : Colors.grey),
+                          color: context.themeColor(
+                              app_theme.ColorSemantic.textSecondary),
+                        ),
                         overflow: TextOverflow.ellipsis,
                       )
                     : const SizedBox.shrink(),
@@ -96,14 +106,16 @@ class ChatListPage extends ConsumerWidget {
                           Text(
                             msg.timestamp,
                             style: TextStyle(
-                              color: isDark ? Colors.grey[400] : Colors.grey,
+                              color: context.themeColor(
+                                  app_theme.ColorSemantic.textSecondary),
                               fontSize: 12,
                             ),
                           ),
                           const SizedBox(height: 4),
                           CircleAvatar(
                             radius: 4,
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: context
+                                .themeColor(app_theme.ColorSemantic.primary),
                           ),
                         ],
                       )
@@ -115,11 +127,11 @@ class ChatListPage extends ConsumerWidget {
             Divider(
               height: 1,
               indent: 80,
-              color: isDark ? Colors.grey[800] : Colors.grey[200],
+              color: context.themeColor(app_theme.ColorSemantic.divider),
             ),
           ],
         ),
-        loading: () => const SizedBox.shrink(), // 因预热，几乎不会显示
+        loading: () => const SizedBox.shrink(),
         error: (error, stackTrace) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -127,7 +139,7 @@ class ChatListPage extends ConsumerWidget {
               Text(
                 '加载失败',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
+                  color: context.themeColor(app_theme.ColorSemantic.error),
                   fontSize: 16,
                 ),
               ),
@@ -136,6 +148,10 @@ class ChatListPage extends ConsumerWidget {
                 onPressed: () {
                   ref.invalidate(chatCharacterProvider);
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      context.themeColor(app_theme.ColorSemantic.buttonPrimary),
+                ),
                 child: const Text('重试'),
               ),
             ],

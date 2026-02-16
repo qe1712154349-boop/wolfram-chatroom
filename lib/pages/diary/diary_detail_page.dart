@@ -1,4 +1,3 @@
-//lib/pages/diary/diary_detail_page.dart
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -6,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/diary_provider.dart';
 import 'diary_editor_page.dart';
-import '../../models/diary_entry.dart'; // 确保这行存在且正确
+import '../../models/diary_entry.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class DiaryDetailPage extends ConsumerWidget {
   final DiaryEntry entry;
@@ -16,18 +16,37 @@ class DiaryDetailPage extends ConsumerWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除日记'),
-        content: const Text('确定要删除这篇日记吗？删除后无法恢复。'),
+        backgroundColor: context.themeColor(app_theme.ColorSemantic.surface),
+        title: Text(
+          '删除日记',
+          style: TextStyle(
+            color: context.themeColor(app_theme.ColorSemantic.textPrimary),
+          ),
+        ),
+        content: Text(
+          '确定要删除这篇日记吗？删除后无法恢复。',
+          style: TextStyle(
+            color: context.themeColor(app_theme.ColorSemantic.textSecondary),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(
+              '取消',
+              style: TextStyle(
+                color:
+                    context.themeColor(app_theme.ColorSemantic.textSecondary),
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
+            child: Text(
               '删除',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(
+                color: context.themeColor(app_theme.ColorSemantic.error),
+              ),
             ),
           ),
         ],
@@ -37,21 +56,21 @@ class DiaryDetailPage extends ConsumerWidget {
     if (result == true && context.mounted) {
       await ref.read(diaryListProvider.notifier).deleteDiary(entry);
       if (context.mounted) {
-        // ← 加 mounted 检查
         Navigator.pop(context);
       }
     }
-  } // ← 这是缺少的右大括号！把它添加到第 42 行后面
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFF5A7E),
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
         title: Text(
           DateFormat('yyyy年MM月dd日').format(entry.createdAt),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.themeColor(app_theme.ColorSemantic.appBarText),
             fontSize: 16,
           ),
         ),
@@ -59,7 +78,10 @@ class DiaryDetailPage extends ConsumerWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
+            icon: Icon(
+              Icons.edit,
+              color: context.themeColor(app_theme.ColorSemantic.appBarText),
+            ),
             onPressed: () {
               Navigator.push(
                 context,
@@ -71,56 +93,64 @@ class DiaryDetailPage extends ConsumerWidget {
             tooltip: '编辑',
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            icon: Icon(
+              Icons.delete_outline,
+              color: context.themeColor(app_theme.ColorSemantic.appBarText),
+            ),
             onPressed: () => _showDeleteDialog(context, ref),
             tooltip: '删除',
           ),
         ],
       ),
+      backgroundColor: context.themeColor(app_theme.ColorSemantic.background),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 封面预览
             _buildCoverPreview(context, ref),
             const SizedBox(height: 30),
-            // 日期和时间
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_today_outlined,
-                  color: Colors.grey,
+                  color:
+                      context.themeColor(app_theme.ColorSemantic.textSecondary),
                   size: 18,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   DateFormat('yyyy年MM月dd日 EEEE', 'zh_CN')
                       .format(entry.createdAt),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey,
+                    color: context
+                        .themeColor(app_theme.ColorSemantic.textSecondary),
                   ),
                 ),
                 const Spacer(),
-                const Icon(
+                Icon(
                   Icons.access_time_outlined,
-                  color: Colors.grey,
+                  color:
+                      context.themeColor(app_theme.ColorSemantic.textSecondary),
                   size: 18,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   DateFormat('HH:mm').format(entry.createdAt),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey,
+                    color: context
+                        .themeColor(app_theme.ColorSemantic.textSecondary),
                   ),
                 ),
               ],
             ),
-            const Divider(height: 30),
-            // 日记内容
-            _buildDiaryContent(),
+            Divider(
+              height: 30,
+              color: context.themeColor(app_theme.ColorSemantic.divider),
+            ),
+            _buildDiaryContent(context),
           ],
         ),
       ),
@@ -142,20 +172,25 @@ class DiaryDetailPage extends ConsumerWidget {
 
         final color1 = entry.coverColor1 != null
             ? parseColor(entry.coverColor1!)
-            : const Color(0xFFBAE1FF);
+            : context.themeColor(app_theme.ColorSemantic.primaryContainer);
         final color2 = entry.coverColor2 != null
             ? parseColor(entry.coverColor2!)
-            : const Color(0xFFFFB3BA);
+            : context.themeColor(app_theme.ColorSemantic.secondary);
 
         return Container(
           height: 200,
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!, width: 1),
+            border: Border.all(
+              color: context.themeColor(app_theme.ColorSemantic.border),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.3),
+                color: context
+                    .themeColor(app_theme.ColorSemantic.border)
+                    .withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -200,11 +235,10 @@ class DiaryDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildDiaryContent() {
+  Widget _buildDiaryContent(BuildContext context) {
     try {
       final contentJson = json.decode(entry.content);
       if (contentJson is List && contentJson.isNotEmpty) {
-        // 提取文本内容
         String text = '';
         for (var element in contentJson) {
           if (element is Map && element.containsKey('insert')) {
@@ -217,9 +251,10 @@ class DiaryDetailPage extends ConsumerWidget {
 
         return Text(
           text.trim(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             height: 1.6,
+            color: context.themeColor(app_theme.ColorSemantic.textPrimary),
           ),
         );
       }
@@ -229,9 +264,10 @@ class DiaryDetailPage extends ConsumerWidget {
 
     return Text(
       entry.content,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         height: 1.6,
+        color: context.themeColor(app_theme.ColorSemantic.textPrimary),
       ),
     );
   }

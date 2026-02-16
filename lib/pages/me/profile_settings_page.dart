@@ -117,7 +117,9 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isSuccess ? null : Colors.red,
+        backgroundColor: isSuccess
+            ? null
+            : context.themeColor(app_theme.ColorSemantic.error), // ✅ 改用语义颜色
         duration: Duration(seconds: isSuccess ? 2 : 3),
         behavior: SnackBarBehavior.floating,
       ),

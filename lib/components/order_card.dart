@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/theme.dart' as app_theme;
 
 class OrderCard extends StatelessWidget {
-  const OrderCard({  // 确保有 const 关键字
+  const OrderCard({
     super.key,
     required this.title,
     required this.subtitle,
@@ -18,31 +19,55 @@ class OrderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isLocked ? Colors.white : Colors.white.withValues(alpha:0.5),
+        color: isLocked
+            ? context.themeColor(app_theme.ColorSemantic.surface)
+            : context
+                .themeColor(app_theme.ColorSemantic.surface)
+                .withOpacity(0.5),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white),
+        border: Border.all(
+          color: context.themeColor(app_theme.ColorSemantic.border),
+        ),
       ),
       child: Row(
         children: [
-          Icon(isLocked ? Icons.lock_outline : Icons.check_circle, color: const Color(0xFFFFD1DC)),
+          Icon(
+            isLocked ? Icons.lock_outline : Icons.check_circle,
+            color: context.themeColor(app_theme.ColorSemantic.primaryContainer),
+          ),
           const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
+                Text(
+                  title,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     decoration: isLocked ? null : TextDecoration.lineThrough,
-                    color: isLocked ? Colors.black87 : Colors.grey,
-                  )),
+                    color: isLocked
+                        ? context
+                            .themeColor(app_theme.ColorSemantic.textPrimary)
+                        : context
+                            .themeColor(app_theme.ColorSemantic.textSecondary),
+                  ),
+                ),
                 if (subtitle.isNotEmpty)
-                  Text(subtitle, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: context.themeColor(app_theme.ColorSemantic.error),
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),
-          const Icon(Icons.radio_button_unchecked, color: Color(0xFFF2F2F2)),
+          Icon(
+            Icons.radio_button_unchecked,
+            color: context.themeColor(app_theme.ColorSemantic.surfaceVariant),
+          ),
         ],
       ),
     );

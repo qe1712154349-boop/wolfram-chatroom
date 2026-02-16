@@ -1,9 +1,9 @@
-//lib/pages/diary/diary_editor_page.dart
-import 'dart:convert';  // 修复1：改为 dart:convert
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/diary_provider.dart';
-import '../../models/diary_entry.dart';  // 修复2：添加 DiaryEntry 的导入
+import '../../models/diary_entry.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class DiaryEditorPage extends ConsumerStatefulWidget {
   const DiaryEditorPage({this.entry, super.key});
@@ -21,21 +21,17 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
   @override
   void initState() {
     super.initState();
-    
-    // 如果是编辑模式，加载现有内容
+
     if (widget.entry != null && widget.entry!.content.isNotEmpty) {
       try {
-        // 尝试解析 JSON 内容
         final contentJson = json.decode(widget.entry!.content);
         if (contentJson is List && contentJson.isNotEmpty) {
-          // 提取文本内容
           final text = _extractTextFromDelta(contentJson);
           _textController.text = text;
         } else {
           _textController.text = widget.entry!.content;
         }
       } catch (e) {
-        // 如果解析失败，直接显示原始内容
         _textController.text = widget.entry!.content;
       }
     }
@@ -63,14 +59,14 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
 
   Future<void> _saveDiary() async {
     if (_isSaving) return;
-    
+
     final text = _textController.text.trim();
-    
+
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('日记内容不能为空'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('日记内容不能为空'),
+          backgroundColor: context.themeColor(app_theme.ColorSemantic.warning),
         ),
       );
       return;
@@ -81,33 +77,29 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
     });
 
     try {
-      // 创建一个简单的 Delta JSON
       final deltaJson = [
         {'insert': '$text\n'}
       ];
       final contentStr = json.encode(deltaJson);
 
       if (widget.entry != null) {
-        // 更新现有日记
         await ref.read(diaryListProvider.notifier).updateDiary(
               widget.entry!,
               contentStr,
             );
       } else {
-        // 创建新日记
         await ref.read(diaryListProvider.notifier).addDiary(contentStr);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                widget.entry != null ? '日记已更新' : '日记已保存'),
-            backgroundColor: const Color(0xFF4CAF50),
+            content: Text(widget.entry != null ? '日记已更新' : '日记已保存'),
+            backgroundColor:
+                context.themeColor(app_theme.ColorSemantic.success),
           ),
         );
-        
-        // 保存成功后返回
+
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) Navigator.pop(context);
       }
@@ -116,7 +108,7 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('保存失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.themeColor(app_theme.ColorSemantic.error),
           ),
         );
       }
@@ -133,11 +125,12 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFF5A7E),
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
         title: Text(
           widget.entry != null ? '编辑日记' : '写日记',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.themeColor(app_theme.ColorSemantic.appBarText),
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -146,27 +139,32 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
         elevation: 0,
         actions: [
           if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
               child: Center(
                 child: SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color:
+                        context.themeColor(app_theme.ColorSemantic.appBarText),
                   ),
                 ),
               ),
             )
           else
             IconButton(
-              icon: const Icon(Icons.save, color: Colors.white),
+              icon: Icon(
+                Icons.save,
+                color: context.themeColor(app_theme.ColorSemantic.appBarText),
+              ),
               onPressed: _saveDiary,
               tooltip: '保存',
             ),
         ],
       ),
+      backgroundColor: context.themeColor(app_theme.ColorSemantic.background),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -174,9 +172,11 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.themeColor(app_theme.ColorSemantic.surface),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(
+                    color: context.themeColor(app_theme.ColorSemantic.border),
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -187,14 +187,19 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
                     expands: true,
                     keyboardType: TextInputType.multiline,
                     textAlignVertical: TextAlignVertical.top,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: '今天发生了什么？写下你的心情...',
-                      hintStyle: TextStyle(color: Colors.grey),
+                      hintStyle: TextStyle(
+                        color: context
+                            .themeColor(app_theme.ColorSemantic.textHint),
+                      ),
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       height: 1.5,
+                      color: context
+                          .themeColor(app_theme.ColorSemantic.textPrimary),
                     ),
                   ),
                 ),
@@ -205,8 +210,10 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5A7E),
-                  foregroundColor: Colors.white,
+                  backgroundColor:
+                      context.themeColor(app_theme.ColorSemantic.buttonPrimary),
+                  foregroundColor: context
+                      .themeColor(app_theme.ColorSemantic.buttonPrimaryText),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -214,17 +221,19 @@ class _DiaryEditorPageState extends ConsumerState<DiaryEditorPage> {
                 ),
                 onPressed: _saveDiary,
                 child: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: context.themeColor(
+                              app_theme.ColorSemantic.buttonPrimaryText),
                         ),
                       )
                     : const Text(
                         '保存日记',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
             ),

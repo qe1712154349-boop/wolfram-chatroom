@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/theme.dart' as app_theme;
 
 class MoodDay extends StatelessWidget {
-  const MoodDay({  // 确保有 const 关键字
+  const MoodDay({
     super.key,
     required this.day,
     required this.emoji,
@@ -16,16 +17,27 @@ class MoodDay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(day, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(
+          day,
+          style: TextStyle(
+            color: context.themeColor(app_theme.ColorSemantic.textSecondary),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: hasMood ? const Color(0xFFFFD1DC) : Colors.grey[200],
+            color: hasMood
+                ? context.themeColor(app_theme.ColorSemantic.primaryContainer)
+                : context.themeColor(app_theme.ColorSemantic.surfaceVariant),
             shape: BoxShape.circle,
           ),
-          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
+          child: Center(
+            child: Text(emoji, style: const TextStyle(fontSize: 24)),
+          ),
         ),
       ],
     );
