@@ -12,7 +12,7 @@ import 'utils/logger.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'theme/core/color_resolver.dart';
 import 'theme/core/color_semantics.dart';
-import 'theme/core/theme_state.dart'; // 🆕 加这一行
+import 'theme/core/theme_state.dart';
 import 'theme/providers/app_theme_provider.dart';
 import 'theme/extensions/semantic_colors_extension.dart';
 import 'theme/providers/brightness_provider.dart';
@@ -105,13 +105,11 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     }
   }
 
-  // 🔥 关键：监听系统亮度变化
   @override
   void didChangePlatformBrightness() {
     super.didChangePlatformBrightness();
 
     if (mounted) {
-      // 用更底层的 View API（绕过 MIUI bug）
       final viewBrightness =
           View.of(context).platformDispatcher.platformBrightness;
 
@@ -141,6 +139,14 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     }
   }
 
+  /// ✅ 辅助方法：从 themeState 解析颜色
+  Color _resolve(ThemeState themeState, ColorSemantic semantic) {
+    return ColorResolver.resolve(
+      themeState: themeState,
+      semantic: semantic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     log.i('🎨 [build] 重新构建');
@@ -148,45 +154,57 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     final themeState = ref.watch(appThemeProvider);
     final effectiveBrightness = themeState.effectiveBrightness;
 
-    final primaryColor = ColorResolver.resolve(
-      themeState: themeState,
-      semantic: ColorSemantic.primary,
-    );
+    // ✅ 从主题系统统一获取颜色
+    final primaryColor = _resolve(themeState, ColorSemantic.primary);
+    final backgroundColor = _resolve(themeState, ColorSemantic.background);
+    final surfaceColor = _resolve(themeState, ColorSemantic.surface);
+    final textPrimaryColor = _resolve(themeState, ColorSemantic.textPrimary);
+    final textSecondaryColor =
+        _resolve(themeState, ColorSemantic.textSecondary);
+    final errorColor = _resolve(themeState, ColorSemantic.error);
 
     final semanticColors = AppSemanticColors.fromThemeState(themeState);
 
-    final currentTheme = effectiveBrightness == Brightness.light
-        ? ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: primaryColor,
-              brightness: Brightness.light,
-            ),
-            extensions: <ThemeExtension<dynamic>>[semanticColors],
-          )
-        : ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.dark,
-            colorScheme: ColorScheme.dark(
-              primary: const Color(0xFFEE537D), // ✅ 选中的颜色
+    // ✅ 亮色和暗色都用主题系统的颜色构建
+    final currentTheme = ThemeData(
+      useMaterial3: true,
+      brightness: effectiveBrightness,
+      colorScheme: effectiveBrightness == Brightness.light
+          ? ColorScheme.light(
+              primary: primaryColor,
               onPrimary: Colors.white,
               secondary: primaryColor.withOpacity(0.7),
               onSecondary: Colors.white,
-              surface: const Color(0xFF1A1A1A),
-              onSurface: Colors.white,
-              background: const Color(0xFF060405),
-              onBackground: Colors.white,
-              error: const Color(0xFFEF5350),
+              surface: surfaceColor,
+              onSurface: textPrimaryColor,
+              error: errorColor,
+              onError: Colors.white,
+            )
+          : ColorScheme.dark(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              secondary: primaryColor.withOpacity(0.7),
+              onSecondary: Colors.white,
+              surface: surfaceColor,
+              onSurface: textPrimaryColor,
+              error: errorColor,
               onError: Colors.white,
             ),
-            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-              selectedItemColor: Color(0xFFEE537D), // ✅ 选中
-              unselectedItemColor: Color(0xFFBCB8B9), // ✅ 未选中
-              backgroundColor: Color(0xFF1A1A1A),
-            ),
-            extensions: <ThemeExtension<dynamic>>[semanticColors],
-          );
+      scaffoldBackgroundColor: backgroundColor, // ✅ 关键：统一背景色
+      appBarTheme: AppBarTheme(
+        backgroundColor: _resolve(themeState, ColorSemantic.appBarBackground),
+        foregroundColor: _resolve(themeState, ColorSemantic.appBarText),
+        elevation: 0,
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        selectedItemColor: primaryColor, // ✅ 选中用主色
+        unselectedItemColor: textSecondaryColor, // ✅ 未选中用次要文字色
+        backgroundColor: surfaceColor, // ✅ 底栏背景用表面色
+      ),
+      dividerColor: _resolve(themeState, ColorSemantic.divider),
+      cardColor: surfaceColor,
+      extensions: <ThemeExtension<dynamic>>[semanticColors],
+    );
 
     final finalThemeMode = switch (effectiveBrightness) {
       Brightness.light => ThemeMode.light,

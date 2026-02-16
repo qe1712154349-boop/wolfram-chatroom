@@ -1,8 +1,9 @@
-// lib/pages/chat/chat_room_settings_page.dart - 修复版
+// lib/pages/chat/chat_room_settings_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
+import '../../theme/theme.dart' as app_theme;
 import 'chat_backup_migrate_page.dart';
 
 class ChatRoomSettingsPage extends ConsumerStatefulWidget {
@@ -27,7 +28,6 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   @override
   void initState() {
     super.initState();
-    // 异步加载头像，避免阻塞UI线程
     _avatarImageFuture = _loadAvatarImage();
   }
 
@@ -35,7 +35,6 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
     if (widget.avatarPath == null) return null;
 
     try {
-      // 异步检查文件是否存在
       final file = File(widget.avatarPath!);
       final exists = await file.exists();
       if (exists && file.statSync().size > 0) {
@@ -48,15 +47,13 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   }
 
   Future<void> _clearChatHistory() async {
-    // 优化：使用更轻量的对话框
     final bool? confirm = await showDialog<bool>(
       context: context,
-      barrierDismissible: true, // 允许点击外部关闭
+      barrierDismissible: true,
       builder: (context) => _buildConfirmationDialog(context),
     );
 
     if (confirm == true) {
-      // ✅ 修复：删除有问题的 Overlay 代码
       await _storage.clearChatHistory();
 
       if (mounted) {
@@ -66,30 +63,30 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   }
 
   Widget _buildConfirmationDialog(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final sem = context.sem;
 
     return AlertDialog(
-      backgroundColor: cs.surface,
+      backgroundColor: sem.surface,
       title: Text(
         "清空聊天记录",
-        style: TextStyle(color: cs.onSurface),
+        style: TextStyle(color: sem.textPrimary),
       ),
       content: Text(
         "确定要清空所有聊天记录吗？此操作不可恢复。",
-        style: TextStyle(color: cs.onSurfaceVariant),
+        style: TextStyle(color: sem.textSecondary),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(
             "取消",
-            style: TextStyle(color: cs.onSurfaceVariant),
+            style: TextStyle(color: sem.textSecondary),
           ),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
           style: TextButton.styleFrom(
-            foregroundColor: cs.error,
+            foregroundColor: sem.error,
           ),
           child: const Text("清空"),
         ),
@@ -99,47 +96,47 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 关键修复：直接使用 Theme.of(context)，不再使用 pageThemeProvider
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final sem = context.sem;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: sem.background,
       appBar: AppBar(
-        backgroundColor: cs.surface,
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: cs.onSurface),
+          icon: Icon(Icons.arrow_back, color: sem.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           "${widget.characterName} 设置",
           style: TextStyle(
-            color: cs.onSurface,
+            color: sem.textPrimary,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
       ),
-      body: _buildBody(cs),
+      body: _buildBody(context),
     );
   }
 
-  Widget _buildBody(ColorScheme cs) {
+  Widget _buildBody(BuildContext context) {
+    final sem = context.sem;
+
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      // 添加缓存和预加载优化
       cacheExtent: 500,
       children: [
-        // 头像和名称展示 - 使用 FutureBuilder 异步加载
+        // 头像和名称展示
         Container(
           padding: const EdgeInsets.all(20),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
+            color: sem.surface,
             borderRadius: BorderRadius.circular(16),
-          ), // 移除阴影减少渲染开销
+          ),
           child: Row(
             children: [
               FutureBuilder<FileImage?>(
@@ -147,13 +144,20 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
                 builder: (context, snapshot) {
                   return CircleAvatar(
                     radius: 32,
-                    backgroundColor: cs.primaryContainer,
+                    backgroundColor: context
+                        .themeColor(app_theme.ColorSemantic.primaryContainer),
                     backgroundImage: snapshot.data,
                     child: snapshot.connectionState == ConnectionState.waiting
-                        ? const CircularProgressIndicator(strokeWidth: 3)
+                        ? CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(sem.primary),
+                          )
                         : widget.avatarPath == null
                             ? Icon(Icons.person,
-                                size: 36, color: cs.onPrimaryContainer)
+                                size: 36,
+                                color: context.themeColor(
+                                    app_theme.ColorSemantic.onPrimaryContainer))
                             : null,
                   );
                 },
@@ -168,7 +172,7 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: cs.onSurface,
+                        color: sem.textPrimary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -176,47 +180,46 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
                     const SizedBox(height: 4),
                     Text(
                       "AI角色设置",
-                      style: TextStyle(color: cs.onSurfaceVariant),
+                      style: TextStyle(color: sem.textSecondary),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.edit, color: cs.primary),
+                icon: Icon(Icons.edit, color: sem.primary),
                 onPressed: () => _editCharacter(),
               ),
             ],
           ),
         ),
 
-        // 设置选项 - 使用 const 构造函数优化
         const SizedBox(height: 8),
         _buildSettingItem(
           icon: Icons.delete_outline,
           title: "清空聊天记录",
           subtitle: "删除所有聊天消息",
-          color: cs.error,
+          color: sem.error,
           onTap: _clearChatHistory,
         ),
         _buildSettingItem(
           icon: Icons.block,
           title: "屏蔽此角色",
           subtitle: "不再接收来自此角色的消息",
-          color: cs.onSurfaceVariant,
+          color: sem.textSecondary,
           onTap: _blockCharacter,
         ),
         _buildSettingItem(
           icon: Icons.report_problem,
           title: "举报",
           subtitle: "举报此角色存在不当内容",
-          color: cs.errorContainer,
+          color: sem.warning,
           onTap: _reportCharacter,
         ),
         _buildSettingItem(
           icon: Icons.cloud_download,
           title: "聊天记录迁移与备份",
           subtitle: "导出/导入人设与消息，防丢失",
-          color: cs.primary,
+          color: sem.primary,
           onTap: _navigateToBackup,
         ),
       ],
@@ -230,14 +233,14 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    final cs = Theme.of(context).colorScheme;
+    final sem = context.sem;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
+        color: sem.surface,
         borderRadius: BorderRadius.circular(12),
-      ), // 移除阴影
+      ),
       child: ListTile(
         leading: Container(
           width: 40,
@@ -252,37 +255,29 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
           title,
           style: TextStyle(
             fontWeight: FontWeight.w500,
-            color: cs.onSurface,
+            color: sem.textPrimary,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          style: TextStyle(fontSize: 12, color: sem.textSecondary),
         ),
         trailing:
-            Icon(Icons.arrow_forward_ios, size: 16, color: cs.onSurfaceVariant),
+            Icon(Icons.arrow_forward_ios, size: 16, color: sem.textSecondary),
         onTap: () {
-          // 添加轻微延迟，避免连续点击
           Future.delayed(const Duration(milliseconds: 100), onTap);
         },
       ),
     );
   }
 
-  void _editCharacter() {
-    // 实现编辑角色逻辑
-  }
+  void _editCharacter() {}
 
-  void _blockCharacter() {
-    // 实现屏蔽角色逻辑
-  }
+  void _blockCharacter() {}
 
-  void _reportCharacter() {
-    // 实现举报逻辑
-  }
+  void _reportCharacter() {}
 
   void _navigateToBackup() {
-    // 使用简单的 MaterialPageRoute，避免复杂动画
     Navigator.push(
       context,
       MaterialPageRoute(

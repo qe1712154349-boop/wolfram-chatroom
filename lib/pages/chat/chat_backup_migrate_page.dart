@@ -1,8 +1,10 @@
+// lib/pages/chat/chat_backup_migrate_page.dart
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // 添加 Clipboard 支持
+import 'package:flutter/services.dart';
 import '../../services/export_service.dart';
 import '../../services/storage_service.dart';
+import '../../theme/theme.dart' as app_theme;
 
 class ChatBackupMigratePage extends StatefulWidget {
   final String characterName;
@@ -19,26 +21,23 @@ class ChatBackupMigratePage extends StatefulWidget {
 class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryPink = const Color(0xFFFF5A7E);
-    final lightPinkBg = const Color(0xFFFFF0F5);
-    final cardBg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final sem = context.sem;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0A0A0A) : lightPinkBg,
+      backgroundColor: sem.background,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF111111) : Colors.white,
+        backgroundColor:
+            context.themeColor(app_theme.ColorSemantic.appBarBackground),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: isDark ? Colors.white : Colors.black87),
+          icon: Icon(Icons.arrow_back_ios_new, color: sem.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           '聊天记录迁移与备份',
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontSize: 16, // 调整为16px
+            color: sem.textPrimary,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -53,13 +52,11 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: cardBg,
+                color: sem.surface,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.3)
-                        : primaryPink.withValues(alpha: 0.08),
+                    color: sem.primary.withOpacity(0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -70,29 +67,29 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: primaryPink.withValues(alpha: 0.12),
+                    color: sem.primary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.cloud_upload_rounded,
-                      color: primaryPink, size: 28),
+                      color: sem.primary, size: 28),
                 ),
                 title: Text(
                   '导出全部配置',
                   style: TextStyle(
-                    fontSize: 16, // 调整为16px
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: sem.textPrimary,
                   ),
                 ),
                 subtitle: Text(
                   '人设 + 聊天记录 + 头像引用（.json）',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    color: sem.textSecondary,
                   ),
                 ),
                 trailing: Icon(Icons.arrow_forward_ios_rounded,
-                    size: 16, color: Colors.grey),
+                    size: 16, color: sem.textSecondary),
               ),
             ),
           ),
@@ -103,13 +100,11 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 24),
               decoration: BoxDecoration(
-                color: cardBg,
+                color: sem.surface,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.2)
-                        : Colors.grey.withValues(alpha: 0.1),
+                    color: sem.border.withOpacity(0.1),
                     blurRadius: 8,
                   ),
                 ],
@@ -119,26 +114,26 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.12),
+                    color: sem.textSecondary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.cloud_download_rounded,
-                      color: Colors.grey, size: 28),
+                      color: sem.textSecondary, size: 28),
                 ),
                 title: Text(
                   '导入配置（开发中）',
                   style: TextStyle(
-                    fontSize: 16, // 调整为16px
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    color: sem.textSecondary,
                   ),
                 ),
                 subtitle: Text(
                   '从备份文件恢复人设与聊天记录',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(fontSize: 13, color: sem.textHint),
                 ),
                 trailing: Icon(Icons.arrow_forward_ios_rounded,
-                    size: 16, color: Colors.grey),
+                    size: 16, color: sem.textSecondary),
               ),
             ),
           ),
@@ -147,13 +142,11 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: cardBg,
+              color: sem.surface,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.4)
-                      : Colors.grey.withValues(alpha: 0.12),
+                  color: sem.border.withOpacity(0.12),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -165,9 +158,9 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                 Text(
                   '关于备份',
                   style: TextStyle(
-                    fontSize: 16, // 调整为16px
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : primaryPink,
+                    color: sem.primary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -179,7 +172,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.5,
-                    color: isDark ? Colors.grey[400] : Colors.grey[700],
+                    color: sem.textSecondary,
                   ),
                 ),
               ],
@@ -190,40 +183,39 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     );
   }
 
-  // 弹出导出选项
   void _showExportOptions(BuildContext context) {
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
-        title: Text(
+        title: const Text(
           '导出选项',
-          style: TextStyle(fontSize: 16), // 调整为16px
+          style: TextStyle(fontSize: 16),
         ),
-        message: Text(
+        message: const Text(
           '请选择要导出的内容',
-          style: TextStyle(fontSize: 14), // 调整为14px
+          style: TextStyle(fontSize: 14),
         ),
         actions: [
           CupertinoActionSheetAction(
             onPressed: () => _startExport(context, includeCharacter: true),
-            child: Text(
+            child: const Text(
               '导出全部配置（人设+消息）',
-              style: TextStyle(fontSize: 16), // 调整为16px
+              style: TextStyle(fontSize: 16),
             ),
           ),
           CupertinoActionSheetAction(
             onPressed: () => _startExport(context, includeCharacter: false),
-            child: Text(
+            child: const Text(
               '仅导出聊天记录',
-              style: TextStyle(fontSize: 16), // 调整为16px
+              style: TextStyle(fontSize: 16),
             ),
           ),
           CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.pop(context),
-            child: Text(
+            child: const Text(
               '取消',
-              style: TextStyle(fontSize: 16), // 调整为16px
+              style: TextStyle(fontSize: 16),
             ),
           ),
         ],
@@ -231,20 +223,16 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     );
   }
 
-  // 开始导出流程
   Future<void> _startExport(BuildContext context,
       {required bool includeCharacter}) async {
-    // 先关闭ActionSheet
     Navigator.pop(context);
 
-    // 1. 检查文件是否已存在
     final fileExists = await ExportService.checkFileExists(
-      widget.characterName, // 角色名
-      includeCharacter, // 是否是全部配置
+      widget.characterName,
+      includeCharacter,
     );
 
     if (fileExists) {
-      // 2. 如果存在，询问是否覆盖
       final type = includeCharacter ? '全部配置' : '聊天记录';
       final fileName = '${widget.characterName}-$type.json';
 
@@ -254,9 +242,8 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
 
       if (!context.mounted) return;
 
-      if (!shouldOverwrite) return; // 用户取消覆盖
+      if (!shouldOverwrite) return;
 
-      // 3. 覆盖导出
       if (!context.mounted) return;
       await _performExport(
         context,
@@ -264,7 +251,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
         overwrite: true,
       );
     } else {
-      // 4. 直接导出（新文件）
       if (!context.mounted) return;
       await _performExport(
         context,
@@ -274,7 +260,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     }
   }
 
-  // 执行导出操作 - 更新版本
   Future<void> _performExport(
     BuildContext context, {
     required bool includeCharacter,
@@ -289,7 +274,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
       );
 
       if (result.success && context.mounted) {
-        // 使用新的 _showSuccessSnackBar 版本
         _showSuccessSnackBar(context, result);
       } else if (!result.success && context.mounted) {
         _showErrorSnackBar(context, result.message);
@@ -301,37 +285,36 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     }
   }
 
-  // 覆盖确认对话框
   Future<bool> _showOverwriteDialog(
       BuildContext context, String fileName) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sem = context.sem;
 
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            backgroundColor: sem.surface,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            icon: const Icon(Icons.warning_rounded, color: Colors.orange),
+            icon: Icon(Icons.warning_rounded, color: sem.warning),
             title: Text(
               '文件已存在',
-              style: TextStyle(fontSize: 16), // 调整为16px
+              style: TextStyle(fontSize: 16, color: sem.textPrimary),
             ),
-            content: Text('已存在同名备份：$fileName\n是否覆盖？'),
+            content: Text('已存在同名备份：$fileName\n是否覆盖？',
+                style: TextStyle(color: sem.textSecondary)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
                   '取消',
-                  style: TextStyle(fontSize: 14), // 调整为14px
+                  style: TextStyle(fontSize: 14, color: sem.textSecondary),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
                 child: Text(
                   '覆盖',
-                  style:
-                      TextStyle(fontSize: 14, color: Colors.orange), // 调整为14px
+                  style: TextStyle(fontSize: 14, color: sem.warning),
                 ),
               ),
             ],
@@ -340,34 +323,31 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
         false;
   }
 
-  // 成功提示 - 新版（显示详细路径）
   void _showSuccessSnackBar(BuildContext context, ExportResult result) {
     if (!result.success || result.filePath == null) return;
 
+    final sem = context.sem;
     final fileName = result.filePath!.split('/').last;
 
-    // 转换路径格式（用户友好显示）
     String displayPath = result.filePath!;
     if (displayPath.contains('/storage/emulated/0/')) {
       displayPath = displayPath.replaceAll('/storage/emulated/0/', '/内部存储/');
     }
 
-    // 如果是应用私有目录，给出额外提示
     if (displayPath.contains('/Android/data/')) {
       displayPath =
           '应用私有下载目录/lovme\n(文件管理器 → 内部存储 → Android → data → com.wolfram.lovme → files → downloads → lovme)';
     }
 
-    // 显示微信风格的底部卡片
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: sem.surface,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -378,19 +358,18 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 标题
               Row(
                 children: [
                   Icon(
                     Icons.check_circle,
-                    color: const Color(0xFFFF5A7E),
+                    color: sem.primary,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     '✅ 已保存文件',
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: sem.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
@@ -398,29 +377,23 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                 ],
               ),
               const SizedBox(height: 8),
-
-              // 文件名
               Text(
                 '文件: $fileName',
-                style: const TextStyle(
-                  color: Colors.black54,
+                style: TextStyle(
+                  color: sem.textSecondary,
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: 4),
-
-              // 路径（模仿微信的灰色小字）
               Text(
                 '保存到: $displayPath',
-                style: const TextStyle(
-                  color: Colors.grey,
+                style: TextStyle(
+                  color: sem.textHint,
                   fontSize: 12,
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,
               ),
-
-              // 复制路径按钮（小按钮）
               const SizedBox(height: 8),
               SizedBox(
                 height: 28,
@@ -436,16 +409,16 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                   },
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    backgroundColor: const Color(0xFFF5F5F5),
+                    backgroundColor: sem.surfaceVariant,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     '复制路径',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue,
+                      color: sem.info,
                     ),
                   ),
                 ),
@@ -466,15 +439,16 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
     );
   }
 
-  // 错误提示
   void _showErrorSnackBar(BuildContext context, String message) {
+    final sem = context.sem;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(fontSize: 14), // 调整为14px
+          style: const TextStyle(fontSize: 14),
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: sem.error,
         duration: const Duration(seconds: 4),
       ),
     );

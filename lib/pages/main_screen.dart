@@ -1,5 +1,4 @@
-// lib/pages/main_screen.dart - 修复暗色 Tab 图标
-
+// lib/pages/main_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -9,6 +8,7 @@ import 'entrance/entrance_main_page.dart';
 import 'me/me_page.dart';
 import '../services/foreground_task_handler.dart';
 import '../services/storage_service.dart';
+import '../theme/theme.dart' as app_theme;
 
 class MainScreen extends StatefulWidget {
   final int initialIndex;
@@ -123,9 +123,11 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sem = context.sem;
+
     if (_isLoadingData) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: sem.background, // ✅ 改用语义颜色
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -134,14 +136,17 @@ class _MainScreenState extends State<MainScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD2DD), Color(0xFFFFB6C1)],
+                  gradient: LinearGradient(
+                    colors: [
+                      sem.primary.withOpacity(0.6), // ✅ 改用主题主色
+                      sem.primary,
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Icon(
                   Icons.pets,
-                  color: Colors.white,
+                  color: Colors.white, // ⚠️ 保留：在渐变背景上
                   size: 36,
                 ),
               ),
@@ -152,7 +157,7 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: sem.background, // ✅ 改用语义颜色
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -161,7 +166,7 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        // 🔥 关键：使用 Theme 的配置，而不是硬编码
+        // ✅ 使用 Theme 配置（现在 main.dart 已经用主题系统设置了这些）
         selectedItemColor:
             Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
         unselectedItemColor:
