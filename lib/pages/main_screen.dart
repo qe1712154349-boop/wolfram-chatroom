@@ -1,6 +1,6 @@
-// lib/pages/main_screen.dart - 最终零错误版
+// lib/pages/main_screen.dart - 修复暗色 Tab 图标
 
-import 'dart:io'; // Platform
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'vow_page.dart';
@@ -40,7 +40,6 @@ class _MainScreenState extends State<MainScreen> {
     _selectedIndex = widget.initialIndex;
     _loadInitialData();
 
-    // 只保留一个initState，这里启动
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupForegroundService();
     });
@@ -68,13 +67,10 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _setupForegroundService() async {
     if (Platform.isAndroid) {
-      final perm = await FlutterForegroundTask.checkNotificationPermission();
-
-      final ignoring =
-          await FlutterForegroundTask.isIgnoringBatteryOptimizations;
+      await FlutterForegroundTask.checkNotificationPermission();
+      await FlutterForegroundTask.isIgnoringBatteryOptimizations;
     }
 
-    // 去掉 await，因为 init 返回 void
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'foreground_chat_service',
@@ -97,7 +93,6 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
 
-    // 下面可以继续 await，因为 start/restart 返回 Future
     if (await FlutterForegroundTask.isRunningService) {
       final result = await FlutterForegroundTask.restartService();
       if (result is ServiceRequestSuccess) {
@@ -166,8 +161,11 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Theme.of(context).unselectedWidgetColor,
+        // 🔥 关键：使用 Theme 的配置，而不是硬编码
+        selectedItemColor:
+            Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
+        unselectedItemColor:
+            Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
         backgroundColor:
             Theme.of(context).bottomNavigationBarTheme.backgroundColor,
         items: const [

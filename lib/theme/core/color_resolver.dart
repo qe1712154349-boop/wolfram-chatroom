@@ -190,34 +190,57 @@ class ColorResolver {
     final materialColors =
         isDarkMode ? _getMaterial3DarkColors() : _getMaterial3LightColors();
 
-    return materialColors[semantic] ?? Colors.grey;
+    // 🔥 改进：如果找不到，返回合理的默认值而不是灰色
+    final fallbackColor = isDarkMode
+        ? const Color(0xFF1A1A1A)
+        : const Color.fromARGB(255, 255, 247, 247);
+    return materialColors[semantic] ?? fallbackColor;
   }
 
   /// 获取Material 3亮色
   static Map<ColorSemantic, Color> _getMaterial3LightColors() {
     return {
-      ColorSemantic.primary: const Color(0xFF6750A4),
-      ColorSemantic.secondary: const Color(0xFF625B71),
+      ColorSemantic.primary: const Color.fromARGB(255, 218, 85, 151),
+      ColorSemantic.secondary: const Color.fromARGB(255, 244, 104, 176),
       ColorSemantic.background: const Color(0xFFFFFBFE),
       ColorSemantic.surface: const Color(0xFFFFFBFE),
       ColorSemantic.surfaceVariant: const Color(0xFFE7E0EC),
       ColorSemantic.textPrimary: const Color(0xFF1C1B1F),
-      ColorSemantic.textSecondary: const Color(0xFF49454F),
+      ColorSemantic.textSecondary: const Color.fromARGB(255, 79, 69, 73),
       ColorSemantic.border: const Color(0xFF79747E),
+
+      // 🔥 新增 Material 3 完整定义
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F5F5),
+      ColorSemantic.primaryContainer: const Color(0xFFE8DEF8),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF1D192B),
+      ColorSemantic.onSurface: const Color(0xFF1C1B1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF49454F),
+      ColorSemantic.cardBackground: const Color(0xFFFFFFFF),
+      ColorSemantic.cardBorder: const Color(0xFFE7E0EC),
     };
   }
 
   /// 获取Material 3暗色
   static Map<ColorSemantic, Color> _getMaterial3DarkColors() {
     return {
-      ColorSemantic.primary: const Color(0xFFD0BCFF),
-      ColorSemantic.secondary: const Color(0xFFCCC2DC),
+      ColorSemantic.primary: const Color.fromARGB(255, 234, 107, 158),
+      ColorSemantic.secondary: const Color.fromARGB(255, 249, 149, 176),
       ColorSemantic.background: const Color(0xFF1C1B1F),
       ColorSemantic.surface: const Color(0xFF1C1B1F),
-      ColorSemantic.surfaceVariant: const Color(0xFF49454F),
-      ColorSemantic.textPrimary: const Color(0xFFE6E1E5),
+      ColorSemantic.surfaceVariant: const Color.fromARGB(255, 79, 69, 73),
+      ColorSemantic.textPrimary: const Color.fromARGB(255, 230, 225, 227),
       ColorSemantic.textSecondary: const Color(0xFFCAC4D0),
-      ColorSemantic.border: const Color(0xFF938F99),
+      ColorSemantic.border: const Color.fromARGB(255, 153, 143, 150),
+
+      // 🔥 新增 Material 3 完整定义（暗色）
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color.fromARGB(255, 228, 85, 123),
+      ColorSemantic.onPrimaryContainer:
+          const Color.fromARGB(255, 255, 130, 155),
+      ColorSemantic.onSurface: const Color.fromARGB(255, 230, 225, 228),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFCAC4D0),
+      ColorSemantic.cardBackground: const Color.fromARGB(255, 31, 27, 30),
+      ColorSemantic.cardBorder: const Color.fromARGB(255, 79, 69, 73),
     };
   }
 

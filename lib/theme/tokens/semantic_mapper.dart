@@ -53,6 +53,27 @@ class SemanticMapper {
       ColorSemantic.warning: BaseColorTokens.warningLight,
       ColorSemantic.error: BaseColorTokens.errorLight,
       ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F5F5),
+      ColorSemantic.primaryContainer: const Color(0xFFFFE4E9),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF6D1F34),
+      ColorSemantic.onSurface: const Color(0xFF1C1B1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF666666),
+      ColorSemantic.cardBackground: BaseColorTokens.white,
+      ColorSemantic.cardBorder: BaseColorTokens.gray300,
+      ColorSemantic.textFieldFill: BaseColorTokens.white,
+      ColorSemantic.textFieldHint: BaseColorTokens.textHintLight,
+      ColorSemantic.buttonBackground: BaseColorTokens.pinkPrimary,
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: BaseColorTokens.backgroundLight,
+      ColorSemantic.messageInputBackground: BaseColorTokens.white,
+      ColorSemantic.messageInputBorder: BaseColorTokens.gray300,
+      ColorSemantic.messageInputText: BaseColorTokens.textPrimaryLight,
+      ColorSemantic.messageInputHint: BaseColorTokens.textHintLight,
+      ColorSemantic.scrollToBottomButton: BaseColorTokens.pinkPrimary,
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: BaseColorTokens.pinkPrimary,
     };
   }
 
@@ -104,6 +125,27 @@ class SemanticMapper {
       ColorSemantic.warning: BaseColorTokens.warningDark,
       ColorSemantic.error: BaseColorTokens.errorDark,
       ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF3A1F25),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFFFB6C1),
+      ColorSemantic.onSurface: const Color(0xFFF5F5F5),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBCB8B9),
+      ColorSemantic.cardBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.cardBorder: BaseColorTokens.gray700,
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: BaseColorTokens.textHintDark,
+      ColorSemantic.buttonBackground: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: BaseColorTokens.backgroundDark,
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF444444),
+      ColorSemantic.messageInputText: BaseColorTokens.textPrimaryDark,
+      ColorSemantic.messageInputHint: BaseColorTokens.textHintDark,
+      ColorSemantic.scrollToBottomButton: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: BaseColorTokens.pinkPrimaryDark,
     };
   }
 
@@ -150,11 +192,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFFFF7B9C),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色保持不变
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successLight,
       ColorSemantic.warning: BaseColorTokens.warningLight,
       ColorSemantic.error: BaseColorTokens.errorLight,
       ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFFEF0F3),
+      ColorSemantic.primaryContainer: const Color(0xFFFFE4E9),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF6D1F34),
+      ColorSemantic.onSurface: const Color(0xFF2C1A1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF6D4F59),
+      ColorSemantic.cardBackground: BaseColorTokens.white,
+      ColorSemantic.cardBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.textFieldFill: BaseColorTokens.white,
+      ColorSemantic.textFieldHint: const Color(0xFFA88B95),
+      ColorSemantic.buttonBackground: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFFFFF8FA),
+      ColorSemantic.messageInputBackground: BaseColorTokens.white,
+      ColorSemantic.messageInputBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.messageInputText: const Color(0xFF2C1A1F),
+      ColorSemantic.messageInputHint: const Color(0xFFA88B95),
+      ColorSemantic.scrollToBottomButton: const Color(0xFFFF7B9C),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFFFF7B9C),
     };
   }
 
@@ -201,11 +264,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFFFF7B9C),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successDark,
       ColorSemantic.warning: BaseColorTokens.warningDark,
       ColorSemantic.error: BaseColorTokens.errorDark,
       ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF3A1F25),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFFFB6C1),
+      ColorSemantic.onSurface: const Color(0xFFF5F5F5),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBBBBBB),
+      ColorSemantic.cardBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.cardBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: const Color(0xFF888888),
+      ColorSemantic.buttonBackground: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFF0A0506),
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.messageInputText: const Color(0xFFF5F5F5),
+      ColorSemantic.messageInputHint: const Color(0xFF888888),
+      ColorSemantic.scrollToBottomButton: const Color(0xFFFF7B9C),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFFFF7B9C),
     };
   }
 
@@ -252,11 +336,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFF8B5D3A),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successLight,
       ColorSemantic.warning: BaseColorTokens.warningLight,
       ColorSemantic.error: BaseColorTokens.errorLight,
       ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F1E8),
+      ColorSemantic.primaryContainer: const Color(0xFFE8DECD),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF372B2D),
+      ColorSemantic.onSurface: const Color(0xFF372B2D),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF6D6359),
+      ColorSemantic.cardBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.cardBorder: const Color(0xFFE8DECD),
+      ColorSemantic.textFieldFill: const Color(0xFFFFFEFB),
+      ColorSemantic.textFieldHint: const Color(0xFFA0988F),
+      ColorSemantic.buttonBackground: const Color(0xFF8B5D3A),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFFFAF7F2),
+      ColorSemantic.messageInputBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.messageInputBorder: const Color(0xFFE8DECD),
+      ColorSemantic.messageInputText: const Color(0xFF372B2D),
+      ColorSemantic.messageInputHint: const Color(0xFFA0988F),
+      ColorSemantic.scrollToBottomButton: const Color(0xFF8B5D3A),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFF8B5D3A),
     };
   }
 
@@ -303,11 +408,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFF4CAF50),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successDark,
       ColorSemantic.warning: BaseColorTokens.warningDark,
       ColorSemantic.error: BaseColorTokens.errorDark,
       ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF1B3A2A),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFC8E6C9),
+      ColorSemantic.onSurface: const Color(0xFFE8F5E9),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBDBDBD),
+      ColorSemantic.cardBackground: const Color(0xFF1E1E1E),
+      ColorSemantic.cardBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: const Color(0xFF888888),
+      ColorSemantic.buttonBackground: const Color(0xFF4CAF50),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFF121212),
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.messageInputText: const Color(0xFFE8F5E9),
+      ColorSemantic.messageInputHint: const Color(0xFF888888),
+      ColorSemantic.scrollToBottomButton: const Color(0xFF4CAF50),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFF4CAF50),
     };
   }
 
@@ -404,7 +530,9 @@ class SemanticMapper {
       for (final semantic in category.value) {
         final color = mapping[semantic];
         if (color != null) {
-          debugPrint('${semantic.name.padRight(25)}: ${color.toHex()}');
+          final hex =
+              '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+          debugPrint('${semantic.name.padRight(25)}: $hex');
         }
       }
     }

@@ -9,8 +9,6 @@ import 'pages/chat/chat_character_edit_page.dart';
 import 'pages/me/profile_settings_page.dart';
 import 'services/storage_service.dart';
 import 'utils/logger.dart';
-import 'dart:io';
-import 'providers/chat_provider.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'theme/core/color_resolver.dart';
 import 'theme/core/color_semantics.dart';
@@ -148,11 +146,6 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     log.i('🎨 [build] 重新构建');
 
     final themeState = ref.watch(appThemeProvider);
-    log.i(
-        '🎨 [build] appThemeProvider.themeMode = ${themeState.themeMode.displayName}');
-    log.i(
-        '🎨 [build] appThemeProvider.effectiveBrightness = ${themeState.effectiveBrightness.name}');
-
     final effectiveBrightness = themeState.effectiveBrightness;
 
     final primaryColor = ColorResolver.resolve(
@@ -175,9 +168,22 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
         : ThemeData(
             useMaterial3: true,
             brightness: Brightness.dark,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: primaryColor,
-              brightness: Brightness.dark,
+            colorScheme: ColorScheme.dark(
+              primary: const Color(0xFFEE537D), // ✅ 选中的颜色
+              onPrimary: Colors.white,
+              secondary: primaryColor.withOpacity(0.7),
+              onSecondary: Colors.white,
+              surface: const Color(0xFF1A1A1A),
+              onSurface: Colors.white,
+              background: const Color(0xFF060405),
+              onBackground: Colors.white,
+              error: const Color(0xFFEF5350),
+              onError: Colors.white,
+            ),
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              selectedItemColor: Color(0xFFEE537D), // ✅ 选中
+              unselectedItemColor: Color(0xFFBCB8B9), // ✅ 未选中
+              backgroundColor: Color(0xFF1A1A1A),
             ),
             extensions: <ThemeExtension<dynamic>>[semanticColors],
           );
@@ -187,8 +193,6 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
       Brightness.dark => ThemeMode.dark,
       _ => ThemeMode.system,
     };
-
-    log.i('🎨 [build] MaterialApp.themeMode 设置为: $finalThemeMode');
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,

@@ -100,9 +100,9 @@ class Theme {
 
 File: D:\D\my_new_app\lib\theme\core\color_resolver.dart
 
-Size: 13627 bytes
+Size: 14905 bytes
 
-Modified: 02/01/2026 01:52:11
+Modified: 02/16/2026 23:16:10
 
 ========================================
 
@@ -131,7 +131,7 @@ class ColorResolver {
     // 2. 图片提取色
     if (themeState.hasExtractedColors) {
       final extractedColor = _resolveFromExtractedColors(
-        extractedColors: themeState.extractedColors!,
+        extractedColors: themeState.currentExtractedColors!,
         semantic: semantic,
         isDarkMode: themeState.isDarkMode,
       );
@@ -140,9 +140,9 @@ class ColorResolver {
       }
     }
 
-    // 3. UI主题色
+// 3. UI主题色
     final themeColor = _resolveFromUITheme(
-      uiTheme: themeState.uiTheme,
+      uiTheme: themeState.currentUITheme,
       semantic: semantic,
       isDarkMode: themeState.isDarkMode,
     );
@@ -170,15 +170,10 @@ class ColorResolver {
     required bool isDarkMode,
   }) {
     try {
-      // 使用映射器将提取的颜色转换为语义颜色
+      // 🔑 关键改动：直接用提取色，不做任何 dim 处理！
       final semanticColors =
           ExtractedColorMapper.mapToSemantics(extractedColors);
-      final color = semanticColors[semantic];
-
-      if (color != null) {
-        // 如果是暗色模式，适当调整颜色
-        return isDarkMode ? _adjustColorForDarkMode(color) : color;
-      }
+      return semanticColors[semantic];
     } catch (e) {
       debugPrint('从提取色解析失败: $e');
     }
@@ -303,34 +298,57 @@ class ColorResolver {
     final materialColors =
         isDarkMode ? _getMaterial3DarkColors() : _getMaterial3LightColors();
 
-    return materialColors[semantic] ?? Colors.grey;
+    // 🔥 改进：如果找不到，返回合理的默认值而不是灰色
+    final fallbackColor = isDarkMode
+        ? const Color(0xFF1A1A1A)
+        : const Color.fromARGB(255, 255, 247, 247);
+    return materialColors[semantic] ?? fallbackColor;
   }
 
   /// 获取Material 3亮色
   static Map<ColorSemantic, Color> _getMaterial3LightColors() {
     return {
-      ColorSemantic.primary: const Color(0xFF6750A4),
-      ColorSemantic.secondary: const Color(0xFF625B71),
+      ColorSemantic.primary: const Color.fromARGB(255, 218, 85, 151),
+      ColorSemantic.secondary: const Color.fromARGB(255, 244, 104, 176),
       ColorSemantic.background: const Color(0xFFFFFBFE),
       ColorSemantic.surface: const Color(0xFFFFFBFE),
       ColorSemantic.surfaceVariant: const Color(0xFFE7E0EC),
       ColorSemantic.textPrimary: const Color(0xFF1C1B1F),
-      ColorSemantic.textSecondary: const Color(0xFF49454F),
+      ColorSemantic.textSecondary: const Color.fromARGB(255, 79, 69, 73),
       ColorSemantic.border: const Color(0xFF79747E),
+
+      // 🔥 新增 Material 3 完整定义
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F5F5),
+      ColorSemantic.primaryContainer: const Color(0xFFE8DEF8),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF1D192B),
+      ColorSemantic.onSurface: const Color(0xFF1C1B1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF49454F),
+      ColorSemantic.cardBackground: const Color(0xFFFFFFFF),
+      ColorSemantic.cardBorder: const Color(0xFFE7E0EC),
     };
   }
 
   /// 获取Material 3暗色
   static Map<ColorSemantic, Color> _getMaterial3DarkColors() {
     return {
-      ColorSemantic.primary: const Color(0xFFD0BCFF),
-      ColorSemantic.secondary: const Color(0xFFCCC2DC),
+      ColorSemantic.primary: const Color.fromARGB(255, 234, 107, 158),
+      ColorSemantic.secondary: const Color.fromARGB(255, 249, 149, 176),
       ColorSemantic.background: const Color(0xFF1C1B1F),
       ColorSemantic.surface: const Color(0xFF1C1B1F),
-      ColorSemantic.surfaceVariant: const Color(0xFF49454F),
-      ColorSemantic.textPrimary: const Color(0xFFE6E1E5),
+      ColorSemantic.surfaceVariant: const Color.fromARGB(255, 79, 69, 73),
+      ColorSemantic.textPrimary: const Color.fromARGB(255, 230, 225, 227),
       ColorSemantic.textSecondary: const Color(0xFFCAC4D0),
-      ColorSemantic.border: const Color(0xFF938F99),
+      ColorSemantic.border: const Color.fromARGB(255, 153, 143, 150),
+
+      // 🔥 新增 Material 3 完整定义（暗色）
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color.fromARGB(255, 228, 85, 123),
+      ColorSemantic.onPrimaryContainer:
+          const Color.fromARGB(255, 255, 130, 155),
+      ColorSemantic.onSurface: const Color.fromARGB(255, 230, 225, 228),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFCAC4D0),
+      ColorSemantic.cardBackground: const Color.fromARGB(255, 31, 27, 30),
+      ColorSemantic.cardBorder: const Color.fromARGB(255, 79, 69, 73),
     };
   }
 
@@ -415,7 +433,7 @@ class ColorResolver {
   /// 调试方法：打印当前所有颜色
   static void debugPrintColors(ThemeState themeState) {
     debugPrint('=== 主题状态 ===');
-    debugPrint('UI主题: ${themeState.uiTheme.displayName}');
+    debugPrint('UI主题: ${themeState.currentUITheme.displayName}');
     debugPrint('主题模式: ${themeState.themeMode.displayName}');
     debugPrint('暗色模式: ${themeState.isDarkMode}');
     debugPrint('有提取色: ${themeState.hasExtractedColors}');
@@ -839,9 +857,9 @@ extension ColorSemanticName on ColorSemantic {
 
 File: D:\D\my_new_app\lib\theme\core\theme_state.dart
 
-Size: 7869 bytes
+Size: 7769 bytes
 
-Modified: 02/01/2026 01:54:10
+Modified: 02/16/2026 14:51:46
 
 ========================================
 
@@ -850,12 +868,12 @@ import 'color_semantics.dart';
 
 /// 主题模式：亮色、暗色、跟随系统
 enum AppThemeMode {
-  light, // 强制亮色
-  dark, // 强制暗色
-  system, // 跟随系统
+  light,
+  dark,
+  system,
 }
 
-/// 扩展方法：方便地获取枚举属性
+// 🆕 只保留这一个扩展（包含 displayName 和 icon）
 extension AppThemeModeExtensions on AppThemeMode {
   String get displayName {
     switch (this) {
@@ -880,14 +898,13 @@ extension AppThemeModeExtensions on AppThemeMode {
   }
 }
 
-/// UI主题类型：用户选择的视觉风格
+/// UI主题类型
 enum UIThemeType {
-  defaultTheme, // 默认主题（你的粉色系）
-  strawberryCandy, // 草莓糖心🍓
-  pickleMilk, // 酸菜牛奶🥛
+  defaultTheme,
+  strawberryCandy,
+  pickleMilk,
 }
 
-/// 扩展方法：方便地获取枚举属性
 extension UIThemeTypeExtensions on UIThemeType {
   String get id {
     switch (this) {
@@ -933,7 +950,6 @@ extension UIThemeTypeExtensions on UIThemeType {
     }
   }
 
-  /// 从字符串转换
   static UIThemeType fromString(String value) {
     switch (value) {
       case 'strawberryCandy':
@@ -944,182 +960,170 @@ extension UIThemeTypeExtensions on UIThemeType {
         return UIThemeType.defaultTheme;
     }
   }
-} // <--- 这里添加这个 } 来关闭 UIThemeTypeExtensions 扩展
+}
 
-/// 主题状态 - 包含所有主题相关的状态
+/// ============ 新增：独立的主题记忆对象 ============
+
+/// 【核心】单个 Brightness 下的主题记忆
+/// 记录：最后选的主题 / 最后提取的图片色 / 最后操作类型
 @immutable
-class ThemeState {
-  final UIThemeType uiTheme; // 用户选择的UI主题
-  final AppThemeMode themeMode; // 亮/暗/系统模式
-  final Map<ExtractedColorType, Color>? extractedColors; // 图片提取的颜色
-  final Brightness effectiveBrightness; // 实际生效的亮度模式
+class ThemeMemory {
+  final UIThemeType uiTheme; // 最后选的主题
+  final Map<ExtractedColorType, Color>? extractedColors; // 最后提取的图片色
+  final ThemeMemoryOperationType lastOperationType; // 最后操作类型
 
-  const ThemeState({
+  const ThemeMemory({
     required this.uiTheme,
-    required this.themeMode,
     this.extractedColors,
-    required this.effectiveBrightness,
+    required this.lastOperationType,
   });
 
-  /// 创建初始状态
-  factory ThemeState.initial() {
-    return ThemeState(
+  factory ThemeMemory.initial() {
+    return ThemeMemory(
       uiTheme: UIThemeType.defaultTheme,
-      themeMode: AppThemeMode.system,
       extractedColors: null,
-      effectiveBrightness: Brightness.light, // 默认为亮色
+      lastOperationType: ThemeMemoryOperationType.themeSwitch,
     );
   }
 
-  /// 复制并更新部分属性
-  ThemeState copyWith({
+  ThemeMemory copyWith({
     UIThemeType? uiTheme,
-    AppThemeMode? themeMode,
     Map<ExtractedColorType, Color>? extractedColors,
-    Brightness? effectiveBrightness,
+    ThemeMemoryOperationType? lastOperationType,
   }) {
-    return ThemeState(
+    return ThemeMemory(
       uiTheme: uiTheme ?? this.uiTheme,
-      themeMode: themeMode ?? this.themeMode,
       extractedColors: extractedColors ?? this.extractedColors,
-      effectiveBrightness: effectiveBrightness ?? this.effectiveBrightness,
+      lastOperationType: lastOperationType ?? this.lastOperationType,
     );
   }
 
-  /// 判断是否有图片提取的颜色
   bool get hasExtractedColors =>
       extractedColors != null && extractedColors!.isNotEmpty;
-
-  /// 判断是否为暗色模式
-  bool get isDarkMode => effectiveBrightness == Brightness.dark;
-
-  /// 获取当前主题ID
-  String get themeId => uiTheme.id;
-
-  /// 获取显示名称
-  String get displayName {
-    if (hasExtractedColors) {
-      return '图片主题 🎨';
-    }
-    return uiTheme.displayName;
-  }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-
-    return other is ThemeState &&
+    return other is ThemeMemory &&
         other.uiTheme == uiTheme &&
-        other.themeMode == themeMode &&
-        other.effectiveBrightness == effectiveBrightness &&
+        other.lastOperationType == lastOperationType &&
         _mapsEqual(other.extractedColors, extractedColors);
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      uiTheme,
-      themeMode,
-      effectiveBrightness,
-      _mapHashCode(extractedColors),
-    );
-  }
+  int get hashCode => Object.hash(
+        uiTheme,
+        lastOperationType,
+        _mapHashCode(extractedColors),
+      );
 
-  @override
-  String toString() {
-    return 'ThemeState(uiTheme: $uiTheme, themeMode: $themeMode, '
-        'hasExtractedColors: $hasExtractedColors, isDarkMode: $isDarkMode)';
-  }
-
-  /// 比较两个颜色Map是否相等
   static bool _mapsEqual(
       Map<ExtractedColorType, Color>? a, Map<ExtractedColorType, Color>? b) {
     if (a == null && b == null) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
-
     for (final key in a.keys) {
       if (b[key] != a[key]) return false;
     }
     return true;
   }
 
-  /// 计算颜色Map的hashCode
   static int _mapHashCode(Map<ExtractedColorType, Color>? map) {
     if (map == null) return 0;
-
     int hash = 0;
     for (final entry in map.entries) {
       hash ^= entry.key.hashCode ^ entry.value.hashCode;
     }
     return hash;
   }
+
+  @override
+  String toString() {
+    return 'ThemeMemory(uiTheme: $uiTheme, hasExtracted: $hasExtractedColors, lastOp: $lastOperationType)';
+  }
 }
 
-/// 主题状态变化监听器
-typedef ThemeStateListener = void Function(ThemeState state);
+/// 最后操作类型（核心：用这个决定"记住什么"）
+enum ThemeMemoryOperationType {
+  themeSwitch, // 最后一次是切主题
+  imageExtract, // 最后一次是提取图片
+}
 
-/// 主题状态变化通知
-class ThemeStateNotifier {
-  ThemeState _state;
-  final List<ThemeStateListener> _listeners = [];
+/// ============ 新增：全局主题总状态 ============
 
-  ThemeStateNotifier([ThemeState? initialState])
-      : _state = initialState ?? ThemeState.initial();
+/// 【核心】应用的完整主题状态
+/// 包含：亮色记忆、暗色记忆、当前 brightness、主题模式
+@immutable
+class ThemeState {
+  final ThemeMemory lightMemory; // 亮色模式下的记忆
+  final ThemeMemory darkMemory; // 暗色模式下的记忆
+  final AppThemeMode themeMode; // 亮/暗/系统
+  final Brightness effectiveBrightness; // 实际生效的亮度
 
-  ThemeState get state => _state;
+  const ThemeState({
+    required this.lightMemory,
+    required this.darkMemory,
+    required this.themeMode,
+    required this.effectiveBrightness,
+  });
 
-  /// 更新UI主题
-  void updateUITheme(UIThemeType uiTheme) {
-    _state = _state.copyWith(uiTheme: uiTheme);
-    _notifyListeners();
+  factory ThemeState.initial() {
+    return ThemeState(
+      lightMemory: ThemeMemory.initial(),
+      darkMemory: ThemeMemory.initial(),
+      themeMode: AppThemeMode.system,
+      effectiveBrightness: Brightness.light,
+    );
   }
 
-  /// 更新主题模式（亮/暗/系统）
-  void updateThemeMode(AppThemeMode themeMode) {
-    _state = _state.copyWith(themeMode: themeMode);
-    _notifyListeners();
+  ThemeState copyWith({
+    ThemeMemory? lightMemory,
+    ThemeMemory? darkMemory,
+    AppThemeMode? themeMode,
+    Brightness? effectiveBrightness,
+  }) {
+    return ThemeState(
+      lightMemory: lightMemory ?? this.lightMemory,
+      darkMemory: darkMemory ?? this.darkMemory,
+      themeMode: themeMode ?? this.themeMode,
+      effectiveBrightness: effectiveBrightness ?? this.effectiveBrightness,
+    );
   }
 
-  /// 更新图片提取的颜色
-  void updateExtractedColors(Map<ExtractedColorType, Color> colors) {
-    _state = _state.copyWith(extractedColors: colors);
-    _notifyListeners();
+  /// 获取当前 brightness 对应的 memory
+  ThemeMemory get currentMemory => isDarkMode ? darkMemory : lightMemory;
+
+  bool get isDarkMode => effectiveBrightness == Brightness.dark;
+
+  /// 获取当前生效的主题配置
+  UIThemeType get currentUITheme => currentMemory.uiTheme;
+
+  Map<ExtractedColorType, Color>? get currentExtractedColors =>
+      currentMemory.extractedColors;
+
+  bool get hasExtractedColors => currentMemory.hasExtractedColors;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ThemeState &&
+        other.lightMemory == lightMemory &&
+        other.darkMemory == darkMemory &&
+        other.themeMode == themeMode &&
+        other.effectiveBrightness == effectiveBrightness;
   }
 
-  /// 清空图片提取的颜色
-  void clearExtractedColors() {
-    _state = _state.copyWith(extractedColors: null);
-    _notifyListeners();
-  }
+  @override
+  int get hashCode => Object.hash(
+        lightMemory,
+        darkMemory,
+        themeMode,
+        effectiveBrightness,
+      );
 
-  /// 更新实际亮度模式
-  void updateEffectiveBrightness(Brightness brightness) {
-    _state = _state.copyWith(effectiveBrightness: brightness);
-    _notifyListeners();
-  }
-
-  /// 重置所有设置
-  void reset() {
-    _state = ThemeState.initial();
-    _notifyListeners();
-  }
-
-  /// 添加监听器
-  void addListener(ThemeStateListener listener) {
-    _listeners.add(listener);
-  }
-
-  /// 移除监听器
-  void removeListener(ThemeStateListener listener) {
-    _listeners.remove(listener);
-  }
-
-  /// 通知所有监听器
-  void _notifyListeners() {
-    for (final listener in _listeners) {
-      listener(_state);
-    }
+  @override
+  String toString() {
+    return 'ThemeState(isDark: $isDarkMode, light: $lightMemory, dark: $darkMemory)';
   }
 }
 
@@ -1902,9 +1906,9 @@ extension ColorExtensions on Color {
 
 File: D:\D\my_new_app\lib\theme\extensions\context_extensions.dart
 
-Size: 15241 bytes
+Size: 15931 bytes
 
-Modified: 02/06/2026 17:32:52
+Modified: 02/15/2026 02:04:42
 
 ========================================
 
@@ -1917,6 +1921,7 @@ import '../providers/theme_manager.dart';
 import '../providers/brightness_provider.dart';
 import '../core/theme_state.dart'; // 添加这行
 import '../providers/color_override.dart'; // 添加这行
+import '../extensions/semantic_colors_extension.dart'; // ← 加这一行
 
 /// 上下文颜色扩展 - 在Widget中直接获取颜色
 extension ThemeColors on BuildContext {
@@ -2079,6 +2084,14 @@ extension ThemeColors on BuildContext {
       borderRadius: BorderRadius.circular(borderRadius),
     );
   }
+
+  // 新增：直接获取 AppSemanticColors 对象（放在 extension 内部末尾）
+  AppSemanticColors get semanticColors {
+    return Theme.of(this).extension<AppSemanticColors>()!;
+  }
+
+  // 更短的别名（推荐用这个）
+  AppSemanticColors get sem => semanticColors;
 }
 
 /// WidgetRef扩展 - 在ConsumerWidget中直接获取颜色
@@ -2214,10 +2227,18 @@ extension ThemeColorsRef on WidgetRef {
     await notifier.updateColors(extractedColors);
   }
 
-  /// 重置主题
-  Future<void> resetTheme() async {
+  /// 重置当前 brightness 模式的主题
+  /// （在暗色就重置暗色，在亮色就重置亮色）
+  Future<void> resetCurrentTheme() async {
     final notifier = read(appThemeProvider.notifier);
-    await notifier.reset();
+    await notifier.resetCurrentBrightness();
+  }
+
+  /// 重置所有主题
+  /// （亮色和暗色都恢复为默认）
+  Future<void> resetAllThemes() async {
+    final notifier = read(appThemeProvider.notifier);
+    await notifier.resetAll();
   }
 
   /// 调试打印主题信息
@@ -2425,11 +2446,99 @@ extension ThemeInput on BuildContext {
 
 ========================================
 
+File: D:\D\my_new_app\lib\theme\extensions\semantic_colors_extension.dart
+
+Size: 3126 bytes
+
+Modified: 02/13/2026 18:09:23
+
+========================================
+
+// lib/theme/extensions/semantic_colors_extension.dart
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import '../core/color_resolver.dart';
+import '../core/theme_state.dart';
+
+class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
+  final Map<ColorSemantic, Color> colors;
+
+  AppSemanticColors({required this.colors});
+
+  // 工厂：从 ThemeState 实时计算所有 semantic 的最终颜色
+  factory AppSemanticColors.fromThemeState(ThemeState state) {
+    final map = <ColorSemantic, Color>{};
+    for (final semantic in ColorSemantic.values) {
+      map[semantic] = ColorResolver.resolve(
+        themeState: state,
+        semantic: semantic,
+      );
+    }
+    return AppSemanticColors(colors: map);
+  }
+
+  // 必须实现 copyWith（Theme 系统要求）
+  @override
+  AppSemanticColors copyWith({Map<ColorSemantic, Color>? colors}) {
+    return AppSemanticColors(
+      colors: colors ?? this.colors,
+    );
+  }
+
+  // 必须实现 lerp（主题切换动画核心）
+  @override
+  AppSemanticColors lerp(
+      covariant ThemeExtension<AppSemanticColors>? other, double t) {
+    if (other is! AppSemanticColors) return this;
+
+    final lerpedColors = <ColorSemantic, Color>{};
+    for (final semantic in ColorSemantic.values) {
+      final c1 = colors[semantic] ?? Colors.transparent;
+      final c2 = other.colors[semantic] ?? Colors.transparent;
+      lerpedColors[semantic] = Color.lerp(c1, c2, t)!;
+    }
+    return AppSemanticColors(colors: lerpedColors);
+  }
+
+  // 强烈推荐：为所有常用 semantic 加 getter（IDE 补全最爽）
+  Color get primary => colors[ColorSemantic.primary]!;
+  Color get secondary => colors[ColorSemantic.secondary]!;
+  Color get accent => colors[ColorSemantic.accent]!;
+  Color get background => colors[ColorSemantic.background]!;
+  Color get surface => colors[ColorSemantic.surface]!;
+  Color get surfaceVariant => colors[ColorSemantic.surfaceVariant]!;
+  Color get textPrimary => colors[ColorSemantic.textPrimary]!;
+  Color get textSecondary => colors[ColorSemantic.textSecondary]!;
+  Color get textHint => colors[ColorSemantic.textHint]!;
+  Color get border => colors[ColorSemantic.border]!;
+  Color get divider => colors[ColorSemantic.divider]!;
+
+  // 气泡相关（常用）
+  Color get userBubbleBackground => colors[ColorSemantic.userBubbleBackground]!;
+  Color get userBubbleBorder => colors[ColorSemantic.userBubbleBorder]!;
+  Color get userBubbleText => colors[ColorSemantic.userBubbleText]!;
+  Color get aiBubbleBackground => colors[ColorSemantic.aiBubbleBackground]!;
+  Color get aiBubbleBorder => colors[ColorSemantic.aiBubbleBorder]!;
+  Color get aiBubbleText => colors[ColorSemantic.aiBubbleText]!;
+
+  // 按钮 / 组件 / 状态（根据你的需求继续加）
+  Color get buttonPrimary => colors[ColorSemantic.buttonPrimary]!;
+  Color get success => colors[ColorSemantic.success]!;
+  Color get warning => colors[ColorSemantic.warning]!;
+  Color get error => colors[ColorSemantic.error]!;
+  Color get info => colors[ColorSemantic.info]!;
+}
+
+
+
+
+========================================
+
 File: D:\D\my_new_app\lib\theme\providers\app_theme_provider.dart
 
-Size: 9403 bytes
+Size: 12074 bytes
 
-Modified: 02/01/2026 15:23:46
+Modified: 02/16/2026 14:43:46
 
 ========================================
 
@@ -2437,10 +2546,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
 import '../core/theme_state.dart';
+import '../core/color_semantics.dart';
 import '../definitions/theme_registry.dart';
 import 'color_override.dart';
 import 'brightness_provider.dart';
-import '../core/color_semantics.dart'; // 添加这行
+import 'theme_memory_manager.dart';
+import '../../../utils/logger.dart'; // 添加日志导入
 
 /// 主主题Provider - 管理整个应用的主题状态
 final appThemeProvider = StateNotifierProvider<AppThemeNotifier, ThemeState>(
@@ -2455,6 +2566,8 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
   final StorageService _storage = StorageService();
 
   AppThemeNotifier(this._ref) : super(ThemeState.initial()) {
+    log.i('📦 [AppThemeNotifier] 构造函数执行');
+
     // 初始化时加载保存的设置
     _loadSavedSettings();
 
@@ -2462,65 +2575,128 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
     _ref.listen<Brightness>(
       platformBrightnessProvider,
       (previous, next) {
+        log.w(
+            '🔔 [AppThemeNotifier-listen] platformBrightnessProvider 变化: $previous -> $next');
         _updateEffectiveBrightness();
       },
     );
+
+    log.i('📦 [AppThemeNotifier] listen 已注册');
 
     // 监听图片提取色变化
     _ref.listen<Map<ExtractedColorType, Color>?>(
       extractedColorsProvider,
       (previous, next) {
         if (next != null) {
-          state = state.copyWith(extractedColors: next);
-        } else {
-          state = state.copyWith(extractedColors: null);
+          log.i('📦 [AppThemeNotifier-listen] extractedColors 变化');
+          _updateExtractedColorsInCurrentMemory(next);
         }
       },
     );
   }
 
-  /// 加载保存的设置
+  /// ========== 加载和初始化 ==========
+
   Future<void> _loadSavedSettings() async {
     try {
-      // 加载UI主题设置
-      final themeString = await _storage.getUITheme();
-      final uiTheme = UIThemeTypeExtensions.fromString(themeString);
+      final manager = _ref.read(themeMemoryManagerProvider);
 
-      // 加载主题模式设置
-      final themeModeString = await _storage.getThemeMode();
-      final themeMode = _themeModeFromString(themeModeString);
+      // 并行加载亮暗两套记忆
+      final lightMemory =
+          await manager.loadMemoryForBrightness(Brightness.light);
+      final darkMemory = await manager.loadMemoryForBrightness(Brightness.dark);
+
+      // 加载主题模式
+      final themeModeStr = await _storage.getThemeMode();
+      final themeMode = _themeModeFromString(themeModeStr);
 
       // 更新状态
       state = state.copyWith(
-        uiTheme: uiTheme,
+        lightMemory: lightMemory,
+        darkMemory: darkMemory,
         themeMode: themeMode,
       );
 
-      // 更新实际亮度
+      // 计算实际亮度
       _updateEffectiveBrightness();
+
+      debugPrint('✅ 主题设置加载完成');
     } catch (e) {
-      debugPrint('加载主题设置失败: $e');
-      // 保持默认状态
+      debugPrint('❌ 加载主题设置失败: $e');
     }
   }
 
-  /// 更新UI主题
+  /// ========== UI主题切换（亮色/暗色分别记忆） ==========
+
+  /// 切换UI主题 - 更新当前 brightness 对应的 memory
   Future<void> updateUITheme(UIThemeType uiTheme) async {
     try {
-      // 保存到本地存储
-      final themeString = uiTheme.id;
-      await _storage.saveUITheme(themeString);
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final currentMemory = state.currentMemory;
 
-      // 更新状态
-      state = state.copyWith(uiTheme: uiTheme);
+      // 更新当前 memory（根据当前 brightness）
+      final updatedMemory =
+          manager.updateThemeSwitchInMemory(currentMemory, uiTheme);
 
-      debugPrint('UI主题已更新: ${uiTheme.displayName}');
+      // 保存到本地
+      await manager.updateMemoryForBrightness(
+        brightness: state.effectiveBrightness,
+        newMemory: updatedMemory,
+      );
+
+      // 更新对应的 state（亮或暗）
+      if (state.isDarkMode) {
+        state = state.copyWith(darkMemory: updatedMemory);
+      } else {
+        state = state.copyWith(lightMemory: updatedMemory);
+      }
+
+      debugPrint(
+          '✅ UI主题已更新: ${uiTheme.displayName} (${state.effectiveBrightness.name})');
     } catch (e) {
-      debugPrint('更新UI主题失败: $e');
+      debugPrint('❌ 更新UI主题失败: $e');
     }
   }
 
+  /// ========== 提取图片色（亮色/暗色分别记忆） ==========
+
+  /// 当 extractedColorsProvider 变化时，更新当前 memory
+  Future<void> _updateExtractedColorsInCurrentMemory(
+    Map<ExtractedColorType, Color> extractedColors,
+  ) async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final currentMemory = state.currentMemory;
+
+      // 更新当前 memory（根据当前 brightness）
+      final updatedMemory = manager.updateImageExtractInMemory(
+        currentMemory,
+        extractedColors,
+      );
+
+      // 保存到本地
+      await manager.updateMemoryForBrightness(
+        brightness: state.effectiveBrightness,
+        newMemory: updatedMemory,
+      );
+
+      // 更新对应的 state（亮或暗）
+      if (state.isDarkMode) {
+        state = state.copyWith(darkMemory: updatedMemory);
+      } else {
+        state = state.copyWith(lightMemory: updatedMemory);
+      }
+
+      debugPrint('✅ 图片提取色已记忆 (${state.effectiveBrightness.name} 模式)');
+    } catch (e) {
+      debugPrint('❌ 记忆提取色失败: $e');
+    }
+  }
+
+  /// ========== 主题模式切换（亮/暗/系统） ==========
+
   /// 更新主题模式（亮/暗/系统）
+  /// 🔑 关键：切换时自动应用"另一个 brightness"对应的 memory
   Future<void> updateThemeMode(AppThemeMode themeMode) async {
     try {
       // 保存到本地存储
@@ -2533,46 +2709,106 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
       // 更新实际亮度
       _updateEffectiveBrightness();
 
-      debugPrint('主题模式已更新: ${themeMode.displayName}');
+      debugPrint('✅ 主题模式已更新: ${themeMode.displayName}');
     } catch (e) {
-      debugPrint('更新主题模式失败: $e');
+      debugPrint('❌ 更新主题模式失败: $e');
     }
   }
 
-  /// 更新实际亮度
+  /// 更新实际亮度（计算 light/dark/system 的结果）
   void _updateEffectiveBrightness() {
+    log.w('🔄 [_updateEffectiveBrightness] 开始计算...');
+
     final platformBrightness = _ref.read(platformBrightnessProvider);
+    final themeMode = state.themeMode;
+
+    log.w(
+        '🔄 [_updateEffectiveBrightness] 当前 themeMode: ${themeMode.displayName}');
+    log.w(
+        '🔄 [_updateEffectiveBrightness] 当前 platformBrightness: ${platformBrightness.name}');
+
     final effectiveBrightness = calculateEffectiveBrightness(
-      state.themeMode,
+      themeMode,
       platformBrightness,
     );
 
+    log.w('🔄 [_updateEffectiveBrightness] 计算结果: ${effectiveBrightness.name}');
+
     state = state.copyWith(effectiveBrightness: effectiveBrightness);
+
+    log.w('✅ [_updateEffectiveBrightness] state 已更新');
   }
 
-  /// 重置所有主题设置
-  Future<void> reset() async {
+  /// ========== 重置 ==========
+
+  /// 重置当前 brightness 对应的主题为默认
+  Future<void> resetCurrentBrightness() async {
     try {
-      // 清除图片提取色
-      // 改为：
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final defaultMemory = manager.resetMemoryToDefault();
+
+      // 保存
+      await manager.updateMemoryForBrightness(
+        brightness: state.effectiveBrightness,
+        newMemory: defaultMemory,
+      );
+
+      // 更新 state
+      if (state.isDarkMode) {
+        state = state.copyWith(darkMemory: defaultMemory);
+      } else {
+        state = state.copyWith(lightMemory: defaultMemory);
+      }
+
+      // 清除提取色
       final utils = _ref.read(extractedColorsUtilsProvider);
       await utils.reset();
 
-      // 重置到默认设置
-      await updateUITheme(UIThemeType.defaultTheme);
-      await updateThemeMode(AppThemeMode.system);
-
-      debugPrint('主题设置已重置');
+      debugPrint('✅ 已重置 ${state.effectiveBrightness.name} 模式');
     } catch (e) {
-      debugPrint('重置主题设置失败: $e');
+      debugPrint('❌ 重置失败: $e');
     }
   }
 
-// 第138行附近：
+  /// 重置全部（亮+暗）
+  Future<void> resetAll() async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final defaultMemory = manager.resetMemoryToDefault();
+
+      // 保存亮暗两套
+      await Future.wait([
+        manager.updateMemoryForBrightness(
+          brightness: Brightness.light,
+          newMemory: defaultMemory,
+        ),
+        manager.updateMemoryForBrightness(
+          brightness: Brightness.dark,
+          newMemory: defaultMemory,
+        ),
+      ]);
+
+      // 更新 state
+      state = state.copyWith(
+        lightMemory: defaultMemory,
+        darkMemory: defaultMemory,
+      );
+
+      // 清除提取色
+      final utils = _ref.read(extractedColorsUtilsProvider);
+      await utils.reset();
+
+      debugPrint('✅ 已重置所有主题设置');
+    } catch (e) {
+      debugPrint('❌ 全局重置失败: $e');
+    }
+  }
+
+  /// ========== 工具方法 ==========
+
   /// 获取当前主题定义
   ThemeDefinition get currentThemeDefinition {
-    // return ThemeRegistry.getThemeByType(state.uiTheme);  // 错误：静态调用
-    return ThemeRegistry().getThemeByType(state.uiTheme); // 正确：实例调用
+    return ThemeRegistry().getThemeByType(state.currentUITheme);
   }
 
   /// 获取当前气泡颜色
@@ -2583,28 +2819,6 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
   /// 获取带透明度的气泡颜色
   Map<String, Color> get currentBubbleColorsWithOpacity {
     return currentThemeDefinition.getBubbleColorsWithOpacity(state.isDarkMode);
-  }
-
-  /// 调试信息
-  void debugPrintState() {
-    debugPrint('=== 主题状态 ===');
-    debugPrint('UI主题: ${state.uiTheme.displayName}');
-    debugPrint('主题模式: ${state.themeMode.displayName}');
-    debugPrint('实际亮度: ${state.isDarkMode ? "暗色" : "亮色"}');
-    debugPrint('有图片提取色: ${state.hasExtractedColors}');
-
-    if (state.hasExtractedColors) {
-      debugPrint('图片提取色:');
-      for (final entry in state.extractedColors!.entries) {
-        debugPrint('  ${entry.key}: ${entry.value.toHex()}');
-      }
-    }
-
-    debugPrint('\n当前气泡颜色:');
-    final bubbleColors = currentBubbleColors;
-    for (final entry in bubbleColors.entries) {
-      debugPrint('  ${entry.key}: ${entry.value.toHex()}');
-    }
   }
 
   /// 字符串转ThemeMode
@@ -2630,24 +2844,30 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
         return 'system';
     }
   }
+
+  /// 调试信息
+  void debugPrintState() {
+    debugPrint('=== 主题状态 ===');
+    debugPrint('当前亮度: ${state.isDarkMode ? "暗色" : "亮色"}');
+    debugPrint('主题模式: ${state.themeMode.displayName}');
+    debugPrint('\n亮色记忆: ${state.lightMemory}');
+    debugPrint('暗色记忆: ${state.darkMemory}');
+  }
 }
 
-// 第201行附近：
-/// 简化Provider：获取当前主题定义
+/// ========== 简化Provider ==========
+
 final currentThemeProvider = Provider<ThemeDefinition>((ref) {
   final state = ref.watch(appThemeProvider);
-  // return ThemeRegistry.getThemeByType(state.uiTheme);  // 错误：静态调用
-  return ThemeRegistry().getThemeByType(state.uiTheme); // 正确：实例调用
+  return ThemeRegistry().getThemeByType(state.currentUITheme);
 });
 
-/// 简化Provider：获取当前气泡颜色
 final currentBubbleColorsProvider = Provider<Map<String, Color>>((ref) {
   final state = ref.watch(appThemeProvider);
   final theme = ref.watch(currentThemeProvider);
   return theme.getBubbleColors(state.isDarkMode);
 });
 
-/// 简化Provider：获取带透明度的气泡颜色
 final currentBubbleColorsWithOpacityProvider =
     Provider<Map<String, Color>>((ref) {
   final state = ref.watch(appThemeProvider);
@@ -2655,11 +2875,9 @@ final currentBubbleColorsWithOpacityProvider =
   return theme.getBubbleColorsWithOpacity(state.isDarkMode);
 });
 
-/// 简化Provider：获取用户气泡装饰
 final userBubbleDecorationProvider = Provider<BoxDecoration>((ref) {
   final state = ref.watch(appThemeProvider);
   final theme = ref.watch(currentThemeProvider);
-
   final colors = theme.getBubbleColorsWithOpacity(state.isDarkMode);
 
   return BoxDecoration(
@@ -2672,11 +2890,9 @@ final userBubbleDecorationProvider = Provider<BoxDecoration>((ref) {
   );
 });
 
-/// 简化Provider：获取AI气泡装饰
 final aiBubbleDecorationProvider = Provider<BoxDecoration>((ref) {
   final state = ref.watch(appThemeProvider);
   final theme = ref.watch(currentThemeProvider);
-
   final colors = theme.getBubbleColorsWithOpacity(state.isDarkMode);
 
   return BoxDecoration(
@@ -2689,11 +2905,9 @@ final aiBubbleDecorationProvider = Provider<BoxDecoration>((ref) {
   );
 });
 
-/// 简化Provider：获取用户气泡文字样式
 final userBubbleTextStyleProvider = Provider<TextStyle>((ref) {
   final state = ref.watch(appThemeProvider);
   final theme = ref.watch(currentThemeProvider);
-
   final colors = theme.getBubbleColors(state.isDarkMode);
 
   return TextStyle(
@@ -2704,11 +2918,9 @@ final userBubbleTextStyleProvider = Provider<TextStyle>((ref) {
   );
 });
 
-/// 简化Provider：获取AI气泡文字样式
 final aiBubbleTextStyleProvider = Provider<TextStyle>((ref) {
   final state = ref.watch(appThemeProvider);
   final theme = ref.watch(currentThemeProvider);
-
   final colors = theme.getBubbleColors(state.isDarkMode);
 
   return TextStyle(
@@ -2719,33 +2931,6 @@ final aiBubbleTextStyleProvider = Provider<TextStyle>((ref) {
   );
 });
 
-/// 主题相关的工具Provider
-final themeUtilsProvider = Provider<ThemeUtils>((ref) {
-  return ThemeUtils();
-});
-
-/// 主题系统初始化Provider
-final themeSystemInitializedProvider = FutureProvider<bool>((ref) async {
-  try {
-    // 等待主题状态加载完成
-    await ref.watch(appThemeProvider.notifier)._loadSavedSettings();
-
-    // 验证主题系统
-    final errors = ThemeUtils.validateThemeSystem();
-
-    if (errors.isNotEmpty) {
-      debugPrint('主题系统初始化有警告: $errors');
-      return false;
-    }
-
-    debugPrint('主题系统初始化完成 ✓');
-    return true;
-  } catch (e) {
-    debugPrint('主题系统初始化失败: $e');
-    return false;
-  }
-});
-
 
 
 
@@ -2753,26 +2938,29 @@ final themeSystemInitializedProvider = FutureProvider<bool>((ref) async {
 
 File: D:\D\my_new_app\lib\theme\providers\brightness_provider.dart
 
-Size: 3599 bytes
+Size: 3775 bytes
 
-Modified: 02/01/2026 12:38:03
+Modified: 02/16/2026 14:43:12
 
 ========================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme_state.dart'; // 添加这行
-import 'app_theme_provider.dart'; // 添加这行
+import '../core/theme_state.dart';
+import 'app_theme_provider.dart';
+import '../../utils/logger.dart'; // 添加日志导入
 
 /// 平台亮度Provider - 监听系统亮度变化
 final platformBrightnessProvider = StateProvider<Brightness>((ref) {
-  // 初始值，会在Widget中更新
+  log.i('🌞 [platformBrightnessProvider] 初始化，默认值: light');
   return Brightness.light;
 });
 
 /// 有效亮度Provider - 根据主题模式计算的实际亮度
 final effectiveBrightnessProvider = Provider<Brightness>((ref) {
   final themeState = ref.watch(appThemeProvider);
+  log.i(
+      '🌞 [effectiveBrightnessProvider] 计算有效亮度: ${themeState.effectiveBrightness.name}');
   return themeState.effectiveBrightness;
 });
 
@@ -2999,9 +3187,9 @@ class ExtractedColorsUtils {
 
 File: D:\D\my_new_app\lib\theme\providers\theme_manager.dart
 
-Size: 9541 bytes
+Size: 9576 bytes
 
-Modified: 02/01/2026 22:14:52
+Modified: 02/15/2026 03:12:05
 
 ========================================
 
@@ -3025,7 +3213,7 @@ class ThemeManager {
 
   /// 获取当前主题定义
   ThemeDefinition get currentTheme {
-    return ThemeRegistry().getThemeByType(currentState.uiTheme); // 正确
+    return ThemeRegistry().getThemeByType(currentState.currentUITheme);
   }
 
   /// 获取当前气泡颜色
@@ -3058,7 +3246,7 @@ class ThemeManager {
 
   /// 重置所有主题设置
   Future<void> resetAll() async {
-    await _ref.read(appThemeProvider.notifier).reset();
+    await _ref.read(appThemeProvider.notifier).resetAll();
   }
 
   /// 切换亮暗模式
@@ -3149,7 +3337,7 @@ class ThemeManager {
   bool get isDarkMode => currentState.isDarkMode;
 
   /// 获取当前主题ID
-  String get currentThemeId => currentState.themeId;
+  String get currentThemeId => currentState.currentUITheme.id;
 
   /// 获取当前主题名称
   String get currentThemeName {
@@ -3300,14 +3488,14 @@ class ThemeSystemUtils {
 
     // 应用测试颜色
     final utils = ref.read(extractedColorsUtilsProvider);
-    await utils.applyTestColor(Colors.deepPurple);
+    await utils.applyTestColor(const Color.fromARGB(255, 217, 77, 136));
 
     debugPrint('测试主题已应用');
   }
 
   /// 重置主题
   static Future<void> resetTheme(WidgetRef ref) async {
-    await ref.read(appThemeProvider.notifier).reset();
+    await ref.read(appThemeProvider.notifier).resetAll();
     debugPrint('主题已重置');
   }
 
@@ -3326,6 +3514,201 @@ class ThemeSystemUtils {
     }
   }
 }
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\providers\theme_memory_manager.dart
+
+Size: 6004 bytes
+
+Modified: 02/15/2026 01:38:49
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/theme_state.dart';
+import '../core/color_semantics.dart';
+import '../../services/storage_service.dart';
+
+/// ============ 【核心业务逻辑层】 ============
+/// 专门管理亮/暗两套记忆的独立性和同步
+
+/// 主题记忆管理器 - 追踪和保存两套独立的记忆
+class ThemeMemoryManager {
+  final StorageService _storage = StorageService();
+
+  /// 根据当前 brightness 更新对应的 memory
+  /// 参数 brightness：指定更新哪个 memory（light/dark）
+  /// 参数 newMemory：新的 memory 对象
+  Future<void> updateMemoryForBrightness({
+    required Brightness brightness,
+    required ThemeMemory newMemory,
+  }) async {
+    try {
+      final key = brightness == Brightness.dark
+          ? _StorageKeys.darkMemory
+          : _StorageKeys.lightMemory;
+
+      // 序列化后保存
+      final serialized = _serializeThemeMemory(newMemory);
+      await _storage.saveString(key, serialized);
+
+      debugPrint('✅ 已保存 ${brightness.name} 模式的记忆: $newMemory');
+    } catch (e) {
+      debugPrint('❌ 保存记忆失败: $e');
+    }
+  }
+
+  /// 加载指定 brightness 的记忆
+  Future<ThemeMemory> loadMemoryForBrightness(Brightness brightness) async {
+    try {
+      final key = brightness == Brightness.dark
+          ? _StorageKeys.darkMemory
+          : _StorageKeys.lightMemory;
+
+      final serialized = await _storage.getString(key);
+
+      if (serialized == null || serialized.isEmpty) {
+        debugPrint('ℹ️ ${brightness.name} 模式无保存记忆，使用初始值');
+        return ThemeMemory.initial();
+      }
+
+      final memory = _deserializeThemeMemory(serialized);
+      debugPrint('✅ 已加载 ${brightness.name} 模式的记忆: $memory');
+      return memory;
+    } catch (e) {
+      debugPrint('❌ 加载记忆失败: $e，使用初始值');
+      return ThemeMemory.initial();
+    }
+  }
+
+  /// 更新当前 brightness 对应的主题选择
+  /// 自动设置 lastOperationType = themeSwitch
+  ThemeMemory updateThemeSwitchInMemory(
+    ThemeMemory currentMemory,
+    UIThemeType newTheme,
+  ) {
+    return currentMemory.copyWith(
+      uiTheme: newTheme,
+      lastOperationType: ThemeMemoryOperationType.themeSwitch,
+    );
+  }
+
+  /// 更新当前 brightness 对应的提取色
+  /// 自动设置 lastOperationType = imageExtract
+  ThemeMemory updateImageExtractInMemory(
+    ThemeMemory currentMemory,
+    Map<ExtractedColorType, Color> extractedColors,
+  ) {
+    return currentMemory.copyWith(
+      extractedColors: extractedColors,
+      lastOperationType: ThemeMemoryOperationType.imageExtract,
+    );
+  }
+
+  /// 重置为默认主题（相当于"主动切回默认"）
+  ThemeMemory resetMemoryToDefault() {
+    return ThemeMemory.initial();
+  }
+
+  /// ========== 序列化/反序列化（用于存储） ==========
+
+  String _serializeThemeMemory(ThemeMemory memory) {
+    // 简化版本：用 JSON 字符串表示
+    // 生产环境应该用 json_serializable 或类似工具
+    final themeIdStr = memory.uiTheme.id;
+    final opTypeStr =
+        memory.lastOperationType == ThemeMemoryOperationType.themeSwitch
+            ? 'switch'
+            : 'extract';
+
+    // 提取色序列化（简化：只存 dominant 和 vibrant）
+    final extractStr = _serializeExtractedColors(memory.extractedColors);
+
+    return '$themeIdStr|$opTypeStr|$extractStr';
+  }
+
+  ThemeMemory _deserializeThemeMemory(String data) {
+    try {
+      final parts = data.split('|');
+      if (parts.length < 3) {
+        return ThemeMemory.initial();
+      }
+
+      final themeIdStr = parts[0];
+      final opTypeStr = parts[1];
+      final extractStr = parts[2];
+
+      final uiTheme = UIThemeTypeExtensions.fromString(themeIdStr);
+      final opType = opTypeStr == 'switch'
+          ? ThemeMemoryOperationType.themeSwitch
+          : ThemeMemoryOperationType.imageExtract;
+
+      final extracted = _deserializeExtractedColors(extractStr);
+
+      return ThemeMemory(
+        uiTheme: uiTheme,
+        extractedColors: extracted,
+        lastOperationType: opType,
+      );
+    } catch (e) {
+      debugPrint('反序列化失败: $e');
+      return ThemeMemory.initial();
+    }
+  }
+
+  String _serializeExtractedColors(Map<ExtractedColorType, Color>? colors) {
+    if (colors == null || colors.isEmpty) return '';
+
+    // 简化：只保存 dominant 和 vibrant
+    final dominant = colors[ExtractedColorType.dominant];
+    final vibrant = colors[ExtractedColorType.vibrant];
+
+    if (dominant == null || vibrant == null) return '';
+
+    return '${dominant.value.toRadixString(16)},${vibrant.value.toRadixString(16)}';
+  }
+
+  Map<ExtractedColorType, Color>? _deserializeExtractedColors(String data) {
+    if (data.isEmpty) return null;
+
+    try {
+      final parts = data.split(',');
+      if (parts.length < 2) return null;
+
+      final dominant = Color(int.parse(parts[0], radix: 16));
+      final vibrant = Color(int.parse(parts[1], radix: 16));
+
+      return {
+        ExtractedColorType.dominant: dominant,
+        ExtractedColorType.vibrant: vibrant,
+        ExtractedColorType.lightVibrant: vibrant.withOpacity(0.7),
+        ExtractedColorType.darkVibrant: vibrant.withOpacity(0.5),
+        ExtractedColorType.muted: dominant.withOpacity(0.6),
+      };
+    } catch (e) {
+      debugPrint('提取色反序列化失败: $e');
+      return null;
+    }
+  }
+}
+
+/// ========== 存储键常量 ==========
+class _StorageKeys {
+  static const String lightMemory = 'theme_light_memory';
+  static const String darkMemory = 'theme_dark_memory';
+  static const String themeMode = 'theme_mode';
+}
+
+/// ========== Provider ==========
+
+final themeMemoryManagerProvider = Provider<ThemeMemoryManager>((ref) {
+  return ThemeMemoryManager();
+});
 
 
 
@@ -3689,9 +4072,9 @@ extension ColorExtensions on Color {
 
 File: D:\D\my_new_app\lib\theme\tokens\semantic_mapper.dart
 
-Size: 18485 bytes
+Size: 26339 bytes
 
-Modified: 02/01/2026 15:21:29
+Modified: 02/16/2026 22:36:33
 
 ========================================
 
@@ -3750,6 +4133,27 @@ class SemanticMapper {
       ColorSemantic.warning: BaseColorTokens.warningLight,
       ColorSemantic.error: BaseColorTokens.errorLight,
       ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F5F5),
+      ColorSemantic.primaryContainer: const Color(0xFFFFE4E9),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF6D1F34),
+      ColorSemantic.onSurface: const Color(0xFF1C1B1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF666666),
+      ColorSemantic.cardBackground: BaseColorTokens.white,
+      ColorSemantic.cardBorder: BaseColorTokens.gray300,
+      ColorSemantic.textFieldFill: BaseColorTokens.white,
+      ColorSemantic.textFieldHint: BaseColorTokens.textHintLight,
+      ColorSemantic.buttonBackground: BaseColorTokens.pinkPrimary,
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: BaseColorTokens.backgroundLight,
+      ColorSemantic.messageInputBackground: BaseColorTokens.white,
+      ColorSemantic.messageInputBorder: BaseColorTokens.gray300,
+      ColorSemantic.messageInputText: BaseColorTokens.textPrimaryLight,
+      ColorSemantic.messageInputHint: BaseColorTokens.textHintLight,
+      ColorSemantic.scrollToBottomButton: BaseColorTokens.pinkPrimary,
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: BaseColorTokens.pinkPrimary,
     };
   }
 
@@ -3801,6 +4205,27 @@ class SemanticMapper {
       ColorSemantic.warning: BaseColorTokens.warningDark,
       ColorSemantic.error: BaseColorTokens.errorDark,
       ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF3A1F25),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFFFB6C1),
+      ColorSemantic.onSurface: const Color(0xFFF5F5F5),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBCB8B9),
+      ColorSemantic.cardBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.cardBorder: BaseColorTokens.gray700,
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: BaseColorTokens.textHintDark,
+      ColorSemantic.buttonBackground: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: BaseColorTokens.backgroundDark,
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF444444),
+      ColorSemantic.messageInputText: BaseColorTokens.textPrimaryDark,
+      ColorSemantic.messageInputHint: BaseColorTokens.textHintDark,
+      ColorSemantic.scrollToBottomButton: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: BaseColorTokens.pinkPrimaryDark,
     };
   }
 
@@ -3847,11 +4272,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFFFF7B9C),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色保持不变
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successLight,
       ColorSemantic.warning: BaseColorTokens.warningLight,
       ColorSemantic.error: BaseColorTokens.errorLight,
       ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFFEF0F3),
+      ColorSemantic.primaryContainer: const Color(0xFFFFE4E9),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF6D1F34),
+      ColorSemantic.onSurface: const Color(0xFF2C1A1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF6D4F59),
+      ColorSemantic.cardBackground: BaseColorTokens.white,
+      ColorSemantic.cardBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.textFieldFill: BaseColorTokens.white,
+      ColorSemantic.textFieldHint: const Color(0xFFA88B95),
+      ColorSemantic.buttonBackground: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFFFFF8FA),
+      ColorSemantic.messageInputBackground: BaseColorTokens.white,
+      ColorSemantic.messageInputBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.messageInputText: const Color(0xFF2C1A1F),
+      ColorSemantic.messageInputHint: const Color(0xFFA88B95),
+      ColorSemantic.scrollToBottomButton: const Color(0xFFFF7B9C),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFFFF7B9C),
     };
   }
 
@@ -3898,11 +4344,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFFFF7B9C),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successDark,
       ColorSemantic.warning: BaseColorTokens.warningDark,
       ColorSemantic.error: BaseColorTokens.errorDark,
       ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF3A1F25),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFFFB6C1),
+      ColorSemantic.onSurface: const Color(0xFFF5F5F5),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBBBBBB),
+      ColorSemantic.cardBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.cardBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: const Color(0xFF888888),
+      ColorSemantic.buttonBackground: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFF0A0506),
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.messageInputText: const Color(0xFFF5F5F5),
+      ColorSemantic.messageInputHint: const Color(0xFF888888),
+      ColorSemantic.scrollToBottomButton: const Color(0xFFFF7B9C),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFFFF7B9C),
     };
   }
 
@@ -3949,11 +4416,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFF8B5D3A),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successLight,
       ColorSemantic.warning: BaseColorTokens.warningLight,
       ColorSemantic.error: BaseColorTokens.errorLight,
       ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F1E8),
+      ColorSemantic.primaryContainer: const Color(0xFFE8DECD),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF372B2D),
+      ColorSemantic.onSurface: const Color(0xFF372B2D),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF6D6359),
+      ColorSemantic.cardBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.cardBorder: const Color(0xFFE8DECD),
+      ColorSemantic.textFieldFill: const Color(0xFFFFFEFB),
+      ColorSemantic.textFieldHint: const Color(0xFFA0988F),
+      ColorSemantic.buttonBackground: const Color(0xFF8B5D3A),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFFFAF7F2),
+      ColorSemantic.messageInputBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.messageInputBorder: const Color(0xFFE8DECD),
+      ColorSemantic.messageInputText: const Color(0xFF372B2D),
+      ColorSemantic.messageInputHint: const Color(0xFFA0988F),
+      ColorSemantic.scrollToBottomButton: const Color(0xFF8B5D3A),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFF8B5D3A),
     };
   }
 
@@ -4000,11 +4488,32 @@ class SemanticMapper {
       ColorSemantic.switchActive: const Color(0xFF4CAF50),
       ColorSemantic.switchInactive: BaseColorTokens.gray500,
 
-      // 状态颜色
+      // ========== 状态颜色 ==========
       ColorSemantic.success: BaseColorTokens.successDark,
       ColorSemantic.warning: BaseColorTokens.warningDark,
       ColorSemantic.error: BaseColorTokens.errorDark,
       ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF1B3A2A),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFC8E6C9),
+      ColorSemantic.onSurface: const Color(0xFFE8F5E9),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBDBDBD),
+      ColorSemantic.cardBackground: const Color(0xFF1E1E1E),
+      ColorSemantic.cardBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: const Color(0xFF888888),
+      ColorSemantic.buttonBackground: const Color(0xFF4CAF50),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFF121212),
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.messageInputText: const Color(0xFFE8F5E9),
+      ColorSemantic.messageInputHint: const Color(0xFF888888),
+      ColorSemantic.scrollToBottomButton: const Color(0xFF4CAF50),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFF4CAF50),
     };
   }
 
@@ -4101,7 +4610,9 @@ class SemanticMapper {
       for (final semantic in category.value) {
         final color = mapping[semantic];
         if (color != null) {
-          debugPrint('${semantic.name.padRight(25)}: ${color.toHex()}');
+          final hex =
+              '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+          debugPrint('${semantic.name.padRight(25)}: $hex');
         }
       }
     }
