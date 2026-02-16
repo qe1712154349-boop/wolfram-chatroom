@@ -75,10 +75,9 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // 用更底层的值初始化
         final viewBrightness =
             View.of(context).platformDispatcher.platformBrightness;
-        log.i('📱 [initState-postFrame] 初始化平台亮度(View): ${viewBrightness.name}');
+        log.i('📱 [initState] 初始化平台亮度: ${viewBrightness.name}');
         ref.read(platformBrightnessProvider.notifier).state = viewBrightness;
       }
     });
@@ -114,17 +113,12 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
     super.didChangePlatformBrightness();
 
     if (mounted) {
-      // MediaQuery 的值
-      final mediaQueryBrightness = MediaQuery.of(context).platformBrightness;
-
-      // View 的值（更底层，通常更准确）
+      // 用更底层的 View API（绕过 MIUI bug）
       final viewBrightness =
           View.of(context).platformDispatcher.platformBrightness;
 
-      log.w('⚡ MediaQuery亮度: ${mediaQueryBrightness.name}');
-      log.w('⚡ View亮度: ${viewBrightness.name}');
+      log.w('⚡ 系统亮度已切换: ${viewBrightness.name}');
 
-      // 用更底层的 View 的值
       ref.read(platformBrightnessProvider.notifier).state = viewBrightness;
     }
   }
