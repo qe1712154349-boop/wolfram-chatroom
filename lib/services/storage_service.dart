@@ -68,8 +68,9 @@ class StorageService {
           final count = decoded.length;
           await prefs.setString(key, jsonString); // 复制到新 key
           await prefs.remove(legacyKey); // 删除旧 key（安全清理）
-          if (kDebugMode)
+          if (kDebugMode) {
             print('✅ 旧数据迁移完成: $count 条消息 from $legacyKey to $key');
+          }
         } catch (e) {
           if (kDebugMode) print('迁移解析失败: $e，保留原数据');
         }
@@ -284,10 +285,12 @@ class StorageService {
 
   Future<void> saveUserProfile(Map<String, dynamic> profile) async {
     if (profile['name'] != null) await saveUserName(profile['name'] as String);
-    if (profile['avatarPath'] != null)
+    if (profile['avatarPath'] != null) {
       await saveUserAvatarPath(profile['avatarPath'] as String);
-    if (profile['showAvatar'] != null)
+    }
+    if (profile['showAvatar'] != null) {
       await saveShowUserAvatar(profile['showAvatar'] as bool);
+    }
   }
 
   Future<String> copyFileToAppDir(String sourcePath) async {

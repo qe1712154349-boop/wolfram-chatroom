@@ -8,6 +8,7 @@ enum AppThemeMode {
   system,
 }
 
+// 🆕 只保留这一个扩展（包含 displayName 和 icon）
 extension AppThemeModeExtensions on AppThemeMode {
   String get displayName {
     switch (this) {
@@ -225,8 +226,7 @@ class ThemeState {
   }
 
   /// 获取当前 brightness 对应的 memory
-  ThemeMemory get currentMemory =>
-      isDarkMode ? darkMemory : lightMemory;
+  ThemeMemory get currentMemory => isDarkMode ? darkMemory : lightMemory;
 
   bool get isDarkMode => effectiveBrightness == Brightness.dark;
 

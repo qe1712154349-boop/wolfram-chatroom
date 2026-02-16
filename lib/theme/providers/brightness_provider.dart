@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme_state.dart'; // 添加这行
-import 'app_theme_provider.dart'; // 添加这行
+import '../core/theme_state.dart';
+import 'app_theme_provider.dart';
+import '../../utils/logger.dart'; // 添加日志导入
 
 /// 平台亮度Provider - 监听系统亮度变化
 final platformBrightnessProvider = StateProvider<Brightness>((ref) {
-  // 初始值，会在Widget中更新
+  log.i('🌞 [platformBrightnessProvider] 初始化，默认值: light');
   return Brightness.light;
 });
 
 /// 有效亮度Provider - 根据主题模式计算的实际亮度
 final effectiveBrightnessProvider = Provider<Brightness>((ref) {
   final themeState = ref.watch(appThemeProvider);
+  log.i(
+      '🌞 [effectiveBrightnessProvider] 计算有效亮度: ${themeState.effectiveBrightness.name}');
   return themeState.effectiveBrightness;
 });
 

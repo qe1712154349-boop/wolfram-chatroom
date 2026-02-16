@@ -7,6 +7,7 @@ import '../definitions/theme_registry.dart';
 import 'color_override.dart';
 import 'brightness_provider.dart';
 import 'theme_memory_manager.dart';
+import '../../../utils/logger.dart'; // 添加日志导入
 
 /// 主主题Provider - 管理整个应用的主题状态
 final appThemeProvider = StateNotifierProvider<AppThemeNotifier, ThemeState>(
@@ -21,6 +22,8 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
   final StorageService _storage = StorageService();
 
   AppThemeNotifier(this._ref) : super(ThemeState.initial()) {
+    log.i('📦 [AppThemeNotifier] 构造函数执行');
+
     // 初始化时加载保存的设置
     _loadSavedSettings();
 
@@ -28,15 +31,20 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
     _ref.listen<Brightness>(
       platformBrightnessProvider,
       (previous, next) {
+        log.w(
+            '🔔 [AppThemeNotifier-listen] platformBrightnessProvider 变化: $previous -> $next');
         _updateEffectiveBrightness();
       },
     );
+
+    log.i('📦 [AppThemeNotifier] listen 已注册');
 
     // 监听图片提取色变化
     _ref.listen<Map<ExtractedColorType, Color>?>(
       extractedColorsProvider,
       (previous, next) {
         if (next != null) {
+          log.i('📦 [AppThemeNotifier-listen] extractedColors 变化');
           _updateExtractedColorsInCurrentMemory(next);
         }
       },
@@ -165,13 +173,26 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
 
   /// 更新实际亮度（计算 light/dark/system 的结果）
   void _updateEffectiveBrightness() {
+    log.w('🔄 [_updateEffectiveBrightness] 开始计算...');
+
     final platformBrightness = _ref.read(platformBrightnessProvider);
+    final themeMode = state.themeMode;
+
+    log.w(
+        '🔄 [_updateEffectiveBrightness] 当前 themeMode: ${themeMode.displayName}');
+    log.w(
+        '🔄 [_updateEffectiveBrightness] 当前 platformBrightness: ${platformBrightness.name}');
+
     final effectiveBrightness = calculateEffectiveBrightness(
-      state.themeMode,
+      themeMode,
       platformBrightness,
     );
 
+    log.w('🔄 [_updateEffectiveBrightness] 计算结果: ${effectiveBrightness.name}');
+
     state = state.copyWith(effectiveBrightness: effectiveBrightness);
+
+    log.w('✅ [_updateEffectiveBrightness] state 已更新');
   }
 
   /// ========== 重置 ==========
