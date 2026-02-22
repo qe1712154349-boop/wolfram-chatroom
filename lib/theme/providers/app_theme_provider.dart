@@ -197,6 +197,17 @@ class AppThemeNotifier extends StateNotifier<ThemeState> {
 
   /// ========== 重置 ==========
 
+  /// 仅重置提取颜色（不重置主题模式）  ← 新增方法
+  Future<void> resetExtractedColors() async {
+    try {
+      final utils = _ref.read(extractedColorsUtilsProvider);
+      await utils.reset();
+      debugPrint('✅ 已清除提取颜色，恢复到系统主题');
+    } catch (e) {
+      debugPrint('❌ 清除提取颜色失败: $e');
+    }
+  }
+
   /// 重置当前 brightness 对应的主题为默认
   Future<void> resetCurrentBrightness() async {
     try {

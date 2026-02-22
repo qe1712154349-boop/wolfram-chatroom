@@ -1,7 +1,8 @@
-// lib/pages/me/profile_settings_page.dart
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../services/storage_service.dart';
 import '../../utils/asset_picker_util.dart';
 import '../../theme/theme.dart' as app_theme;
@@ -17,9 +18,11 @@ class ProfileSettingsPage extends ConsumerStatefulWidget {
 
 class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   final StorageService _storage = StorageService();
+
   String? _userAvatarPath;
   String _userName = 'name';
   bool _showUserAvatar = true;
+
   bool _isLoading = false;
   bool _isSaving = false;
 
@@ -53,18 +56,18 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
   Future<void> _pickUserAvatar() async {
     if (_isSaving) return;
 
+    setState(() => _isSaving = true);
     try {
-      setState(() => _isSaving = true);
       final AssetEntity? asset =
           await AssetPickerUtil.pickSingleImageDirectly(context);
       if (asset == null) {
-        setState(() => _isSaving = false);
+        if (mounted) setState(() => _isSaving = false);
         return;
       }
 
       final file = await asset.originFile;
       if (file == null) {
-        setState(() => _isSaving = false);
+        if (mounted) setState(() => _isSaving = false);
         return;
       }
 
@@ -79,8 +82,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
       _showSnackBar('头像已更新', isSuccess: true);
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
       _showSnackBar('选择头像失败: $e', isSuccess: false);
     }
   }
@@ -119,7 +121,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
         content: Text(message),
         backgroundColor: isSuccess
             ? null
-            : context.themeColor(app_theme.ColorSemantic.error), // ✅ 改用语义颜色
+            : context.themeColor(app_theme.ColorSemantic.error),
         duration: Duration(seconds: isSuccess ? 2 : 3),
         behavior: SnackBarBehavior.floating,
       ),
@@ -132,7 +134,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('修改名字'),
         content: TextField(
           controller: controller,
@@ -145,7 +147,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('取消'),
           ),
           ElevatedButton(
@@ -153,7 +155,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
               final name = controller.text.trim();
               if (name.isNotEmpty) {
                 _saveUserName(name);
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               }
             },
             child: const Text('保存'),
@@ -261,7 +263,7 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
             ),
           ),
 
-          // 设置项
+          // 设置项列表
           _buildSettingItem(
             icon: Icons.edit,
             title: '修改名字',
@@ -279,8 +281,6 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
                   context.themeColor(app_theme.ColorSemantic.switchActive),
             ),
           ),
-
-          // 测试按钮
           _buildSettingItem(
             icon: Icons.color_lens,
             title: '测试主题色更新',
@@ -290,21 +290,21 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
               final testColors = {
                 app_theme.ExtractedColorType.dominant: testColor,
                 app_theme.ExtractedColorType.vibrant: Color.fromRGBO(
-                  (testColor.red * 255 + 30).clamp(0, 255).toInt(),
-                  (testColor.green * 255 + 30).clamp(0, 255).toInt(),
-                  (testColor.blue * 255 + 30).clamp(0, 255).toInt(),
+                  ((testColor.r * 255) + 30).clamp(0, 255).toInt(),
+                  ((testColor.g * 255) + 30).clamp(0, 255).toInt(),
+                  ((testColor.b * 255) + 30).clamp(0, 255).toInt(),
                   1.0,
                 ),
                 app_theme.ExtractedColorType.lightVibrant: Color.fromRGBO(
-                  (testColor.red * 255 + 60).clamp(0, 255).toInt(),
-                  (testColor.green * 255 + 60).clamp(0, 255).toInt(),
-                  (testColor.blue * 255 + 60).clamp(0, 255).toInt(),
+                  ((testColor.r * 255) + 60).clamp(0, 255).toInt(),
+                  ((testColor.g * 255) + 60).clamp(0, 255).toInt(),
+                  ((testColor.b * 255) + 60).clamp(0, 255).toInt(),
                   1.0,
                 ),
                 app_theme.ExtractedColorType.darkVibrant: Color.fromRGBO(
-                  (testColor.red * 255 - 30).clamp(0, 255).toInt(),
-                  (testColor.green * 255 - 30).clamp(0, 255).toInt(),
-                  (testColor.blue * 255 - 30).clamp(0, 255).toInt(),
+                  ((testColor.r * 255) - 30).clamp(0, 255).toInt(),
+                  ((testColor.g * 255) - 30).clamp(0, 255).toInt(),
+                  ((testColor.b * 255) - 30).clamp(0, 255).toInt(),
                   1.0,
                 ),
                 app_theme.ExtractedColorType.muted:
@@ -313,11 +313,9 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
               await ref
                   .read(app_theme.extractedColorsUtilsProvider)
                   .updateColors(testColors);
-              _showSnackBar('已应用紫色主题', isSuccess: true);
+              if (mounted) _showSnackBar('已应用紫色主题', isSuccess: true);
             },
           ),
-
-          // 图片提取主题色
           _buildSettingItem(
             icon: Icons.palette,
             title: '从图片提取主题色',
@@ -329,37 +327,70 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
 
               final rawColors = await AssetPickerUtil.extractPalette(asset);
               if (rawColors == null || rawColors.isEmpty) {
-                _showSnackBar('提取失败', isSuccess: false);
+                if (mounted) _showSnackBar('提取失败', isSuccess: false);
                 return;
               }
 
-              // 关键：用工具类转换字符串 key → 枚举 key
               final convertedColors = ref
                   .read(app_theme.extractedColorsUtilsProvider)
                   .convertFromStringMap(rawColors);
-
-              // 如果转换后为空或不完整，可加提示
               if (convertedColors.isEmpty) {
-                _showSnackBar('提取颜色无效', isSuccess: false);
+                if (mounted) _showSnackBar('提取颜色无效', isSuccess: false);
                 return;
               }
 
               await ref
                   .read(app_theme.extractedColorsUtilsProvider)
                   .updateColors(convertedColors);
-
-              _showSnackBar('主题色已提取', isSuccess: true);
+              if (mounted) _showSnackBar('主题色已提取', isSuccess: true);
             },
           ),
-
-          // 重置主题色
+// 重置主题色
           _buildSettingItem(
             icon: Icons.restart_alt,
             title: '重置主题色',
-            subtitle: '恢复到默认颜色',
-            onTap: () async {
-              await ref.read(app_theme.extractedColorsUtilsProvider).reset();
-              _showSnackBar('主题色已重置', isSuccess: true);
+            subtitle: '恢复到系统默认（当前模式）',
+            onTap: () {
+              showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('重置主题色？'),
+                  content: const Text(
+                      '将清除所有从图片提取的自定义颜色，并把当前亮/暗模式恢复为默认配色。\n\n效果与“设置 → 重置当前模式”相同。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('取消'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          // 直接复用设置页的核心重置方法
+                          await ref
+                              .read(app_theme.appThemeProvider.notifier)
+                              .resetCurrentBrightness();
+
+                          if (!mounted) return;
+                          Navigator.pop(dialogContext);
+                          _showSnackBar('主题色已重置为当前模式默认', isSuccess: true);
+                        } catch (e) {
+                          if (mounted) {
+                            Navigator.pop(dialogContext);
+                            _showSnackBar('重置失败: $e', isSuccess: false);
+                          }
+                          debugPrint('重置主题色异常: $e');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('重置',
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],
@@ -367,6 +398,9 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
     );
   }
 
+  // ────────────────────────────────────────────────
+  // 小模具的正确做法 - 现在放在正确位置（类成员方法）
+  // ────────────────────────────────────────────────
   Widget _buildSettingItem({
     required IconData icon,
     required String title,
@@ -382,8 +416,10 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(icon,
-            color: context.themeColor(app_theme.ColorSemantic.primary)),
+        leading: Icon(
+          icon,
+          color: context.themeColor(app_theme.ColorSemantic.primary),
+        ),
         title: Text(
           title,
           style: TextStyle(
