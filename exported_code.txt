@@ -1,0 +1,4668 @@
+﻿
+========================================
+
+File: D:\D\my_new_app\lib\theme\theme.dart
+
+Size: 1285 bytes
+
+Modified: 02/03/2026 15:08:49
+
+========================================
+
+// lib/theme/theme.dart （完整推荐 export 列表）
+export 'providers/app_theme_provider.dart' show appThemeProvider;
+export 'core/theme_state.dart' show UIThemeType;
+
+// 核心类型与语义
+export 'core/color_semantics.dart' show ColorSemantic, ExtractedColorType;
+// 改成这样（补上 UIThemeTypeExtension）：
+export 'core/theme_state.dart'; // 完整 export，让所有 extension 自动可见
+
+export 'core/color_resolver.dart' show ColorResolver;
+
+// 令牌
+export 'tokens/base_tokens.dart'
+    show BaseColorTokens, ColorUtils, ColorPalettes, ColorExtensions;
+
+export 'tokens/semantic_mapper.dart';
+
+// 主题定义
+export 'definitions/default_theme.dart';
+export 'definitions/strawberry_candy.dart';
+export 'definitions/pickle_milk.dart';
+export 'definitions/theme_registry.dart'
+    show ThemeDefinition, ThemeRegistry, ThemePreview, ThemeUtils;
+
+// Providers
+export 'providers/app_theme_provider.dart' show appThemeProvider;
+export 'providers/brightness_provider.dart' show BrightnessUtils;
+export 'providers/color_override.dart';
+export 'providers/theme_manager.dart';
+
+// 扩展（关键！）
+export 'extensions/context_extensions.dart'; // ← 加这个，让 context.themeColor 可用
+
+// facade
+export 'theme_facade.dart';
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\theme_facade.dart
+
+Size: 1002 bytes
+
+Modified: 02/01/2026 22:14:52
+
+========================================
+
+// lib/theme/theme_facade.dart
+// 主题系统的友好 facade - 只 import barrel，不直接 import 具体文件
+
+import 'theme.dart' as theme; // import 自己的 barrel
+
+class ThemeSystem {
+  static Map<String, List<String>> validate() {
+    return theme.ThemeUtils.validateThemeSystem();
+  }
+
+  static void debugPrintAllThemes() {
+    theme.ThemeRegistry().debugPrintAllThemes();
+  }
+
+  static void debugPrintAllColors({bool isDark = false}) {
+    theme.ThemeUtils.debugPrintAllThemeColors(isDark);
+  }
+
+  static List<theme.ThemeDefinition> getAllThemes() {
+    return theme.ThemeRegistry().getAllThemes();
+  }
+}
+
+class Theme {
+  static theme.ColorResolver get resolver => theme.ColorResolver();
+
+  static theme.ColorUtils get colors => theme.ColorUtils();
+
+  static theme.BrightnessUtils get brightness => theme.BrightnessUtils();
+
+  static theme.ThemeUtils get utils => theme.ThemeUtils();
+
+  static theme.ThemeRegistry get registry => theme.ThemeRegistry();
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\core\color_resolver.dart
+
+Size: 14905 bytes
+
+Modified: 02/16/2026 23:16:10
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'color_semantics.dart';
+import 'theme_state.dart';
+
+/// 颜色解析器 - 整个主题系统的核心引擎
+/// 负责按照优先级获取正确的颜色值：
+/// 1. 图片提取色 (最高优先级)
+/// 2. UI主题色
+/// 3. 默认主题色
+/// 4. Material 3系统色 (fallback)
+class ColorResolver {
+  /// 主解析方法：根据主题状态获取颜色
+  static Color resolve({
+    required ThemeState themeState,
+    required ColorSemantic semantic,
+    Color? explicitOverride, // 显式覆盖（用于特殊情况）
+  }) {
+    // 1. 显式覆盖（最高优先级）
+    if (explicitOverride != null) {
+      return explicitOverride;
+    }
+
+    // 2. 图片提取色
+    if (themeState.hasExtractedColors) {
+      final extractedColor = _resolveFromExtractedColors(
+        extractedColors: themeState.currentExtractedColors!,
+        semantic: semantic,
+        isDarkMode: themeState.isDarkMode,
+      );
+      if (extractedColor != null) {
+        return extractedColor;
+      }
+    }
+
+// 3. UI主题色
+    final themeColor = _resolveFromUITheme(
+      uiTheme: themeState.currentUITheme,
+      semantic: semantic,
+      isDarkMode: themeState.isDarkMode,
+    );
+    if (themeColor != null) {
+      return themeColor;
+    }
+
+    // 4. 默认主题色
+    final defaultColor = _resolveFromDefaultTheme(
+      semantic: semantic,
+      isDarkMode: themeState.isDarkMode,
+    );
+    if (defaultColor != null) {
+      return defaultColor;
+    }
+
+    // 5. Material 3 fallback
+    return _fallbackToMaterial3(semantic, themeState.isDarkMode);
+  }
+
+  /// 从图片提取的颜色中解析
+  static Color? _resolveFromExtractedColors({
+    required Map<ExtractedColorType, Color> extractedColors,
+    required ColorSemantic semantic,
+    required bool isDarkMode,
+  }) {
+    try {
+      // 🔑 关键改动：直接用提取色，不做任何 dim 处理！
+      final semanticColors =
+          ExtractedColorMapper.mapToSemantics(extractedColors);
+      return semanticColors[semantic];
+    } catch (e) {
+      debugPrint('从提取色解析失败: $e');
+    }
+
+    return null;
+  }
+
+  /// 从UI主题解析
+  static Color? _resolveFromUITheme({
+    required UIThemeType uiTheme,
+    required ColorSemantic semantic,
+    required bool isDarkMode,
+  }) {
+    // 这里会从主题定义文件中获取颜色
+    // 具体的颜色映射在 theme/definitions/ 中定义
+    // 暂时返回null，等主题定义文件创建后再实现
+    return null;
+  }
+
+  /// 从默认主题解析
+  static Color? _resolveFromDefaultTheme({
+    required ColorSemantic semantic,
+    required bool isDarkMode,
+  }) {
+    // 默认主题的硬编码颜色
+    const defaultLightColors = {
+      // 气泡颜色
+      ColorSemantic.userBubbleBackground: Color(0xFFFEEBEF),
+      ColorSemantic.userBubbleBorder: Color(0xFFE8DADD),
+      ColorSemantic.userBubbleText: Color(0xFFA53A67),
+      ColorSemantic.aiBubbleBackground: Color(0xFFFFFFFF),
+      ColorSemantic.aiBubbleBorder: Color(0xFFE6E0E0),
+      ColorSemantic.aiBubbleText: Color(0xFF1D1D1F),
+
+      // 应用颜色
+      ColorSemantic.primary: Color(0xFFFF5A7E),
+      ColorSemantic.secondary: Color(0xFFFFB6C1),
+      ColorSemantic.accent: Color(0xFFFF5A7E),
+      ColorSemantic.background: Color(0xFFFDF7F7),
+      ColorSemantic.surface: Colors.white,
+      ColorSemantic.surfaceVariant: Color(0xFFF5F5F5),
+      ColorSemantic.textPrimary: Color(0xFF1D1D1F),
+      ColorSemantic.textSecondary: Color(0xFF6D6D6F),
+      ColorSemantic.textHint: Color(0xFF9E9E9E),
+      ColorSemantic.border: Color(0xFFE0E0E0),
+      ColorSemantic.divider: Color(0xFFF0F0F0),
+
+      // 按钮颜色
+      ColorSemantic.buttonPrimary: Color(0xFFFF5A7E),
+      ColorSemantic.buttonPrimaryText: Colors.white,
+      ColorSemantic.buttonSecondary: Color(0xFFF5F5F5),
+      ColorSemantic.buttonSecondaryText: Color(0xFF1D1D1F),
+
+      // 组件颜色
+      ColorSemantic.appBarBackground: Colors.white,
+      ColorSemantic.appBarText: Color(0xFF1D1D1F),
+      ColorSemantic.inputBackground: Colors.white,
+      ColorSemantic.inputBorder: Color(0xFFE0E0E0),
+      ColorSemantic.inputText: Color(0xFF1D1D1F),
+      ColorSemantic.switchActive: Color(0xFFFF5A7E),
+      ColorSemantic.switchInactive: Color(0xFF757575),
+
+      // 状态颜色
+      ColorSemantic.success: Color(0xFF4CAF50),
+      ColorSemantic.warning: Color(0xFFFF9800),
+      ColorSemantic.error: Color(0xFFF44336),
+      ColorSemantic.info: Color(0xFF2196F3),
+    };
+
+    const defaultDarkColors = {
+      // 气泡颜色
+      ColorSemantic.userBubbleBackground: Color(0xFF2A1A1F),
+      ColorSemantic.userBubbleBorder: Color(0xFF443339),
+      ColorSemantic.userBubbleText: Color(0xFFF8BBD0),
+      ColorSemantic.aiBubbleBackground: Color(0xFF1A1A1A),
+      ColorSemantic.aiBubbleBorder: Color(0xFF333333),
+      ColorSemantic.aiBubbleText: Color(0xFFE0E0E0),
+
+      // 应用颜色
+      ColorSemantic.primary: Color(0xFFF95685),
+      ColorSemantic.secondary: Color(0xFF3A1F25),
+      ColorSemantic.accent: Color(0xFFF95685),
+      ColorSemantic.background: Color(0xFF060405),
+      ColorSemantic.surface: Color(0xFF1A1A1A),
+      ColorSemantic.surfaceVariant: Color(0xFF2D2D2D),
+      ColorSemantic.textPrimary: Colors.white,
+      ColorSemantic.textSecondary: Color(0xFFAAAAAA),
+      ColorSemantic.textHint: Color(0xFF757575),
+      ColorSemantic.border: Color(0xFF424242),
+      ColorSemantic.divider: Color(0xFF333333),
+
+      // 按钮颜色
+      ColorSemantic.buttonPrimary: Color(0xFFF95685),
+      ColorSemantic.buttonPrimaryText: Colors.white,
+      ColorSemantic.buttonSecondary: Color(0xFF2D2D2D),
+      ColorSemantic.buttonSecondaryText: Colors.white,
+
+      // 组件颜色
+      ColorSemantic.appBarBackground: Color(0xFF1A1A1A),
+      ColorSemantic.appBarText: Colors.white,
+      ColorSemantic.inputBackground: Color(0xFF252525),
+      ColorSemantic.inputBorder: Color(0xFF444444),
+      ColorSemantic.inputText: Colors.white,
+      ColorSemantic.switchActive: Color(0xFFF95685),
+      ColorSemantic.switchInactive: Color(0xFF757575),
+
+      // 状态颜色（暗色模式下更柔和）
+      ColorSemantic.success: Color(0xFF66BB6A),
+      ColorSemantic.warning: Color(0xFFFFB74D),
+      ColorSemantic.error: Color(0xFFEF5350),
+      ColorSemantic.info: Color(0xFF42A5F5),
+    };
+
+    final colors = isDarkMode ? defaultDarkColors : defaultLightColors;
+    return colors[semantic];
+  }
+
+  /// Material 3 fallback颜色
+  static Color _fallbackToMaterial3(ColorSemantic semantic, bool isDarkMode) {
+    // 这些是Material 3的默认颜色
+    // 当所有其他方式都失败时使用
+    final materialColors =
+        isDarkMode ? _getMaterial3DarkColors() : _getMaterial3LightColors();
+
+    // 🔥 改进：如果找不到，返回合理的默认值而不是灰色
+    final fallbackColor = isDarkMode
+        ? const Color(0xFF1A1A1A)
+        : const Color.fromARGB(255, 255, 247, 247);
+    return materialColors[semantic] ?? fallbackColor;
+  }
+
+  /// 获取Material 3亮色
+  static Map<ColorSemantic, Color> _getMaterial3LightColors() {
+    return {
+      ColorSemantic.primary: const Color.fromARGB(255, 218, 85, 151),
+      ColorSemantic.secondary: const Color.fromARGB(255, 244, 104, 176),
+      ColorSemantic.background: const Color(0xFFFFFBFE),
+      ColorSemantic.surface: const Color(0xFFFFFBFE),
+      ColorSemantic.surfaceVariant: const Color(0xFFE7E0EC),
+      ColorSemantic.textPrimary: const Color(0xFF1C1B1F),
+      ColorSemantic.textSecondary: const Color.fromARGB(255, 79, 69, 73),
+      ColorSemantic.border: const Color(0xFF79747E),
+
+      // 🔥 新增 Material 3 完整定义
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F5F5),
+      ColorSemantic.primaryContainer: const Color(0xFFE8DEF8),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF1D192B),
+      ColorSemantic.onSurface: const Color(0xFF1C1B1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF49454F),
+      ColorSemantic.cardBackground: const Color(0xFFFFFFFF),
+      ColorSemantic.cardBorder: const Color(0xFFE7E0EC),
+    };
+  }
+
+  /// 获取Material 3暗色
+  static Map<ColorSemantic, Color> _getMaterial3DarkColors() {
+    return {
+      ColorSemantic.primary: const Color.fromARGB(255, 234, 107, 158),
+      ColorSemantic.secondary: const Color.fromARGB(255, 249, 149, 176),
+      ColorSemantic.background: const Color(0xFF1C1B1F),
+      ColorSemantic.surface: const Color(0xFF1C1B1F),
+      ColorSemantic.surfaceVariant: const Color.fromARGB(255, 79, 69, 73),
+      ColorSemantic.textPrimary: const Color.fromARGB(255, 230, 225, 227),
+      ColorSemantic.textSecondary: const Color(0xFFCAC4D0),
+      ColorSemantic.border: const Color.fromARGB(255, 153, 143, 150),
+
+      // 🔥 新增 Material 3 完整定义（暗色）
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color.fromARGB(255, 228, 85, 123),
+      ColorSemantic.onPrimaryContainer:
+          const Color.fromARGB(255, 255, 130, 155),
+      ColorSemantic.onSurface: const Color.fromARGB(255, 230, 225, 228),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFCAC4D0),
+      ColorSemantic.cardBackground: const Color.fromARGB(255, 31, 27, 30),
+      ColorSemantic.cardBorder: const Color.fromARGB(255, 79, 69, 73),
+    };
+  }
+
+  /// 为暗色模式调整颜色
+  static Color _adjustColorForDarkMode(Color color) {
+    // 如果是亮色，调暗一些
+    final hsl = HSLColor.fromColor(color);
+
+    // 降低亮度
+    final adjustedLightness = hsl.lightness * 0.7;
+
+    // 稍微降低饱和度，使颜色在暗色模式下更柔和
+    final adjustedSaturation = hsl.saturation * 0.8;
+
+    return hsl
+        .withLightness(adjustedLightness.clamp(0.0, 1.0))
+        .withSaturation(adjustedSaturation.clamp(0.0, 1.0))
+        .toColor();
+  }
+
+  /// 批量解析多个颜色
+  static Map<ColorSemantic, Color> resolveMultiple({
+    required ThemeState themeState,
+    required List<ColorSemantic> semantics,
+  }) {
+    final result = <ColorSemantic, Color>{};
+
+    for (final semantic in semantics) {
+      result[semantic] = resolve(
+        themeState: themeState,
+        semantic: semantic,
+      );
+    }
+
+    return result;
+  }
+
+  /// 解析气泡相关的所有颜色
+  static Map<String, Color> resolveBubbleColors({
+    required ThemeState themeState,
+    bool withOpacity = true,
+  }) {
+    final semantics = [
+      ColorSemantic.userBubbleBackground,
+      ColorSemantic.userBubbleBorder,
+      ColorSemantic.userBubbleText,
+      ColorSemantic.aiBubbleBackground,
+      ColorSemantic.aiBubbleBorder,
+      ColorSemantic.aiBubbleText,
+    ];
+
+    final colors = resolveMultiple(
+      themeState: themeState,
+      semantics: semantics,
+    );
+
+    // 如果需要透明度，应用30%透明度
+    if (withOpacity) {
+      final userBubbleBg = colors[ColorSemantic.userBubbleBackground];
+      final aiBubbleBg = colors[ColorSemantic.aiBubbleBackground];
+
+      if (userBubbleBg != null) {
+        colors[ColorSemantic.userBubbleBackground] =
+            userBubbleBg.withOpacity(0.3);
+      }
+      if (aiBubbleBg != null) {
+        colors[ColorSemantic.aiBubbleBackground] = aiBubbleBg.withOpacity(0.3);
+      }
+    }
+
+    // 转换为更方便使用的格式
+    return {
+      'userBubbleBackground': colors[ColorSemantic.userBubbleBackground]!,
+      'userBubbleBorder': colors[ColorSemantic.userBubbleBorder]!,
+      'userBubbleText': colors[ColorSemantic.userBubbleText]!,
+      'aiBubbleBackground': colors[ColorSemantic.aiBubbleBackground]!,
+      'aiBubbleBorder': colors[ColorSemantic.aiBubbleBorder]!,
+      'aiBubbleText': colors[ColorSemantic.aiBubbleText]!,
+    };
+  }
+
+  /// 调试方法：打印当前所有颜色
+  static void debugPrintColors(ThemeState themeState) {
+    debugPrint('=== 主题状态 ===');
+    debugPrint('UI主题: ${themeState.currentUITheme.displayName}');
+    debugPrint('主题模式: ${themeState.themeMode.displayName}');
+    debugPrint('暗色模式: ${themeState.isDarkMode}');
+    debugPrint('有提取色: ${themeState.hasExtractedColors}');
+
+    debugPrint('\n=== 气泡颜色 ===');
+    final bubbleColors = resolveBubbleColors(themeState: themeState);
+    for (final entry in bubbleColors.entries) {
+      debugPrint('${entry.key}: ${entry.value}');
+    }
+
+    debugPrint('\n=== 其他重要颜色 ===');
+    final otherSemantics = [
+      ColorSemantic.primary,
+      ColorSemantic.background,
+      ColorSemantic.surface,
+      ColorSemantic.textPrimary,
+    ];
+
+    for (final semantic in otherSemantics) {
+      final color = resolve(themeState: themeState, semantic: semantic);
+      debugPrint('${semantic.name}: $color');
+    }
+  }
+}
+
+/// 颜色解析器的简化版本（用于ConsumerWidget）
+class ColorResolverNotifier {
+  final ThemeState themeState;
+
+  ColorResolverNotifier(this.themeState);
+
+  /// 快速获取用户气泡颜色
+  Color get userBubbleBg => ColorResolver.resolve(
+        themeState: themeState,
+        semantic: ColorSemantic.userBubbleBackground,
+      );
+
+  Color get userBubbleText => ColorResolver.resolve(
+        themeState: themeState,
+        semantic: ColorSemantic.userBubbleText,
+      );
+
+  /// 快速获取AI气泡颜色
+  Color get aiBubbleBg => ColorResolver.resolve(
+        themeState: themeState,
+        semantic: ColorSemantic.aiBubbleBackground,
+      );
+
+  Color get aiBubbleText => ColorResolver.resolve(
+        themeState: themeState,
+        semantic: ColorSemantic.aiBubbleText,
+      );
+
+  /// 获取带透明度的气泡背景
+  Color get userBubbleBgWithOpacity => userBubbleBg.withOpacity(0.3);
+  Color get aiBubbleBgWithOpacity => aiBubbleBg.withOpacity(0.3);
+
+  /// 获取气泡装饰
+  BoxDecoration get userBubbleDecoration => BoxDecoration(
+        color: userBubbleBgWithOpacity,
+        border: Border.all(color: userBubbleBorder, width: 1),
+        borderRadius: BorderRadius.circular(18),
+      );
+
+  BoxDecoration get aiBubbleDecoration => BoxDecoration(
+        color: aiBubbleBgWithOpacity,
+        border: Border.all(color: aiBubbleBorder, width: 1),
+        borderRadius: BorderRadius.circular(18),
+      );
+
+  /// 获取边框颜色
+  Color get userBubbleBorder => ColorResolver.resolve(
+        themeState: themeState,
+        semantic: ColorSemantic.userBubbleBorder,
+      );
+
+  Color get aiBubbleBorder => ColorResolver.resolve(
+        themeState: themeState,
+        semantic: ColorSemantic.aiBubbleBorder,
+      );
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\core\color_semantics.dart
+
+Size: 12212 bytes
+
+Modified: 02/03/2026 15:10:38
+
+========================================
+
+/// color_semantics.dart
+/// 添加必要的导入
+library;
+
+import 'package:flutter/material.dart';
+
+/// 颜色语义枚举 - 定义颜色的用途而不是具体值
+/// 这样我们可以灵活地为主题分配不同的颜色值
+enum ColorSemantic {
+  // ========== 气泡相关 ==========
+  userBubbleBackground, // 用户气泡背景色
+  userBubbleBorder, // 用户气泡边框色
+  userBubbleText, // 用户气泡文字色
+
+  aiBubbleBackground, // AI气泡背景色
+  aiBubbleBorder, // AI气泡边框色
+  aiBubbleText, // AI气泡文字色
+
+  // ========== 应用通用 ==========
+  primary, // 主色（按钮、选中状态等）
+  secondary, // 辅色
+  accent, // 强调色（图标、高亮等）
+
+  background, // 页面背景色
+  surface, // 表面色（卡片、对话框背景）
+  surfaceVariant, // 表面变体色（列表项等）
+
+  textPrimary, // 主要文字色
+  textSecondary, // 次要文字色
+  textHint, // 提示文字色
+
+  border, // 通用边框色
+  divider, // 分割线颜色
+
+  // ========== 组件特定 ==========
+  buttonPrimary, // 主要按钮背景
+  buttonPrimaryText, // 主要按钮文字
+  buttonSecondary, // 次要按钮背景
+  buttonSecondaryText, // 次要按钮文字
+
+  appBarBackground, // 应用栏背景
+  appBarText, // 应用栏文字
+
+  inputBackground, // 输入框背景
+  inputBorder, // 输入框边框
+  inputText, // 输入框文字
+
+  switchActive, // Switch开启状态
+  switchInactive, // Switch关闭状态
+
+  success, // 成功色
+  warning, // 警告色
+  error, // 错误色
+  info, // 信息色
+// 新增（解决 undefined_enum_constant，覆盖 Material 3 常见语义）
+  surfaceContainerHighest,
+  primaryContainer,
+  onPrimaryContainer,
+  onSurface,
+  onSurfaceVariant,
+  cardBackground, // 编辑页卡片背景
+  cardBorder, // 编辑页卡片边框
+  textFieldFill, // 输入框填充色
+  textFieldHint, // 输入框提示文字
+  buttonBackground, // 保存按钮背景
+  buttonText, // 保存按钮文字
+
+  // 新增（聊天室专用，确保覆盖所有使用场景）
+  chatRoomBackground, // 聊天室整体背景（原 scaffoldBackgroundColor）
+  messageInputBackground, // 输入框背景
+  messageInputBorder, // 输入框边框
+  messageInputText, // 输入框文字
+  messageInputHint, // 输入框提示文字
+  scrollToBottomButton, // 滚动到底部按钮背景
+  scrollToBottomIcon, // 滚动到底部图标
+  loadingIndicator, // 正在输入... 指示器
+}
+
+/// 图片提取的颜色语义 - 从图片中提取的5个主要颜色
+enum ExtractedColorType {
+  dominant, // 主导色（图片中最多的颜色）→ 用于background
+  vibrant, // 鲜艳色（图片中最鲜艳的颜色）→ 用于primary/accent
+  lightVibrant, // 亮鲜艳色 → 用于surface
+  darkVibrant, // 暗鲜艳色 → 用于surfaceVariant
+  muted, // 柔和色 → 用于secondary
+}
+
+/// 颜色语义映射 - 将图片提取的颜色映射到应用语义
+class ExtractedColorMapper {
+  /// 将提取的5个颜色映射到完整的颜色语义表
+  static Map<ColorSemantic, Color> mapToSemantics(
+    Map<ExtractedColorType, Color> extractedColors,
+  ) {
+    return {
+      // 气泡颜色使用鲜艳色和主导色
+      ColorSemantic.userBubbleBackground:
+          extractedColors[ExtractedColorType.vibrant]!,
+      ColorSemantic.userBubbleText:
+          _getContrastColor(extractedColors[ExtractedColorType.vibrant]!),
+      ColorSemantic.aiBubbleBackground:
+          extractedColors[ExtractedColorType.lightVibrant]!,
+      ColorSemantic.aiBubbleText:
+          _getContrastColor(extractedColors[ExtractedColorType.lightVibrant]!),
+
+      // 应用通用颜色
+      ColorSemantic.primary: extractedColors[ExtractedColorType.vibrant]!,
+      ColorSemantic.secondary: extractedColors[ExtractedColorType.muted]!,
+      ColorSemantic.accent: extractedColors[ExtractedColorType.vibrant]!,
+      ColorSemantic.background: extractedColors[ExtractedColorType.dominant]!,
+      ColorSemantic.surface: extractedColors[ExtractedColorType.lightVibrant]!,
+      ColorSemantic.surfaceVariant:
+          extractedColors[ExtractedColorType.darkVibrant]!,
+
+      // 文字颜色根据背景色计算对比度
+      ColorSemantic.textPrimary:
+          _getContrastColor(extractedColors[ExtractedColorType.dominant]!),
+      ColorSemantic.textSecondary: _getContrastColor(
+          extractedColors[ExtractedColorType.dominant]!,
+          lighter: true),
+
+      // 边框和分割线使用柔和色
+      ColorSemantic.border:
+          extractedColors[ExtractedColorType.muted]!.withOpacity(0.3),
+      ColorSemantic.divider:
+          extractedColors[ExtractedColorType.muted]!.withOpacity(0.2),
+
+      // 按钮颜色
+      ColorSemantic.buttonPrimary: extractedColors[ExtractedColorType.vibrant]!,
+      ColorSemantic.buttonPrimaryText: Colors.white,
+      ColorSemantic.buttonSecondary: extractedColors[ExtractedColorType.muted]!,
+      ColorSemantic.buttonSecondaryText:
+          _getContrastColor(extractedColors[ExtractedColorType.muted]!),
+
+      // 组件颜色
+      ColorSemantic.appBarBackground:
+          extractedColors[ExtractedColorType.dominant]!,
+      ColorSemantic.appBarText:
+          _getContrastColor(extractedColors[ExtractedColorType.dominant]!),
+      ColorSemantic.inputBackground:
+          extractedColors[ExtractedColorType.lightVibrant]!,
+      ColorSemantic.inputText:
+          _getContrastColor(extractedColors[ExtractedColorType.lightVibrant]!),
+
+      // 状态颜色（保持固定，不受图片影响）
+      ColorSemantic.success: const Color(0xFF4CAF50),
+      ColorSemantic.warning: const Color(0xFFFF9800),
+      ColorSemantic.error: const Color(0xFFF44336),
+      ColorSemantic.info: const Color(0xFF2196F3),
+    };
+  }
+
+  /// 获取对比色（黑或白）
+  static Color _getContrastColor(Color background, {bool lighter = false}) {
+    // 计算亮度
+    final luminance = background.computeLuminance();
+
+    if (lighter) {
+      // 返回更浅的颜色
+      return luminance > 0.5
+          ? Colors.black.withOpacity(0.6)
+          : Colors.white.withOpacity(0.8);
+    }
+
+    // 返回高对比度颜色
+    return luminance > 0.5 ? Colors.black : Colors.white;
+  }
+}
+
+/// 扩展方法：方便地获取颜色名称
+extension ColorSemanticName on ColorSemantic {
+  String get name {
+    switch (this) {
+      case ColorSemantic.userBubbleBackground:
+        return '用户气泡背景';
+      case ColorSemantic.userBubbleBorder:
+        return '用户气泡边框';
+      case ColorSemantic.userBubbleText:
+        return '用户气泡文字';
+      case ColorSemantic.aiBubbleBackground:
+        return 'AI气泡背景';
+      case ColorSemantic.aiBubbleBorder:
+        return 'AI气泡边框';
+      case ColorSemantic.aiBubbleText:
+        return 'AI气泡文字';
+      case ColorSemantic.primary:
+        return '主色';
+      case ColorSemantic.secondary:
+        return '辅色';
+      case ColorSemantic.accent:
+        return '强调色';
+      case ColorSemantic.background:
+        return '背景色';
+      case ColorSemantic.surface:
+        return '表面色';
+      case ColorSemantic.surfaceVariant:
+        return '表面变体';
+      case ColorSemantic.textPrimary:
+        return '主要文字';
+      case ColorSemantic.textSecondary:
+        return '次要文字';
+      case ColorSemantic.textHint:
+        return '提示文字';
+      case ColorSemantic.border:
+        return '边框色';
+      case ColorSemantic.divider:
+        return '分割线';
+      case ColorSemantic.buttonPrimary:
+        return '主要按钮';
+      case ColorSemantic.buttonPrimaryText:
+        return '主要按钮文字';
+      case ColorSemantic.buttonSecondary:
+        return '次要按钮';
+      case ColorSemantic.buttonSecondaryText:
+        return '次要按钮文字';
+      case ColorSemantic.appBarBackground:
+        return '应用栏背景';
+      case ColorSemantic.appBarText:
+        return '应用栏文字';
+      case ColorSemantic.inputBackground:
+        return '输入框背景';
+      case ColorSemantic.inputBorder:
+        return '输入框边框';
+      case ColorSemantic.inputText:
+        return '输入框文字';
+      case ColorSemantic.switchActive:
+        return 'Switch开启';
+      case ColorSemantic.switchInactive:
+        return 'Switch关闭';
+      case ColorSemantic.success:
+        return '成功色';
+      case ColorSemantic.warning:
+        return '警告色';
+      case ColorSemantic.error:
+        return '错误色';
+      case ColorSemantic.info:
+        return '信息色';
+
+      // 新增（补全你加的所有语义常量）
+      case ColorSemantic.surfaceContainerHighest:
+        return '高亮表面容器';
+      case ColorSemantic.primaryContainer:
+        return '主色容器';
+      case ColorSemantic.onPrimaryContainer:
+        return '主色容器上的文字';
+      case ColorSemantic.onSurface:
+        return '表面上的文字';
+      case ColorSemantic.onSurfaceVariant:
+        return '表面变体上的文字';
+      case ColorSemantic.chatRoomBackground:
+        return '聊天室整体背景';
+      case ColorSemantic.messageInputBackground:
+        return '消息输入框背景';
+      case ColorSemantic.messageInputBorder:
+        return '消息输入框边框';
+      case ColorSemantic.messageInputText:
+        return '消息输入框文字';
+      case ColorSemantic.messageInputHint:
+        return '消息输入框提示文字';
+      case ColorSemantic.scrollToBottomButton:
+        return '滚动到底部按钮背景';
+      case ColorSemantic.scrollToBottomIcon:
+        return '滚动到底部图标';
+      case ColorSemantic.loadingIndicator:
+        return '加载/正在输入指示器';
+
+      // 兜底（防止未来加新枚举值时忘记补 case）
+      default:
+        return name.toString().split('.').last; // 自动转成驼峰名
+    }
+  }
+
+  /// 获取颜色描述（也补全，避免未来扩展时漏）
+  String get description {
+    switch (this) {
+      case ColorSemantic.userBubbleBackground:
+        return '用户发送消息的气泡背景颜色';
+      case ColorSemantic.userBubbleText:
+        return '用户发送消息的文字颜色';
+      case ColorSemantic.aiBubbleBackground:
+        return 'AI回复消息的气泡背景颜色';
+      case ColorSemantic.aiBubbleText:
+        return 'AI回复消息的文字颜色';
+      case ColorSemantic.primary:
+        return '应用的主要品牌色，用于重要操作和焦点状态';
+      case ColorSemantic.background:
+        return '页面的背景颜色';
+
+      // 新增描述
+      case ColorSemantic.surfaceContainerHighest:
+        return '高亮表面容器，用于卡片/对话框等';
+      case ColorSemantic.primaryContainer:
+        return '主色容器，用于强调区域背景';
+      case ColorSemantic.onPrimaryContainer:
+        return '主色容器上的文字/图标';
+      case ColorSemantic.onSurface:
+        return '表面上的主要文字';
+      case ColorSemantic.onSurfaceVariant:
+        return '表面上的次要文字/变体';
+      case ColorSemantic.chatRoomBackground:
+        return '聊天室整体背景色';
+      case ColorSemantic.messageInputBackground:
+        return '消息输入框背景色';
+      case ColorSemantic.messageInputBorder:
+        return '消息输入框边框色';
+      case ColorSemantic.messageInputText:
+        return '消息输入框文字色';
+      case ColorSemantic.messageInputHint:
+        return '消息输入框提示文字色';
+      case ColorSemantic.scrollToBottomButton:
+        return '滚动到底部按钮背景色';
+      case ColorSemantic.scrollToBottomIcon:
+        return '滚动到底部图标色';
+      case ColorSemantic.loadingIndicator:
+        return '加载/正在输入指示器颜色';
+
+      default:
+        return '颜色语义：$name';
+    }
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\core\theme_state.dart
+
+Size: 7769 bytes
+
+Modified: 02/23/2026 18:12:33
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'color_semantics.dart';
+
+/// 主题模式：亮色、暗色、跟随系统
+enum AppThemeMode {
+  light,
+  dark,
+  system,
+}
+
+// 🆕 只保留这一个扩展（包含 displayName 和 icon）
+extension AppThemeModeExtensions on AppThemeMode {
+  String get displayName {
+    switch (this) {
+      case AppThemeMode.light:
+        return '亮色';
+      case AppThemeMode.dark:
+        return '暗色';
+      case AppThemeMode.system:
+        return '跟随系统';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case AppThemeMode.light:
+        return Icons.light_mode;
+      case AppThemeMode.dark:
+        return Icons.dark_mode;
+      case AppThemeMode.system:
+        return Icons.settings_suggest;
+    }
+  }
+}
+
+/// UI主题类型
+enum UIThemeType {
+  defaultTheme,
+  strawberryCandy,
+  pickleMilk,
+}
+
+extension UIThemeTypeExtensions on UIThemeType {
+  String get id {
+    switch (this) {
+      case UIThemeType.defaultTheme:
+        return 'default';
+      case UIThemeType.strawberryCandy:
+        return 'strawberryCandy';
+      case UIThemeType.pickleMilk:
+        return 'pickleMilk';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case UIThemeType.defaultTheme:
+        return '默认主题';
+      case UIThemeType.strawberryCandy:
+        return '草莓糖心🍓';
+      case UIThemeType.pickleMilk:
+        return '酸菜牛奶🥛';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case UIThemeType.defaultTheme:
+        return '清爽的粉色系设计';
+      case UIThemeType.strawberryCandy:
+        return '少女心满满的草莓风格';
+      case UIThemeType.pickleMilk:
+        return '优雅的酸菜牛奶配色';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case UIThemeType.defaultTheme:
+        return Icons.favorite;
+      case UIThemeType.strawberryCandy:
+        return Icons.cake;
+      case UIThemeType.pickleMilk:
+        return Icons.local_cafe;
+    }
+  }
+
+  static UIThemeType fromString(String value) {
+    switch (value) {
+      case 'strawberryCandy':
+        return UIThemeType.strawberryCandy;
+      case 'pickleMilk':
+        return UIThemeType.pickleMilk;
+      default:
+        return UIThemeType.defaultTheme;
+    }
+  }
+}
+
+/// ============ 新增：独立的主题记忆对象 ============
+
+/// 【核心】单个 Brightness 下的主题记忆
+/// 记录：最后选的主题 / 最后提取的图片色 / 最后操作类型
+@immutable
+class ThemeMemory {
+  final UIThemeType uiTheme; // 最后选的主题
+  final Map<ExtractedColorType, Color>? extractedColors; // 最后提取的图片色
+  final ThemeMemoryOperationType lastOperationType; // 最后操作类型
+
+  const ThemeMemory({
+    required this.uiTheme,
+    this.extractedColors,
+    required this.lastOperationType,
+  });
+
+  factory ThemeMemory.initial() {
+    return ThemeMemory(
+      uiTheme: UIThemeType.defaultTheme,
+      extractedColors: null,
+      lastOperationType: ThemeMemoryOperationType.themeSwitch,
+    );
+  }
+
+  ThemeMemory copyWith({
+    UIThemeType? uiTheme,
+    Map<ExtractedColorType, Color>? extractedColors,
+    ThemeMemoryOperationType? lastOperationType,
+  }) {
+    return ThemeMemory(
+      uiTheme: uiTheme ?? this.uiTheme,
+      extractedColors: extractedColors ?? this.extractedColors,
+      lastOperationType: lastOperationType ?? this.lastOperationType,
+    );
+  }
+
+  bool get hasExtractedColors =>
+      extractedColors != null && extractedColors!.isNotEmpty;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ThemeMemory &&
+        other.uiTheme == uiTheme &&
+        other.lastOperationType == lastOperationType &&
+        _mapsEqual(other.extractedColors, extractedColors);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        uiTheme,
+        lastOperationType,
+        _mapHashCode(extractedColors),
+      );
+
+  static bool _mapsEqual(
+      Map<ExtractedColorType, Color>? a, Map<ExtractedColorType, Color>? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (b[key] != a[key]) return false;
+    }
+    return true;
+  }
+
+  static int _mapHashCode(Map<ExtractedColorType, Color>? map) {
+    if (map == null) return 0;
+    int hash = 0;
+    for (final entry in map.entries) {
+      hash ^= entry.key.hashCode ^ entry.value.hashCode;
+    }
+    return hash;
+  }
+
+  @override
+  String toString() {
+    return 'ThemeMemory(uiTheme: $uiTheme, hasExtracted: $hasExtractedColors, lastOp: $lastOperationType)';
+  }
+}
+
+/// 最后操作类型（核心：用这个决定"记住什么"）
+enum ThemeMemoryOperationType {
+  themeSwitch, // 最后一次是切主题
+  imageExtract, // 最后一次是提取图片
+}
+
+/// ============ 新增：全局主题总状态 ============
+
+/// 【核心】应用的完整主题状态
+/// 包含：亮色记忆、暗色记忆、当前 brightness、主题模式
+@immutable
+class ThemeState {
+  final ThemeMemory lightMemory; // 亮色模式下的记忆
+  final ThemeMemory darkMemory; // 暗色模式下的记忆
+  final AppThemeMode themeMode; // 亮/暗/系统
+  final Brightness effectiveBrightness; // 实际生效的亮度
+
+  const ThemeState({
+    required this.lightMemory,
+    required this.darkMemory,
+    required this.themeMode,
+    required this.effectiveBrightness,
+  });
+
+  factory ThemeState.initial() {
+    return ThemeState(
+      lightMemory: ThemeMemory.initial(),
+      darkMemory: ThemeMemory.initial(),
+      themeMode: AppThemeMode.system,
+      effectiveBrightness: Brightness.light,
+    );
+  }
+
+  ThemeState copyWith({
+    ThemeMemory? lightMemory,
+    ThemeMemory? darkMemory,
+    AppThemeMode? themeMode,
+    Brightness? effectiveBrightness,
+  }) {
+    return ThemeState(
+      lightMemory: lightMemory ?? this.lightMemory,
+      darkMemory: darkMemory ?? this.darkMemory,
+      themeMode: themeMode ?? this.themeMode,
+      effectiveBrightness: effectiveBrightness ?? this.effectiveBrightness,
+    );
+  }
+
+  /// 获取当前 brightness 对应的 memory
+  ThemeMemory get currentMemory => isDarkMode ? darkMemory : lightMemory;
+
+  bool get isDarkMode => effectiveBrightness == Brightness.dark;
+
+  /// 获取当前生效的主题配置
+  UIThemeType get currentUITheme => currentMemory.uiTheme;
+
+  Map<ExtractedColorType, Color>? get currentExtractedColors =>
+      currentMemory.extractedColors;
+
+  bool get hasExtractedColors => currentMemory.hasExtractedColors;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ThemeState &&
+        other.lightMemory == lightMemory &&
+        other.darkMemory == darkMemory &&
+        other.themeMode == themeMode &&
+        other.effectiveBrightness == effectiveBrightness;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        lightMemory,
+        darkMemory,
+        themeMode,
+        effectiveBrightness,
+      );
+
+  @override
+  String toString() {
+    return 'ThemeState(isDark: $isDarkMode, light: $lightMemory, dark: $darkMemory)';
+  }
+}
+
+/// 计算实际亮度模式
+Brightness calculateEffectiveBrightness(
+  AppThemeMode themeMode,
+  Brightness platformBrightness,
+) {
+  switch (themeMode) {
+    case AppThemeMode.light:
+      return Brightness.light;
+    case AppThemeMode.dark:
+      return Brightness.dark;
+    case AppThemeMode.system:
+      return platformBrightness;
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\definitions\default_theme.dart
+
+Size: 3478 bytes
+
+Modified: 02/01/2026 12:56:22
+
+========================================
+
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import '../tokens/semantic_mapper.dart';
+
+/// 默认主题 - 你的粉色系设计
+class DefaultTheme {
+  static const String id = 'default';
+  static const String name = '默认主题';
+  static const String description = '清爽的粉色系设计，简约而温暖';
+  static const IconData icon = Icons.favorite;
+
+  /// 亮色模式颜色映射
+  static Map<ColorSemantic, Color> get light {
+    return SemanticMapper.defaultLight();
+  }
+
+  /// 暗色模式颜色映射
+  static Map<ColorSemantic, Color> get dark {
+    return SemanticMapper.defaultDark();
+  }
+
+  /// 获取当前亮度的颜色映射
+  static Map<ColorSemantic, Color> getColors(bool isDark) {
+    return isDark ? dark : light;
+  }
+
+  /// 获取特定语义的颜色
+  static Color getColor(ColorSemantic semantic, bool isDark) {
+    return getColors(isDark)[semantic] ?? Colors.grey;
+  }
+
+  /// 获取气泡相关颜色
+  static Map<String, Color> getBubbleColors(bool isDark) {
+    final colors = getColors(isDark);
+    return {
+      'userBubbleBackground': colors[ColorSemantic.userBubbleBackground]!,
+      'userBubbleBorder': colors[ColorSemantic.userBubbleBorder]!,
+      'userBubbleText': colors[ColorSemantic.userBubbleText]!,
+      'aiBubbleBackground': colors[ColorSemantic.aiBubbleBackground]!,
+      'aiBubbleBorder': colors[ColorSemantic.aiBubbleBorder]!,
+      'aiBubbleText': colors[ColorSemantic.aiBubbleText]!,
+    };
+  }
+
+  /// 获取带透明度的气泡颜色
+  static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
+    final colors = getBubbleColors(isDark);
+    return {
+      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBorder': colors['userBubbleBorder']!,
+      'userBubbleText': colors['userBubbleText']!,
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBorder': colors['aiBubbleBorder']!,
+      'aiBubbleText': colors['aiBubbleText']!,
+    };
+  }
+
+  /// 调试信息
+  static void debugPrintInfo() {
+    debugPrint('=== 默认主题 ===');
+    debugPrint('ID: $id');
+    debugPrint('名称: $name');
+    debugPrint('描述: $description');
+
+    debugPrint('\n亮色模式气泡颜色:');
+    final lightBubbles = getBubbleColors(false);
+    for (final entry in lightBubbles.entries) {
+      debugPrint('  ${entry.key}: ${_colorToHex(entry.value)}');
+    }
+
+    debugPrint('\n暗色模式气泡颜色:');
+    final darkBubbles = getBubbleColors(true);
+    for (final entry in darkBubbles.entries) {
+      debugPrint('  ${entry.key}: ${_colorToHex(entry.value)}');
+    }
+  }
+
+  /// 将颜色转换为16进制字符串
+  static String _colorToHex(Color color) {
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+  }
+
+  /// 验证主题完整性
+  static List<String> validate() {
+    final errors = <String>[];
+
+    // 检查亮色模式
+    final lightMissing = SemanticMapper.validateMapping(light);
+    if (lightMissing.isNotEmpty) {
+      errors.add('亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
+    }
+
+    // 检查暗色模式
+    final darkMissing = SemanticMapper.validateMapping(dark);
+    if (darkMissing.isNotEmpty) {
+      errors.add('暗色模式缺少: ${darkMissing.map((e) => e.name).join(', ')}');
+    }
+
+    return errors;
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\definitions\pickle_milk.dart
+
+Size: 4811 bytes
+
+Modified: 02/01/2026 13:05:25
+
+========================================
+
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import '../tokens/semantic_mapper.dart';
+
+/// 酸菜牛奶主题 - 优雅的酸菜牛奶配色
+class PickleMilkTheme {
+  static const String id = 'pickleMilk';
+  static const String name = '酸菜牛奶🥛';
+  static const String description = '优雅的酸菜牛奶配色，舒适而清新';
+  static const IconData icon = Icons.local_cafe;
+
+  /// 亮色模式颜色映射
+  static Map<ColorSemantic, Color> get light {
+    return SemanticMapper.pickleMilkLight();
+  }
+
+  /// 暗色模式颜色映射
+  static Map<ColorSemantic, Color> get dark {
+    return SemanticMapper.pickleMilkDark();
+  }
+
+  /// 获取当前亮度的颜色映射
+  static Map<ColorSemantic, Color> getColors(bool isDark) {
+    return isDark ? dark : light;
+  }
+
+  /// 获取特定语义的颜色
+  static Color getColor(ColorSemantic semantic, bool isDark) {
+    return getColors(isDark)[semantic] ?? Colors.grey;
+  }
+
+  /// 获取气泡相关颜色
+  static Map<String, Color> getBubbleColors(bool isDark) {
+    final colors = getColors(isDark);
+    return {
+      'userBubbleBackground': colors[ColorSemantic.userBubbleBackground]!,
+      'userBubbleBorder': colors[ColorSemantic.userBubbleBorder]!,
+      'userBubbleText': colors[ColorSemantic.userBubbleText]!,
+      'aiBubbleBackground': colors[ColorSemantic.aiBubbleBackground]!,
+      'aiBubbleBorder': colors[ColorSemantic.aiBubbleBorder]!,
+      'aiBubbleText': colors[ColorSemantic.aiBubbleText]!,
+    };
+  }
+
+  /// 获取带透明度的气泡颜色
+  static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
+    final colors = getBubbleColors(isDark);
+    return {
+      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBorder': colors['userBubbleBorder']!,
+      'userBubbleText': colors['userBubbleText']!,
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBorder': colors['aiBubbleBorder']!,
+      'aiBubbleText': colors['aiBubbleText']!,
+    };
+  }
+
+  /// 主题特色：酸菜牛奶特有的样式
+  static Map<String, dynamic> getThemeFeatures() {
+    return {
+      'hasRoundedCorners': true,
+      'borderWidth': 1.0,
+      'bubbleOpacity': 0.3,
+      'shadowEnabled': true,
+      'shadowOpacity': 0.1,
+      'animationStyle': 'smooth',
+    };
+  }
+
+  /// 获取主题预览颜色（用于展示）
+  static List<Color> getPreviewColors(bool isDark) {
+    final colors = getColors(isDark);
+    return [
+      colors[ColorSemantic.primary]!,
+      colors[ColorSemantic.secondary]!,
+      colors[ColorSemantic.background]!,
+      colors[ColorSemantic.userBubbleBackground]!,
+      colors[ColorSemantic.aiBubbleBackground]!,
+    ];
+  }
+
+  /// 酸菜牛奶主题特有的输入框样式
+  static InputDecoration getInputDecoration(bool isDark) {
+    final colors = getColors(isDark);
+    return InputDecoration(
+      filled: true,
+      fillColor: colors[ColorSemantic.inputBackground],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: colors[ColorSemantic.inputBorder]!,
+          width: 1,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: colors[ColorSemantic.inputBorder]!,
+          width: 1,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: colors[ColorSemantic.primary]!,
+          width: 2,
+        ),
+      ),
+      hintStyle: TextStyle(
+        color: colors[ColorSemantic.textHint],
+      ),
+    );
+  }
+
+  /// 调试信息
+  static void debugPrintInfo() {
+    debugPrint('=== 酸菜牛奶主题 ===');
+    debugPrint('ID: $id');
+    debugPrint('名称: $name');
+    debugPrint('描述: $description');
+
+    final features = getThemeFeatures();
+    debugPrint('主题特色:');
+    for (final entry in features.entries) {
+      debugPrint('  ${entry.key}: ${entry.value}');
+    }
+  }
+
+  /// 验证主题完整性
+  static List<String> validate() {
+    final errors = <String>[];
+
+    // 检查亮色模式
+    final lightMissing = SemanticMapper.validateMapping(light);
+    if (lightMissing.isNotEmpty) {
+      errors.add('亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
+    }
+
+    // 检查暗色模式
+    final darkMissing = SemanticMapper.validateMapping(dark);
+    if (darkMissing.isNotEmpty) {
+      errors.add('暗色模式缺少: ${darkMissing.map((e) => e.name).join(', ')}');
+    }
+
+    return errors;
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\definitions\strawberry_candy.dart
+
+Size: 3790 bytes
+
+Modified: 02/01/2026 15:21:34
+
+========================================
+
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import '../tokens/semantic_mapper.dart';
+
+/// 草莓糖心主题 - 少女心满满的草莓风格
+class StrawberryCandyTheme {
+  static const String id = 'strawberryCandy';
+  static const String name = '草莓糖心🍓';
+  static const String description = '少女心满满的草莓风格，甜美而清新';
+  static const IconData icon = Icons.cake;
+
+  /// 亮色模式颜色映射
+  static Map<ColorSemantic, Color> get light {
+    return SemanticMapper.strawberryCandyLight();
+  }
+
+  /// 暗色模式颜色映射
+  static Map<ColorSemantic, Color> get dark {
+    return SemanticMapper.strawberryCandyDark();
+  }
+
+  /// 获取当前亮度的颜色映射
+  static Map<ColorSemantic, Color> getColors(bool isDark) {
+    return isDark ? dark : light;
+  }
+
+  /// 获取特定语义的颜色
+  static Color getColor(ColorSemantic semantic, bool isDark) {
+    return getColors(isDark)[semantic] ?? Colors.grey;
+  }
+
+  /// 获取气泡相关颜色
+  static Map<String, Color> getBubbleColors(bool isDark) {
+    final colors = getColors(isDark);
+    return {
+      'userBubbleBackground': colors[ColorSemantic.userBubbleBackground]!,
+      'userBubbleBorder': colors[ColorSemantic.userBubbleBorder]!,
+      'userBubbleText': colors[ColorSemantic.userBubbleText]!,
+      'aiBubbleBackground': colors[ColorSemantic.aiBubbleBackground]!,
+      'aiBubbleBorder': colors[ColorSemantic.aiBubbleBorder]!,
+      'aiBubbleText': colors[ColorSemantic.aiBubbleText]!,
+    };
+  }
+
+  /// 获取带透明度的气泡颜色
+  static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
+    final colors = getBubbleColors(isDark);
+    return {
+      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBorder': colors['userBubbleBorder']!,
+      'userBubbleText': colors['userBubbleText']!,
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBorder': colors['aiBubbleBorder']!,
+      'aiBubbleText': colors['aiBubbleText']!,
+    };
+  }
+
+  /// 主题特色：草莓糖心特有的样式
+  static Map<String, dynamic> getThemeFeatures() {
+    return {
+      'hasRoundedCorners': true,
+      'borderWidth': 1.0,
+      'bubbleOpacity': 0.3,
+      'shadowEnabled': false,
+      'animationStyle': 'gentle',
+    };
+  }
+
+  /// 获取主题预览颜色（用于展示）
+  static List<Color> getPreviewColors(bool isDark) {
+    final colors = getColors(isDark);
+    return [
+      colors[ColorSemantic.primary]!,
+      colors[ColorSemantic.secondary]!,
+      colors[ColorSemantic.background]!,
+      colors[ColorSemantic.userBubbleBackground]!,
+      colors[ColorSemantic.aiBubbleBackground]!,
+    ];
+  }
+
+  /// 调试信息
+  static void debugPrintInfo() {
+    debugPrint('=== 草莓糖心主题 ===');
+    debugPrint('ID: $id');
+    debugPrint('名称: $name');
+    debugPrint('描述: $description');
+
+    final features = getThemeFeatures();
+    debugPrint('主题特色:');
+    for (final entry in features.entries) {
+      debugPrint('  ${entry.key}: ${entry.value}');
+    }
+  }
+
+  /// 验证主题完整性
+  static List<String> validate() {
+    final errors = <String>[];
+
+    // 检查亮色模式
+    final lightMissing = SemanticMapper.validateMapping(light);
+    if (lightMissing.isNotEmpty) {
+      errors.add('亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
+    }
+
+    // 检查暗色模式
+    final darkMissing = SemanticMapper.validateMapping(dark);
+    if (darkMissing.isNotEmpty) {
+      errors.add('暗色模式缺少: ${darkMissing.map((e) => e.name).join(', ')}');
+    }
+
+    return errors;
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\definitions\theme_registry.dart
+
+Size: 9654 bytes
+
+Modified: 02/01/2026 22:14:52
+
+========================================
+
+/// theme_registry.dart - 结构化版本
+library;
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import '../tokens/semantic_mapper.dart';
+import '../core/theme_state.dart'; // 添加这行
+
+// ========== 接口和基类 ==========
+
+/// 主题定义接口
+abstract class ThemeDefinition {
+  String get id;
+  String get name;
+  String get description;
+  IconData get icon;
+
+  Map<ColorSemantic, Color> getColors(bool isDark);
+  Map<String, Color> getBubbleColors(bool isDark);
+  Map<String, Color> getBubbleColorsWithOpacity(bool isDark);
+  List<Color> getPreviewColors(bool isDark);
+  List<String> validate();
+}
+
+/// 主题基类 - 提供通用实现
+abstract class BaseThemeDefinition implements ThemeDefinition {
+  @override
+  Map<String, Color> getBubbleColors(bool isDark) {
+    final colors = getColors(isDark);
+    return {
+      'userBubbleBackground': colors[ColorSemantic.userBubbleBackground]!,
+      'userBubbleBorder': colors[ColorSemantic.userBubbleBorder]!,
+      'userBubbleText': colors[ColorSemantic.userBubbleText]!,
+      'aiBubbleBackground': colors[ColorSemantic.aiBubbleBackground]!,
+      'aiBubbleBorder': colors[ColorSemantic.aiBubbleBorder]!,
+      'aiBubbleText': colors[ColorSemantic.aiBubbleText]!,
+    };
+  }
+
+  @override
+  Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
+    final colors = getBubbleColors(isDark);
+    return {
+      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBorder': colors['userBubbleBorder']!,
+      'userBubbleText': colors['userBubbleText']!,
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBorder': colors['aiBubbleBorder']!,
+      'aiBubbleText': colors['aiBubbleText']!,
+    };
+  }
+
+  @override
+  List<Color> getPreviewColors(bool isDark) {
+    final colors = getColors(isDark);
+    return [
+      colors[ColorSemantic.primary]!,
+      colors[ColorSemantic.secondary]!,
+      colors[ColorSemantic.background]!,
+      colors[ColorSemantic.userBubbleBackground]!,
+      colors[ColorSemantic.aiBubbleBackground]!,
+    ];
+  }
+
+  @override
+  List<String> validate() {
+    final errors = <String>[];
+
+    // 检查亮色模式
+    final lightMapping = getColors(false);
+    final lightMissing = SemanticMapper.validateMapping(lightMapping);
+    if (lightMissing.isNotEmpty) {
+      errors
+          .add('$name亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
+    }
+
+    // 检查暗色模式
+    final darkMapping = getColors(true);
+    final darkMissing = SemanticMapper.validateMapping(darkMapping);
+    if (darkMissing.isNotEmpty) {
+      errors.add('$name暗色模式缺少: ${darkMissing.map((e) => e.name).join(', ')}');
+    }
+
+    return errors;
+  }
+}
+
+// ========== 具体主题实现 ==========
+
+/// 默认主题
+class DefaultThemeDefinition extends BaseThemeDefinition {
+  @override
+  String get id => 'default';
+
+  @override
+  String get name => '默认主题';
+
+  @override
+  String get description => '清爽的粉色系设计，简约而温暖';
+
+  @override
+  IconData get icon => Icons.favorite;
+
+  @override
+  Map<ColorSemantic, Color> getColors(bool isDark) {
+    return SemanticMapper.getMapping(themeId: id, isDark: isDark);
+  }
+}
+
+/// 草莓糖心主题
+class StrawberryCandyThemeDefinition extends BaseThemeDefinition {
+  @override
+  String get id => 'strawberryCandy';
+
+  @override
+  String get name => '草莓糖心🍓';
+
+  @override
+  String get description => '少女心满满的草莓风格，甜美而清新';
+
+  @override
+  IconData get icon => Icons.cake;
+
+  @override
+  Map<ColorSemantic, Color> getColors(bool isDark) {
+    return SemanticMapper.getMapping(themeId: id, isDark: isDark);
+  }
+}
+
+/// 酸菜牛奶主题
+class PickleMilkThemeDefinition extends BaseThemeDefinition {
+  @override
+  String get id => 'pickleMilk';
+
+  @override
+  String get name => '酸菜牛奶🥛';
+
+  @override
+  String get description => '优雅的酸菜牛奶配色，舒适而清新';
+
+  @override
+  IconData get icon => Icons.local_cafe;
+
+  @override
+  Map<ColorSemantic, Color> getColors(bool isDark) {
+    return SemanticMapper.getMapping(themeId: id, isDark: isDark);
+  }
+}
+
+// ========== 主题注册表 ==========
+
+/// 主题注册表 - 统一管理和注册所有主题
+class ThemeRegistry {
+  static final ThemeRegistry _instance = ThemeRegistry._internal();
+  factory ThemeRegistry() => _instance;
+
+  final Map<String, ThemeDefinition> _themes = {};
+
+  ThemeRegistry._internal() {
+    _registerDefaultThemes();
+  }
+
+  /// 注册默认主题
+  void _registerDefaultThemes() {
+    registerTheme(DefaultThemeDefinition());
+    registerTheme(StrawberryCandyThemeDefinition());
+    registerTheme(PickleMilkThemeDefinition());
+  }
+
+  /// 注册新主题
+  void registerTheme(ThemeDefinition theme) {
+    _themes[theme.id] = theme;
+  }
+
+  /// 注销主题
+  void unregisterTheme(String themeId) {
+    _themes.remove(themeId);
+  }
+
+  /// 获取所有主题
+  List<ThemeDefinition> getAllThemes() {
+    return _themes.values.toList();
+  }
+
+  /// 根据ID获取主题
+  ThemeDefinition? getThemeById(String id) {
+    return _themes[id];
+  }
+
+  /// 根据UIThemeType获取主题  <--- 添加这个方法
+  ThemeDefinition getThemeByType(UIThemeType type) {
+    final themeId = type.id; // 使用扩展方法获取ID
+    return getThemeById(themeId) ?? defaultTheme;
+  }
+
+  /// 获取默认主题
+  ThemeDefinition get defaultTheme => _themes['default']!;
+
+  /// 验证所有主题的完整性
+  Map<String, List<String>> validateAllThemes() {
+    final results = <String, List<String>>{};
+
+    for (final theme in _themes.values) {
+      final errors = theme.validate();
+      if (errors.isNotEmpty) {
+        results[theme.id] = errors;
+      }
+    }
+
+    return results;
+  }
+
+  /// 打印所有主题信息（用于调试）
+  void debugPrintAllThemes() {
+    debugPrint('=== 主题注册表 ===');
+    debugPrint('已注册主题数: ${_themes.length}');
+
+    for (final theme in _themes.values) {
+      debugPrint('\n--- ${theme.name} ---');
+      debugPrint('ID: ${theme.id}');
+      debugPrint('描述: ${theme.description}');
+    }
+  }
+
+  /// 获取主题预览信息（用于设置页面）
+  List<ThemePreview> getThemePreviews(bool isDark) {
+    return _themes.values.map((theme) {
+      return ThemePreview(
+        id: theme.id,
+        name: theme.name,
+        description: theme.description,
+        icon: theme.icon,
+        previewColors: theme.getPreviewColors(isDark),
+      );
+    }).toList();
+  }
+}
+
+// ========== 工具类和扩展 ==========
+
+/// 主题预览信息
+class ThemePreview {
+  final String id;
+  final String name;
+  final String description;
+  final IconData icon;
+  final List<Color> previewColors;
+
+  const ThemePreview({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.icon,
+    required this.previewColors,
+  });
+}
+
+/// 主题工具类
+class ThemeUtils {
+  static final ThemeRegistry _registry = ThemeRegistry();
+
+  /// 获取主题注册表实例
+  static ThemeRegistry get registry => _registry;
+
+  /// 从字符串获取主题
+  static ThemeDefinition? themeFromString(String value) {
+    return _registry.getThemeById(value);
+  }
+
+  /// 获取所有主题
+  static List<ThemeDefinition> getAllThemes() {
+    return _registry.getAllThemes();
+  }
+
+  /// 验证主题系统
+  static Map<String, List<String>> validateThemeSystem() {
+    debugPrint('=== 验证主题系统 ===');
+
+    final themeErrors = _registry.validateAllThemes();
+    if (themeErrors.isNotEmpty) {
+      debugPrint('发现主题错误:');
+      for (final entry in themeErrors.entries) {
+        debugPrint('  ${entry.key}:');
+        for (final error in entry.value) {
+          debugPrint('    - $error');
+        }
+      }
+    } else {
+      debugPrint('所有主题验证通过 ✓');
+    }
+
+    return themeErrors;
+  }
+
+  /// 调试打印所有主题的颜色
+  static void debugPrintAllThemeColors(bool isDark) {
+    debugPrint('=== 所有主题颜色 (${isDark ? '暗色' : '亮色'}模式) ===');
+
+    for (final theme in _registry.getAllThemes()) {
+      debugPrint('\n--- ${theme.name} ---');
+
+      final colors = theme.getColors(isDark);
+      final bubbleColors = theme.getBubbleColors(isDark);
+
+      debugPrint('气泡颜色:');
+      for (final entry in bubbleColors.entries) {
+        final color = entry.value;
+        debugPrint('  ${entry.key.padRight(25)}: ${_colorToHex(color)}');
+      }
+
+      debugPrint('\n重要颜色:');
+      final importantSemantics = [
+        ColorSemantic.primary,
+        ColorSemantic.secondary,
+        ColorSemantic.background,
+        ColorSemantic.surface,
+        ColorSemantic.textPrimary,
+        ColorSemantic.textSecondary,
+      ];
+
+      for (final semantic in importantSemantics) {
+        final color = colors[semantic];
+        if (color != null) {
+          debugPrint('  ${semantic.name.padRight(20)}: ${_colorToHex(color)}');
+        }
+      }
+    }
+  }
+
+  /// 颜色转16进制字符串
+  static String _colorToHex(Color color) {
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+  }
+}
+
+/// 颜色扩展
+extension ColorExtensions on Color {
+  String toHex() {
+    return '#${value.toRadixString(16).padLeft(8, '0').substring(2)}';
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\extensions\context_extensions.dart
+
+Size: 15931 bytes
+
+Modified: 02/23/2026 18:12:33
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/color_semantics.dart';
+import '../core/color_resolver.dart';
+import '../providers/app_theme_provider.dart';
+import '../providers/theme_manager.dart';
+import '../providers/brightness_provider.dart';
+import '../core/theme_state.dart'; // 添加这行
+import '../providers/color_override.dart'; // 添加这行
+import '../extensions/semantic_colors_extension.dart'; // ← 加这一行
+
+/// 上下文颜色扩展 - 在Widget中直接获取颜色
+extension ThemeColors on BuildContext {
+  // ========== 基础颜色获取 ==========
+
+  /// 使用颜色解析器获取颜色
+  Color themeColor(ColorSemantic semantic) {
+    final ref = ProviderScope.containerOf(this);
+    final themeState = ref.read(appThemeProvider);
+
+    return ColorResolver.resolve(
+      themeState: themeState,
+      semantic: semantic,
+    );
+  }
+
+  /// 获取用户气泡背景色（带30%透明度）
+  Color get userBubbleBackground {
+    final ref = ProviderScope.containerOf(this);
+    final themeState = ref.read(appThemeProvider);
+    final theme = ref.read(currentThemeProvider);
+
+    return theme.getBubbleColorsWithOpacity(
+        themeState.isDarkMode)['userBubbleBackground']!;
+  }
+
+  /// 获取用户气泡边框色
+  Color get userBubbleBorder {
+    return themeColor(ColorSemantic.userBubbleBorder);
+  }
+
+  /// 获取用户气泡文字色
+  Color get userBubbleText {
+    return themeColor(ColorSemantic.userBubbleText);
+  }
+
+  /// 获取AI气泡背景色（带30%透明度）
+  Color get aiBubbleBackground {
+    final ref = ProviderScope.containerOf(this);
+    final themeState = ref.read(appThemeProvider);
+    final theme = ref.read(currentThemeProvider);
+
+    return theme.getBubbleColorsWithOpacity(
+        themeState.isDarkMode)['aiBubbleBackground']!;
+  }
+
+  /// 获取AI气泡边框色
+  Color get aiBubbleBorder {
+    return themeColor(ColorSemantic.aiBubbleBorder);
+  }
+
+  /// 获取AI气泡文字色
+  Color get aiBubbleText {
+    return themeColor(ColorSemantic.aiBubbleText);
+  }
+
+  // ========== 气泡装饰 ==========
+
+  /// 获取用户气泡装饰
+  BoxDecoration get userBubbleDecoration {
+    final ref = ProviderScope.containerOf(this);
+    return ref.read(userBubbleDecorationProvider);
+  }
+
+  /// 获取AI气泡装饰
+  BoxDecoration get aiBubbleDecoration {
+    final ref = ProviderScope.containerOf(this);
+    return ref.read(aiBubbleDecorationProvider);
+  }
+
+  /// 获取用户气泡文字样式
+  TextStyle get userBubbleTextStyle {
+    final ref = ProviderScope.containerOf(this);
+    return ref.read(userBubbleTextStyleProvider);
+  }
+
+  /// 获取AI气泡文字样式
+  TextStyle get aiBubbleTextStyle {
+    final ref = ProviderScope.containerOf(this);
+    return ref.read(aiBubbleTextStyleProvider);
+  }
+
+  // ========== 常用颜色快捷方式 ==========
+
+  /// 获取主色
+  Color get themePrimary => themeColor(ColorSemantic.primary);
+
+  /// 获取背景色
+  Color get themeBackground => themeColor(ColorSemantic.background);
+
+  /// 获取表面色
+  Color get themeSurface => themeColor(ColorSemantic.surface);
+
+  /// 获取主要文字色
+  Color get themeTextPrimary => themeColor(ColorSemantic.textPrimary);
+
+  /// 获取次要文字色
+  Color get themeTextSecondary => themeColor(ColorSemantic.textSecondary);
+
+  /// 获取边框色
+  Color get themeBorder => themeColor(ColorSemantic.border);
+
+  // ========== 状态颜色 ==========
+
+  Color get themeSuccess => themeColor(ColorSemantic.success);
+  Color get themeWarning => themeColor(ColorSemantic.warning);
+  Color get themeError => themeColor(ColorSemantic.error);
+  Color get themeInfo => themeColor(ColorSemantic.info);
+
+  // ========== 主题状态信息 ==========
+
+  /// 是否是暗色模式
+  bool get isDarkMode {
+    final ref = ProviderScope.containerOf(this);
+    return ref.read(isDarkModeProvider);
+  }
+
+// 改为：
+  /// 是否有图片提取色
+  bool get hasExtractedColors {
+    final ref = ProviderScope.containerOf(this);
+    final themeState = ref.read(appThemeProvider);
+    return themeState.hasExtractedColors;
+  }
+
+  /// 获取当前主题名称
+  String get currentThemeName {
+    final ref = ProviderScope.containerOf(this);
+    final manager = ref.read(themeManagerProvider);
+    return manager.currentThemeName;
+  }
+
+  // ========== 工具方法 ==========
+
+  /// 获取合适的文字颜色（基于背景色）
+  Color getContrastTextColor(Color backgroundColor) {
+    final luminance = backgroundColor.computeLuminance();
+    return luminance > 0.5 ? Colors.black : Colors.white;
+  }
+
+  /// 获取带透明度的颜色
+  Color withBubbleOpacity(Color color) {
+    return color.withOpacity(0.3);
+  }
+
+  /// 创建气泡装饰
+  BoxDecoration createBubbleDecoration({
+    required Color backgroundColor,
+    required Color borderColor,
+    double borderRadius = 18,
+    double borderWidth = 1,
+    bool withOpacity = true,
+  }) {
+    return BoxDecoration(
+      color: withOpacity ? backgroundColor.withOpacity(0.3) : backgroundColor,
+      border: Border.all(
+        color: borderColor,
+        width: borderWidth,
+      ),
+      borderRadius: BorderRadius.circular(borderRadius),
+    );
+  }
+
+  // 新增：直接获取 AppSemanticColors 对象（放在 extension 内部末尾）
+  AppSemanticColors get semanticColors {
+    return Theme.of(this).extension<AppSemanticColors>()!;
+  }
+
+  // 更短的别名（推荐用这个）
+  AppSemanticColors get sem => semanticColors;
+}
+
+/// WidgetRef扩展 - 在ConsumerWidget中直接获取颜色
+extension ThemeColorsRef on WidgetRef {
+  // ========== 基础颜色获取 ==========
+
+  /// 使用颜色解析器获取颜色
+  Color themeColor(ColorSemantic semantic) {
+    final themeState = read(appThemeProvider);
+
+    return ColorResolver.resolve(
+      themeState: themeState,
+      semantic: semantic,
+    );
+  }
+
+  /// 获取用户气泡背景色（带30%透明度）
+  Color get userBubbleBackground {
+    final themeState = read(appThemeProvider);
+    final theme = read(currentThemeProvider);
+
+    return theme.getBubbleColorsWithOpacity(
+        themeState.isDarkMode)['userBubbleBackground']!;
+  }
+
+  /// 获取用户气泡边框色
+  Color get userBubbleBorder {
+    return themeColor(ColorSemantic.userBubbleBorder);
+  }
+
+  /// 获取用户气泡文字色
+  Color get userBubbleText {
+    return themeColor(ColorSemantic.userBubbleText);
+  }
+
+  /// 获取AI气泡背景色（带30%透明度）
+  Color get aiBubbleBackground {
+    final themeState = read(appThemeProvider);
+    final theme = read(currentThemeProvider);
+
+    return theme.getBubbleColorsWithOpacity(
+        themeState.isDarkMode)['aiBubbleBackground']!;
+  }
+
+  /// 获取AI气泡边框色
+  Color get aiBubbleBorder {
+    return themeColor(ColorSemantic.aiBubbleBorder);
+  }
+
+  /// 获取AI气泡文字色
+  Color get aiBubbleText {
+    return themeColor(ColorSemantic.aiBubbleText);
+  }
+
+  // ========== 气泡装饰 ==========
+
+  /// 获取用户气泡装饰
+  BoxDecoration get userBubbleDecoration {
+    return read(userBubbleDecorationProvider);
+  }
+
+  /// 获取AI气泡装饰
+  BoxDecoration get aiBubbleDecoration {
+    return read(aiBubbleDecorationProvider);
+  }
+
+  /// 获取用户气泡文字样式
+  TextStyle get userBubbleTextStyle {
+    return read(userBubbleTextStyleProvider);
+  }
+
+  /// 获取AI气泡文字样式
+  TextStyle get aiBubbleTextStyle {
+    return read(aiBubbleTextStyleProvider);
+  }
+
+  // ========== 主题装饰 ==========
+
+  /// 获取当前主题的所有装饰
+  ThemeDecorations get themeDecorations {
+    return read(currentThemeDecorationsProvider);
+  }
+
+  // ========== 主题状态信息 ==========
+
+  /// 是否是暗色模式
+  bool get isDarkMode {
+    return read(isDarkModeProvider);
+  }
+
+// 改为：
+  /// 是否有图片提取色
+  bool get hasExtractedColors {
+    final themeState = read(appThemeProvider);
+    return themeState.hasExtractedColors;
+  }
+
+  /// 获取当前主题名称
+  String get currentThemeName {
+    final manager = read(themeManagerProvider);
+    return manager.currentThemeName;
+  }
+
+  /// 获取主题管理器
+  ThemeManager get themeManager {
+    return read(themeManagerProvider);
+  }
+
+  // ========== 工具方法 ==========
+
+  /// 切换UI主题
+  Future<void> switchUITheme(UIThemeType uiTheme) async {
+    final notifier = read(appThemeProvider.notifier);
+    await notifier.updateUITheme(uiTheme);
+  }
+
+  /// 切换主题模式
+  Future<void> switchThemeMode(AppThemeMode themeMode) async {
+    final notifier = read(appThemeProvider.notifier);
+    await notifier.updateThemeMode(themeMode);
+  }
+
+  /// 切换亮暗模式
+  Future<void> toggleDarkMode() async {
+    final manager = read(themeManagerProvider);
+    await manager.toggleDarkMode();
+  }
+
+  /// 应用图片提取色
+  Future<void> applyExtractedColors(Map<String, Color> colors) async {
+    final notifier = read(extractedColorsUtilsProvider);
+    final extractedColors = notifier.convertFromStringMap(colors);
+    await notifier.updateColors(extractedColors);
+  }
+
+  /// 重置当前 brightness 模式的主题
+  /// （在暗色就重置暗色，在亮色就重置亮色）
+  Future<void> resetCurrentTheme() async {
+    final notifier = read(appThemeProvider.notifier);
+    await notifier.resetCurrentBrightness();
+  }
+
+  /// 重置所有主题
+  /// （亮色和暗色都恢复为默认）
+  Future<void> resetAllThemes() async {
+    final notifier = read(appThemeProvider.notifier);
+    await notifier.resetAll();
+  }
+
+  /// 调试打印主题信息
+  void debugPrintThemeInfo() {
+    final manager = read(themeManagerProvider);
+    manager.debugPrintInfo();
+  }
+}
+
+/// Color扩展 - 添加主题相关功能
+extension ThemeColorExtensions on Color {
+  /// 获取对比色（黑或白）
+  Color get contrastColor {
+    final luminance = computeLuminance();
+    return luminance > 0.5 ? Colors.black : Colors.white;
+  }
+
+  /// 获取适合做文字的颜色（确保可读性）
+  Color get readableTextColor {
+    final luminance = computeLuminance();
+    if (luminance > 0.7) {
+      return Colors.black; // 亮背景用深色文字
+    } else if (luminance < 0.3) {
+      return Colors.white; // 暗背景用浅色文字
+    } else {
+      // 中等亮度，使用对比色
+      return contrastColor;
+    }
+  }
+
+  /// 调整亮度
+  Color withBrightness(double delta) {
+    final hsl = HSLColor.fromColor(this);
+    final newLightness = (hsl.lightness + delta).clamp(0.0, 1.0);
+    return hsl.withLightness(newLightness).toColor();
+  }
+
+  /// 创建深色版本
+  Color get darken => withBrightness(-0.2);
+
+  /// 创建浅色版本
+  Color get lighten => withBrightness(0.2);
+
+  /// 降低饱和度
+  Color get desaturate {
+    final hsl = HSLColor.fromColor(this);
+    final newSaturation = (hsl.saturation * 0.7).clamp(0.0, 1.0);
+    return hsl.withSaturation(newSaturation).toColor();
+  }
+
+  /// 创建气泡颜色（带30%透明度）
+  Color get asBubbleColor => withOpacity(0.3);
+
+  /// 创建边框颜色（带20%透明度）
+  Color get asBorderColor => withOpacity(0.2);
+}
+
+/// TextStyle扩展 - 添加主题相关功能
+extension ThemeTextStyleExtensions on TextStyle {
+  /// 使用主题颜色
+  TextStyle withThemeColor(Color color) {
+    return copyWith(color: color);
+  }
+
+  /// 使用用户气泡文字颜色
+  TextStyle withUserBubbleColor(BuildContext context) {
+    return copyWith(color: context.userBubbleText);
+  }
+
+  /// 使用AI气泡文字颜色
+  TextStyle withAiBubbleColor(BuildContext context) {
+    return copyWith(color: context.aiBubbleText);
+  }
+
+  /// 使用主题主色
+  TextStyle withPrimaryColor(BuildContext context) {
+    return copyWith(color: context.themePrimary);
+  }
+}
+
+/// BoxDecoration扩展 - 添加主题相关功能
+extension ThemeDecorationExtensions on BoxDecoration {
+  /// 使用用户气泡样式
+  BoxDecoration withUserBubbleStyle(BuildContext context) {
+    return copyWith(
+      color: context.userBubbleBackground,
+      border: Border.all(
+        color: context.userBubbleBorder,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(18),
+    );
+  }
+
+  /// 使用AI气泡样式
+  BoxDecoration withAiBubbleStyle(BuildContext context) {
+    return copyWith(
+      color: context.aiBubbleBackground,
+      border: Border.all(
+        color: context.aiBubbleBorder,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(18),
+    );
+  }
+}
+
+/// 快速创建气泡Widget的扩展
+extension ThemeBubbleWidgetExtensions on Widget {
+  /// 包装为用户气泡
+  Widget asUserBubble(BuildContext context, {EdgeInsetsGeometry? padding}) {
+    return Container(
+      decoration: context.userBubbleDecoration,
+      padding:
+          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: DefaultTextStyle(
+        style: context.userBubbleTextStyle,
+        child: this,
+      ),
+    );
+  }
+
+  /// 包装为AI气泡
+  Widget asAiBubble(BuildContext context, {EdgeInsetsGeometry? padding}) {
+    return Container(
+      decoration: context.aiBubbleDecoration,
+      padding:
+          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: DefaultTextStyle(
+        style: context.aiBubbleTextStyle,
+        child: this,
+      ),
+    );
+  }
+}
+
+/// 调试工具
+class ThemeDebugTools {
+  /// 打印所有主题颜色
+  static void printAllThemeColors(WidgetRef ref) {
+    final manager = ref.themeManager;
+    manager.debugPrintInfo();
+
+    debugPrint('\n=== 扩展方法测试 ===');
+    debugPrint('用户气泡文字色: ${ref.userBubbleText.toHex()}');
+    debugPrint('AI气泡文字色: ${ref.aiBubbleText.toHex()}');
+    debugPrint('暗色模式: ${ref.isDarkMode}');
+    debugPrint('有提取色: ${ref.hasExtractedColors}');
+  }
+
+  /// 在控制台显示颜色方块（用于调试）
+  static void showColorPalette(WidgetRef ref) {
+    final colors = <String, Color>{
+      '用户气泡背景': ref.userBubbleBackground,
+      '用户气泡边框': ref.userBubbleBorder,
+      '用户气泡文字': ref.userBubbleText,
+      'AI气泡背景': ref.aiBubbleBackground,
+      'AI气泡边框': ref.aiBubbleBorder,
+      'AI气泡文字': ref.aiBubbleText,
+      '主色': ref.themeColor(ColorSemantic.primary),
+      '背景色': ref.themeColor(ColorSemantic.background),
+    };
+
+    debugPrint('\n=== 颜色调色板 ===');
+    for (final entry in colors.entries) {
+      final hex = entry.value.toHex();
+      debugPrint('${entry.key.padRight(12)}: $hex');
+    }
+  }
+}
+
+/// 颜色转16进制字符串扩展
+extension ColorToHexExtension on Color {
+  String toHex() {
+    return '#${value.toRadixString(16).padLeft(8, '0').substring(2)}';
+  }
+}
+
+/// 输入框边框扩展（全局默认边框）
+extension ThemeInput on BuildContext {
+  InputBorder get inputBorder {
+    // 默认边框：圆角 12，1px 主题边框色
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: themeColor(ColorSemantic.inputBorder),
+        width: 1,
+      ),
+    );
+  }
+
+  InputBorder get noBorder {
+    return InputBorder.none;
+  }
+
+  // 如果你想为不同主题定义不同默认边框，可在这里加逻辑
+  // 例如：
+  // final uiTheme = ref.read(appThemeProvider).uiTheme;
+  // if (uiTheme == UIThemeType.strawberryCandy) return InputBorder.none;
+  // return OutlineInputBorder(...);
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\extensions\semantic_colors_extension.dart
+
+Size: 3126 bytes
+
+Modified: 02/13/2026 18:09:23
+
+========================================
+
+// lib/theme/extensions/semantic_colors_extension.dart
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import '../core/color_resolver.dart';
+import '../core/theme_state.dart';
+
+class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
+  final Map<ColorSemantic, Color> colors;
+
+  AppSemanticColors({required this.colors});
+
+  // 工厂：从 ThemeState 实时计算所有 semantic 的最终颜色
+  factory AppSemanticColors.fromThemeState(ThemeState state) {
+    final map = <ColorSemantic, Color>{};
+    for (final semantic in ColorSemantic.values) {
+      map[semantic] = ColorResolver.resolve(
+        themeState: state,
+        semantic: semantic,
+      );
+    }
+    return AppSemanticColors(colors: map);
+  }
+
+  // 必须实现 copyWith（Theme 系统要求）
+  @override
+  AppSemanticColors copyWith({Map<ColorSemantic, Color>? colors}) {
+    return AppSemanticColors(
+      colors: colors ?? this.colors,
+    );
+  }
+
+  // 必须实现 lerp（主题切换动画核心）
+  @override
+  AppSemanticColors lerp(
+      covariant ThemeExtension<AppSemanticColors>? other, double t) {
+    if (other is! AppSemanticColors) return this;
+
+    final lerpedColors = <ColorSemantic, Color>{};
+    for (final semantic in ColorSemantic.values) {
+      final c1 = colors[semantic] ?? Colors.transparent;
+      final c2 = other.colors[semantic] ?? Colors.transparent;
+      lerpedColors[semantic] = Color.lerp(c1, c2, t)!;
+    }
+    return AppSemanticColors(colors: lerpedColors);
+  }
+
+  // 强烈推荐：为所有常用 semantic 加 getter（IDE 补全最爽）
+  Color get primary => colors[ColorSemantic.primary]!;
+  Color get secondary => colors[ColorSemantic.secondary]!;
+  Color get accent => colors[ColorSemantic.accent]!;
+  Color get background => colors[ColorSemantic.background]!;
+  Color get surface => colors[ColorSemantic.surface]!;
+  Color get surfaceVariant => colors[ColorSemantic.surfaceVariant]!;
+  Color get textPrimary => colors[ColorSemantic.textPrimary]!;
+  Color get textSecondary => colors[ColorSemantic.textSecondary]!;
+  Color get textHint => colors[ColorSemantic.textHint]!;
+  Color get border => colors[ColorSemantic.border]!;
+  Color get divider => colors[ColorSemantic.divider]!;
+
+  // 气泡相关（常用）
+  Color get userBubbleBackground => colors[ColorSemantic.userBubbleBackground]!;
+  Color get userBubbleBorder => colors[ColorSemantic.userBubbleBorder]!;
+  Color get userBubbleText => colors[ColorSemantic.userBubbleText]!;
+  Color get aiBubbleBackground => colors[ColorSemantic.aiBubbleBackground]!;
+  Color get aiBubbleBorder => colors[ColorSemantic.aiBubbleBorder]!;
+  Color get aiBubbleText => colors[ColorSemantic.aiBubbleText]!;
+
+  // 按钮 / 组件 / 状态（根据你的需求继续加）
+  Color get buttonPrimary => colors[ColorSemantic.buttonPrimary]!;
+  Color get success => colors[ColorSemantic.success]!;
+  Color get warning => colors[ColorSemantic.warning]!;
+  Color get error => colors[ColorSemantic.error]!;
+  Color get info => colors[ColorSemantic.info]!;
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\providers\app_theme_provider.dart
+
+Size: 12456 bytes
+
+Modified: 02/23/2026 18:12:33
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/storage_service.dart';
+import '../core/theme_state.dart';
+import '../core/color_semantics.dart';
+import '../definitions/theme_registry.dart';
+import 'color_override.dart';
+import 'brightness_provider.dart';
+import 'theme_memory_manager.dart';
+import '../../../utils/logger.dart'; // 添加日志导入
+
+/// 主主题Provider - 管理整个应用的主题状态
+final appThemeProvider = StateNotifierProvider<AppThemeNotifier, ThemeState>(
+  (ref) {
+    return AppThemeNotifier(ref);
+  },
+);
+
+/// 主题状态Notifier
+class AppThemeNotifier extends StateNotifier<ThemeState> {
+  final Ref _ref;
+  final StorageService _storage = StorageService();
+
+  AppThemeNotifier(this._ref) : super(ThemeState.initial()) {
+    log.i('📦 [AppThemeNotifier] 构造函数执行');
+
+    // 初始化时加载保存的设置
+    _loadSavedSettings();
+
+    // 监听平台亮度变化
+    _ref.listen<Brightness>(
+      platformBrightnessProvider,
+      (previous, next) {
+        log.w(
+            '🔔 [AppThemeNotifier-listen] platformBrightnessProvider 变化: $previous -> $next');
+        _updateEffectiveBrightness();
+      },
+    );
+
+    log.i('📦 [AppThemeNotifier] listen 已注册');
+
+    // 监听图片提取色变化
+    _ref.listen<Map<ExtractedColorType, Color>?>(
+      extractedColorsProvider,
+      (previous, next) {
+        if (next != null) {
+          log.i('📦 [AppThemeNotifier-listen] extractedColors 变化');
+          _updateExtractedColorsInCurrentMemory(next);
+        }
+      },
+    );
+  }
+
+  /// ========== 加载和初始化 ==========
+
+  Future<void> _loadSavedSettings() async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+
+      // 并行加载亮暗两套记忆
+      final lightMemory =
+          await manager.loadMemoryForBrightness(Brightness.light);
+      final darkMemory = await manager.loadMemoryForBrightness(Brightness.dark);
+
+      // 加载主题模式
+      final themeModeStr = await _storage.getThemeMode();
+      final themeMode = _themeModeFromString(themeModeStr);
+
+      // 更新状态
+      state = state.copyWith(
+        lightMemory: lightMemory,
+        darkMemory: darkMemory,
+        themeMode: themeMode,
+      );
+
+      // 计算实际亮度
+      _updateEffectiveBrightness();
+
+      debugPrint('✅ 主题设置加载完成');
+    } catch (e) {
+      debugPrint('❌ 加载主题设置失败: $e');
+    }
+  }
+
+  /// ========== UI主题切换（亮色/暗色分别记忆） ==========
+
+  /// 切换UI主题 - 更新当前 brightness 对应的 memory
+  Future<void> updateUITheme(UIThemeType uiTheme) async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final currentMemory = state.currentMemory;
+
+      // 更新当前 memory（根据当前 brightness）
+      final updatedMemory =
+          manager.updateThemeSwitchInMemory(currentMemory, uiTheme);
+
+      // 保存到本地
+      await manager.updateMemoryForBrightness(
+        brightness: state.effectiveBrightness,
+        newMemory: updatedMemory,
+      );
+
+      // 更新对应的 state（亮或暗）
+      if (state.isDarkMode) {
+        state = state.copyWith(darkMemory: updatedMemory);
+      } else {
+        state = state.copyWith(lightMemory: updatedMemory);
+      }
+
+      debugPrint(
+          '✅ UI主题已更新: ${uiTheme.displayName} (${state.effectiveBrightness.name})');
+    } catch (e) {
+      debugPrint('❌ 更新UI主题失败: $e');
+    }
+  }
+
+  /// ========== 提取图片色（亮色/暗色分别记忆） ==========
+
+  /// 当 extractedColorsProvider 变化时，更新当前 memory
+  Future<void> _updateExtractedColorsInCurrentMemory(
+    Map<ExtractedColorType, Color> extractedColors,
+  ) async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final currentMemory = state.currentMemory;
+
+      // 更新当前 memory（根据当前 brightness）
+      final updatedMemory = manager.updateImageExtractInMemory(
+        currentMemory,
+        extractedColors,
+      );
+
+      // 保存到本地
+      await manager.updateMemoryForBrightness(
+        brightness: state.effectiveBrightness,
+        newMemory: updatedMemory,
+      );
+
+      // 更新对应的 state（亮或暗）
+      if (state.isDarkMode) {
+        state = state.copyWith(darkMemory: updatedMemory);
+      } else {
+        state = state.copyWith(lightMemory: updatedMemory);
+      }
+
+      debugPrint('✅ 图片提取色已记忆 (${state.effectiveBrightness.name} 模式)');
+    } catch (e) {
+      debugPrint('❌ 记忆提取色失败: $e');
+    }
+  }
+
+  /// ========== 主题模式切换（亮/暗/系统） ==========
+
+  /// 更新主题模式（亮/暗/系统）
+  /// 🔑 关键：切换时自动应用"另一个 brightness"对应的 memory
+  Future<void> updateThemeMode(AppThemeMode themeMode) async {
+    try {
+      // 保存到本地存储
+      final modeString = _themeModeToString(themeMode);
+      await _storage.saveThemeMode(modeString);
+
+      // 更新状态
+      state = state.copyWith(themeMode: themeMode);
+
+      // 更新实际亮度
+      _updateEffectiveBrightness();
+
+      debugPrint('✅ 主题模式已更新: ${themeMode.displayName}');
+    } catch (e) {
+      debugPrint('❌ 更新主题模式失败: $e');
+    }
+  }
+
+  /// 更新实际亮度（计算 light/dark/system 的结果）
+  void _updateEffectiveBrightness() {
+    log.w('🔄 [_updateEffectiveBrightness] 开始计算...');
+
+    final platformBrightness = _ref.read(platformBrightnessProvider);
+    final themeMode = state.themeMode;
+
+    log.w(
+        '🔄 [_updateEffectiveBrightness] 当前 themeMode: ${themeMode.displayName}');
+    log.w(
+        '🔄 [_updateEffectiveBrightness] 当前 platformBrightness: ${platformBrightness.name}');
+
+    final effectiveBrightness = calculateEffectiveBrightness(
+      themeMode,
+      platformBrightness,
+    );
+
+    log.w('🔄 [_updateEffectiveBrightness] 计算结果: ${effectiveBrightness.name}');
+
+    state = state.copyWith(effectiveBrightness: effectiveBrightness);
+
+    log.w('✅ [_updateEffectiveBrightness] state 已更新');
+  }
+
+  /// ========== 重置 ==========
+
+  /// 仅重置提取颜色（不重置主题模式）  ← 新增方法
+  Future<void> resetExtractedColors() async {
+    try {
+      final utils = _ref.read(extractedColorsUtilsProvider);
+      await utils.reset();
+      debugPrint('✅ 已清除提取颜色，恢复到系统主题');
+    } catch (e) {
+      debugPrint('❌ 清除提取颜色失败: $e');
+    }
+  }
+
+  /// 重置当前 brightness 对应的主题为默认
+  Future<void> resetCurrentBrightness() async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final defaultMemory = manager.resetMemoryToDefault();
+
+      // 保存
+      await manager.updateMemoryForBrightness(
+        brightness: state.effectiveBrightness,
+        newMemory: defaultMemory,
+      );
+
+      // 更新 state
+      if (state.isDarkMode) {
+        state = state.copyWith(darkMemory: defaultMemory);
+      } else {
+        state = state.copyWith(lightMemory: defaultMemory);
+      }
+
+      // 清除提取色
+      final utils = _ref.read(extractedColorsUtilsProvider);
+      await utils.reset();
+
+      debugPrint('✅ 已重置 ${state.effectiveBrightness.name} 模式');
+    } catch (e) {
+      debugPrint('❌ 重置失败: $e');
+    }
+  }
+
+  /// 重置全部（亮+暗）
+  Future<void> resetAll() async {
+    try {
+      final manager = _ref.read(themeMemoryManagerProvider);
+      final defaultMemory = manager.resetMemoryToDefault();
+
+      // 保存亮暗两套
+      await Future.wait([
+        manager.updateMemoryForBrightness(
+          brightness: Brightness.light,
+          newMemory: defaultMemory,
+        ),
+        manager.updateMemoryForBrightness(
+          brightness: Brightness.dark,
+          newMemory: defaultMemory,
+        ),
+      ]);
+
+      // 更新 state
+      state = state.copyWith(
+        lightMemory: defaultMemory,
+        darkMemory: defaultMemory,
+      );
+
+      // 清除提取色
+      final utils = _ref.read(extractedColorsUtilsProvider);
+      await utils.reset();
+
+      debugPrint('✅ 已重置所有主题设置');
+    } catch (e) {
+      debugPrint('❌ 全局重置失败: $e');
+    }
+  }
+
+  /// ========== 工具方法 ==========
+
+  /// 获取当前主题定义
+  ThemeDefinition get currentThemeDefinition {
+    return ThemeRegistry().getThemeByType(state.currentUITheme);
+  }
+
+  /// 获取当前气泡颜色
+  Map<String, Color> get currentBubbleColors {
+    return currentThemeDefinition.getBubbleColors(state.isDarkMode);
+  }
+
+  /// 获取带透明度的气泡颜色
+  Map<String, Color> get currentBubbleColorsWithOpacity {
+    return currentThemeDefinition.getBubbleColorsWithOpacity(state.isDarkMode);
+  }
+
+  /// 字符串转ThemeMode
+  AppThemeMode _themeModeFromString(String value) {
+    switch (value) {
+      case 'light':
+        return AppThemeMode.light;
+      case 'dark':
+        return AppThemeMode.dark;
+      default:
+        return AppThemeMode.system;
+    }
+  }
+
+  /// ThemeMode转字符串
+  String _themeModeToString(AppThemeMode themeMode) {
+    switch (themeMode) {
+      case AppThemeMode.light:
+        return 'light';
+      case AppThemeMode.dark:
+        return 'dark';
+      case AppThemeMode.system:
+        return 'system';
+    }
+  }
+
+  /// 调试信息
+  void debugPrintState() {
+    debugPrint('=== 主题状态 ===');
+    debugPrint('当前亮度: ${state.isDarkMode ? "暗色" : "亮色"}');
+    debugPrint('主题模式: ${state.themeMode.displayName}');
+    debugPrint('\n亮色记忆: ${state.lightMemory}');
+    debugPrint('暗色记忆: ${state.darkMemory}');
+  }
+}
+
+/// ========== 简化Provider ==========
+
+final currentThemeProvider = Provider<ThemeDefinition>((ref) {
+  final state = ref.watch(appThemeProvider);
+  return ThemeRegistry().getThemeByType(state.currentUITheme);
+});
+
+final currentBubbleColorsProvider = Provider<Map<String, Color>>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+  return theme.getBubbleColors(state.isDarkMode);
+});
+
+final currentBubbleColorsWithOpacityProvider =
+    Provider<Map<String, Color>>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+  return theme.getBubbleColorsWithOpacity(state.isDarkMode);
+});
+
+final userBubbleDecorationProvider = Provider<BoxDecoration>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+  final colors = theme.getBubbleColorsWithOpacity(state.isDarkMode);
+
+  return BoxDecoration(
+    color: colors['userBubbleBackground']!,
+    border: Border.all(
+      color: colors['userBubbleBorder']!,
+      width: 1,
+    ),
+    borderRadius: BorderRadius.circular(18),
+  );
+});
+
+final aiBubbleDecorationProvider = Provider<BoxDecoration>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+  final colors = theme.getBubbleColorsWithOpacity(state.isDarkMode);
+
+  return BoxDecoration(
+    color: colors['aiBubbleBackground']!,
+    border: Border.all(
+      color: colors['aiBubbleBorder']!,
+      width: 1,
+    ),
+    borderRadius: BorderRadius.circular(18),
+  );
+});
+
+final userBubbleTextStyleProvider = Provider<TextStyle>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+  final colors = theme.getBubbleColors(state.isDarkMode);
+
+  return TextStyle(
+    color: colors['userBubbleText']!,
+    fontSize: 16,
+    height: 1.4,
+    fontWeight: FontWeight.normal,
+  );
+});
+
+final aiBubbleTextStyleProvider = Provider<TextStyle>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+  final colors = theme.getBubbleColors(state.isDarkMode);
+
+  return TextStyle(
+    color: colors['aiBubbleText']!,
+    fontSize: 16,
+    height: 1.4,
+    fontWeight: FontWeight.normal,
+  );
+});
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\providers\brightness_provider.dart
+
+Size: 3775 bytes
+
+Modified: 02/16/2026 14:43:12
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/theme_state.dart';
+import 'app_theme_provider.dart';
+import '../../utils/logger.dart'; // 添加日志导入
+
+/// 平台亮度Provider - 监听系统亮度变化
+final platformBrightnessProvider = StateProvider<Brightness>((ref) {
+  log.i('🌞 [platformBrightnessProvider] 初始化，默认值: light');
+  return Brightness.light;
+});
+
+/// 有效亮度Provider - 根据主题模式计算的实际亮度
+final effectiveBrightnessProvider = Provider<Brightness>((ref) {
+  final themeState = ref.watch(appThemeProvider);
+  log.i(
+      '🌞 [effectiveBrightnessProvider] 计算有效亮度: ${themeState.effectiveBrightness.name}');
+  return themeState.effectiveBrightness;
+});
+
+/// 暗色模式Provider - 方便使用的布尔值
+final isDarkModeProvider = Provider<bool>((ref) {
+  final brightness = ref.watch(effectiveBrightnessProvider);
+  return brightness == Brightness.dark;
+});
+
+/// 亮度变化监听器 - 用于在Widget中监听系统亮度变化
+class BrightnessListener extends StateNotifier<Brightness> {
+  BrightnessListener() : super(Brightness.light);
+
+  void update(Brightness brightness) {
+    state = brightness;
+  }
+}
+
+final brightnessListenerProvider =
+    StateNotifierProvider<BrightnessListener, Brightness>(
+  (ref) => BrightnessListener(),
+);
+
+/// 亮度工具类
+class BrightnessUtils {
+  /// 获取当前主题模式的实际亮度
+  static Brightness getEffectiveBrightness(
+    AppThemeMode themeMode,
+    Brightness platformBrightness,
+  ) {
+    switch (themeMode) {
+      case AppThemeMode.light:
+        return Brightness.light;
+      case AppThemeMode.dark:
+        return Brightness.dark;
+      case AppThemeMode.system:
+        return platformBrightness;
+    }
+  }
+
+  /// 判断是否为暗色模式
+  static bool isDarkMode(Brightness brightness) {
+    return brightness == Brightness.dark;
+  }
+
+  /// 获取合适的文字颜色
+  static Color getTextColorForBrightness(Brightness brightness) {
+    return brightness == Brightness.dark ? Colors.white : Colors.black;
+  }
+
+  /// 获取合适的背景颜色
+  static Color getBackgroundColorForBrightness(Brightness brightness) {
+    return brightness == Brightness.dark
+        ? const Color(0xFF121212)
+        : const Color(0xFFFAFAFA);
+  }
+
+  /// 调整颜色以适应亮度
+  static Color adjustColorForBrightness(Color color, Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      // 暗色模式下降低亮度
+      final hsl = HSLColor.fromColor(color);
+      final adjustedLightness = hsl.lightness * 0.7;
+      return hsl.withLightness(adjustedLightness.clamp(0.0, 1.0)).toColor();
+    }
+    return color;
+  }
+
+  /// 创建对比色
+  static Color getContrastColor(Color color, Brightness brightness) {
+    final luminance = color.computeLuminance();
+
+    if (brightness == Brightness.dark) {
+      return luminance > 0.3 ? Colors.black : Colors.white;
+    } else {
+      return luminance > 0.6 ? Colors.black : Colors.white;
+    }
+  }
+}
+
+/// 亮度扩展方法
+extension BrightnessExtensions on Brightness {
+  /// 获取显示名称
+  String get displayName {
+    return this == Brightness.dark ? '暗色' : '亮色';
+  }
+
+  /// 获取图标
+  IconData get icon {
+    return this == Brightness.dark ? Icons.dark_mode : Icons.light_mode;
+  }
+
+  /// 是否是暗色模式
+  bool get isDark => this == Brightness.dark;
+
+  /// 是否是亮色模式
+  bool get isLight => this == Brightness.light;
+
+  /// 获取相反亮度
+  Brightness get opposite {
+    return this == Brightness.dark ? Brightness.light : Brightness.dark;
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\providers\color_override.dart
+
+Size: 2968 bytes
+
+Modified: 02/23/2026 18:12:33
+
+========================================
+
+// lib/theme/providers/color_override.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/color_semantics.dart';
+
+/// 图片提取颜色Provider
+final extractedColorsProvider =
+    StateProvider<Map<ExtractedColorType, Color>?>((ref) {
+  return null;
+});
+
+/// 提取颜色工具Provider
+final extractedColorsUtilsProvider = Provider<ExtractedColorsUtils>((ref) {
+  return ExtractedColorsUtils(ref);
+});
+
+/// 提取颜色工具类
+class ExtractedColorsUtils {
+  final Ref _ref;
+
+  ExtractedColorsUtils(this._ref);
+
+  /// 是否有提取颜色
+  bool get hasExtractedColors {
+    final colors = _ref.read(extractedColorsProvider);
+    return colors != null && colors.isNotEmpty;
+  }
+
+  /// 获取提取颜色
+  Map<ExtractedColorType, Color>? get extractedColors {
+    return _ref.read(extractedColorsProvider);
+  }
+
+  /// 更新提取颜色
+  Future<void> updateColors(Map<ExtractedColorType, Color> colors) async {
+    _ref.read(extractedColorsProvider.notifier).state = colors;
+  }
+
+  /// 应用测试颜色
+  Future<void> applyTestColor(Color color) async {
+    final testColors = {
+      ExtractedColorType.dominant: color,
+      ExtractedColorType.vibrant: color.withValues(
+          alpha: 255,
+          red: color.red + 30,
+          green: color.green + 30,
+          blue: color.blue + 30),
+      ExtractedColorType.lightVibrant: color.withValues(
+          alpha: 255,
+          red: color.red + 60,
+          green: color.green + 60,
+          blue: color.blue + 60),
+      ExtractedColorType.darkVibrant: color.withValues(
+          alpha: 255,
+          red: color.red - 30,
+          green: color.green - 30,
+          blue: color.blue - 30),
+      ExtractedColorType.muted: color.withOpacity(0.5),
+    };
+
+    await updateColors(testColors);
+  }
+
+  /// 重置提取颜色
+  Future<void> reset() async {
+    _ref.read(extractedColorsProvider.notifier).state = null;
+  }
+
+  /// 从字符串Map转换为ExtractedColorType Map
+  Map<ExtractedColorType, Color> convertFromStringMap(
+      Map<String, Color> stringMap) {
+    final result = <ExtractedColorType, Color>{};
+
+    for (final entry in stringMap.entries) {
+      final type = _stringToExtractedColorType(entry.key);
+      if (type != null) {
+        result[type] = entry.value;
+      }
+    }
+
+    return result;
+  }
+
+  /// 字符串转ExtractedColorType
+  ExtractedColorType? _stringToExtractedColorType(String value) {
+    switch (value) {
+      case 'dominant':
+        return ExtractedColorType.dominant;
+      case 'vibrant':
+        return ExtractedColorType.vibrant;
+      case 'lightVibrant':
+        return ExtractedColorType.lightVibrant;
+      case 'darkVibrant':
+        return ExtractedColorType.darkVibrant;
+      case 'muted':
+        return ExtractedColorType.muted;
+      default:
+        return null;
+    }
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\providers\theme_manager.dart
+
+Size: 9576 bytes
+
+Modified: 02/23/2026 18:12:33
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/color_resolver.dart';
+import '../core/theme_state.dart';
+import '../definitions/theme_registry.dart';
+import 'app_theme_provider.dart';
+import 'color_override.dart';
+import '../core/color_semantics.dart'; // 添加这行
+
+/// 主题管理器 - 提供高级主题操作
+class ThemeManager {
+  final Ref _ref;
+
+  ThemeManager(this._ref);
+
+  /// 获取当前主题状态
+  ThemeState get currentState => _ref.read(appThemeProvider);
+
+  /// 获取当前主题定义
+  ThemeDefinition get currentTheme {
+    return ThemeRegistry().getThemeByType(currentState.currentUITheme);
+  }
+
+  /// 获取当前气泡颜色
+  Map<String, Color> get bubbleColors {
+    return currentTheme.getBubbleColors(currentState.isDarkMode);
+  }
+
+  /// 获取带透明度的气泡颜色
+  Map<String, Color> get bubbleColorsWithOpacity {
+    return currentTheme.getBubbleColorsWithOpacity(currentState.isDarkMode);
+  }
+
+  /// 切换UI主题
+  Future<void> switchUITheme(UIThemeType uiTheme) async {
+    await _ref.read(appThemeProvider.notifier).updateUITheme(uiTheme);
+  }
+
+  /// 切换主题模式（亮/暗/系统）
+  Future<void> switchThemeMode(AppThemeMode themeMode) async {
+    await _ref.read(appThemeProvider.notifier).updateThemeMode(themeMode);
+  }
+
+  /// 应用图片提取色
+  Future<void> applyExtractedColors(Map<String, Color> colors) async {
+    // await _ref.read(extractedColorsProvider.notifier).updateColors(colors);  // 错误
+    final utils = _ref.read(extractedColorsUtilsProvider);
+    final extractedColors = utils.convertFromStringMap(colors);
+    await utils.updateColors(extractedColors); // 正确
+  }
+
+  /// 重置所有主题设置
+  Future<void> resetAll() async {
+    await _ref.read(appThemeProvider.notifier).resetAll();
+  }
+
+  /// 切换亮暗模式
+  Future<void> toggleDarkMode() async {
+    final currentMode = currentState.themeMode;
+
+    if (currentMode == AppThemeMode.system) {
+      // 如果当前是系统模式，切换到与系统相反的模式
+      final isCurrentlyDark = currentState.isDarkMode;
+      await switchThemeMode(
+        isCurrentlyDark ? AppThemeMode.light : AppThemeMode.dark,
+      );
+    } else if (currentMode == AppThemeMode.light) {
+      await switchThemeMode(AppThemeMode.dark);
+    } else {
+      await switchThemeMode(AppThemeMode.light);
+    }
+  }
+
+  /// 获取颜色（使用颜色解析器）
+  Color getColor(ColorSemantic semantic) {
+    return ColorResolver.resolve(
+      themeState: currentState,
+      semantic: semantic,
+    );
+  }
+
+  /// 获取多个颜色
+  Map<ColorSemantic, Color> getColors(List<ColorSemantic> semantics) {
+    return ColorResolver.resolveMultiple(
+      themeState: currentState,
+      semantics: semantics,
+    );
+  }
+
+  /// 获取用户气泡装饰
+  BoxDecoration getUserBubbleDecoration() {
+    final colors = bubbleColorsWithOpacity;
+    return BoxDecoration(
+      color: colors['userBubbleBackground']!,
+      border: Border.all(
+        color: colors['userBubbleBorder']!,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(18),
+    );
+  }
+
+  /// 获取AI气泡装饰
+  BoxDecoration getAiBubbleDecoration() {
+    final colors = bubbleColorsWithOpacity;
+    return BoxDecoration(
+      color: colors['aiBubbleBackground']!,
+      border: Border.all(
+        color: colors['aiBubbleBorder']!,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(18),
+    );
+  }
+
+  /// 获取用户气泡文字样式
+  TextStyle getUserBubbleTextStyle() {
+    final colors = bubbleColors;
+    return TextStyle(
+      color: colors['userBubbleText']!,
+      fontSize: 16,
+      height: 1.4,
+      fontWeight: FontWeight.normal,
+    );
+  }
+
+  /// 获取AI气泡文字样式
+  TextStyle getAiBubbleTextStyle() {
+    final colors = bubbleColors;
+    return TextStyle(
+      color: colors['aiBubbleText']!,
+      fontSize: 16,
+      height: 1.4,
+      fontWeight: FontWeight.normal,
+    );
+  }
+
+  /// 判断是否有图片提取色
+  bool get hasExtractedColors => currentState.hasExtractedColors;
+
+  /// 判断当前是否为暗色模式
+  bool get isDarkMode => currentState.isDarkMode;
+
+  /// 获取当前主题ID
+  String get currentThemeId => currentState.currentUITheme.id;
+
+  /// 获取当前主题名称
+  String get currentThemeName {
+    if (hasExtractedColors) {
+      return '图片主题 🎨';
+    }
+    return currentTheme.name;
+  }
+
+  /// 获取所有可用主题
+  List<ThemeDefinition> getAllThemes() {
+    return ThemeRegistry().getAllThemes(); // 正确
+  }
+
+  /// 获取主题预览
+  List<ThemePreview> getThemePreviews() {
+    return ThemeRegistry().getThemePreviews(isDarkMode); // 正确
+  }
+
+  /// 调试信息
+  void debugPrintInfo() {
+    debugPrint('=== 主题管理器 ===');
+    debugPrint('当前主题: ${currentTheme.name}');
+    debugPrint('主题模式: ${currentState.themeMode.displayName}');
+    debugPrint('暗色模式: $isDarkMode');
+    debugPrint('有提取色: $hasExtractedColors');
+
+    debugPrint('\n气泡颜色:');
+    final bubbles = bubbleColors;
+    for (final entry in bubbles.entries) {
+      debugPrint('  ${entry.key}: ${entry.value.toHex()}');
+    }
+
+    debugPrint('\n所有可用主题:');
+    for (final theme in getAllThemes()) {
+      debugPrint('  ${theme.name} (${theme.id})');
+    }
+  }
+}
+
+/// 主题管理器Provider
+final themeManagerProvider = Provider<ThemeManager>((ref) {
+  return ThemeManager(ref);
+});
+
+/// 简化Provider：获取当前主题装饰
+final currentThemeDecorationsProvider = Provider<ThemeDecorations>((ref) {
+  final state = ref.watch(appThemeProvider);
+  final theme = ref.watch(currentThemeProvider);
+
+  final colors = theme.getBubbleColorsWithOpacity(state.isDarkMode);
+  final textColors = theme.getBubbleColors(state.isDarkMode);
+
+  return ThemeDecorations(
+    userBubbleDecoration: BoxDecoration(
+      color: colors['userBubbleBackground']!,
+      border: Border.all(
+        color: colors['userBubbleBorder']!,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    aiBubbleDecoration: BoxDecoration(
+      color: colors['aiBubbleBackground']!,
+      border: Border.all(
+        color: colors['aiBubbleBorder']!,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    userBubbleTextStyle: TextStyle(
+      color: textColors['userBubbleText']!,
+      fontSize: 16,
+      height: 1.4,
+      fontWeight: FontWeight.normal,
+    ),
+    aiBubbleTextStyle: TextStyle(
+      color: textColors['aiBubbleText']!,
+      fontSize: 16,
+      height: 1.4,
+      fontWeight: FontWeight.normal,
+    ),
+  );
+});
+
+/// 主题装饰数据类
+class ThemeDecorations {
+  final BoxDecoration userBubbleDecoration;
+  final BoxDecoration aiBubbleDecoration;
+  final TextStyle userBubbleTextStyle;
+  final TextStyle aiBubbleTextStyle;
+
+  const ThemeDecorations({
+    required this.userBubbleDecoration,
+    required this.aiBubbleDecoration,
+    required this.userBubbleTextStyle,
+    required this.aiBubbleTextStyle,
+  });
+}
+
+/// 主题系统工具
+class ThemeSystemUtils {
+  /// 初始化主题系统
+  static Future<void> initialize(WidgetRef ref) async {
+    debugPrint('正在初始化主题系统...');
+
+    try {
+      // 验证主题系统
+      final errors = ThemeUtils.validateThemeSystem();
+      if (errors.isNotEmpty) {
+        debugPrint('主题系统验证有警告:');
+        for (final entry in errors.entries) {
+          debugPrint('  ${entry.key}: ${entry.value.join(', ')}');
+        }
+      }
+
+      // 主题状态会在 AppThemeNotifier 构造函数中自动加载
+      // 不需要手动调用私有方法
+      debugPrint('主题系统初始化完成 ✓');
+    } catch (e) {
+      debugPrint('主题系统初始化失败: $e');
+    }
+  }
+
+  /// 切换主题
+  static Future<void> switchTheme({
+    required WidgetRef ref,
+    UIThemeType? uiTheme,
+    AppThemeMode? themeMode,
+  }) async {
+    final manager = ref.read(themeManagerProvider);
+
+    if (uiTheme != null) {
+      await manager.switchUITheme(uiTheme);
+    }
+
+    if (themeMode != null) {
+      await manager.switchThemeMode(themeMode);
+    }
+  }
+
+  /// 应用测试主题
+  static Future<void> applyTestTheme(WidgetRef ref) async {
+    final manager = ref.read(themeManagerProvider);
+
+    // 切换到草莓糖心主题
+    await manager.switchUITheme(UIThemeType.strawberryCandy);
+
+    // 应用测试颜色
+    final utils = ref.read(extractedColorsUtilsProvider);
+    await utils.applyTestColor(const Color.fromARGB(255, 217, 77, 136));
+
+    debugPrint('测试主题已应用');
+  }
+
+  /// 重置主题
+  static Future<void> resetTheme(WidgetRef ref) async {
+    await ref.read(appThemeProvider.notifier).resetAll();
+    debugPrint('主题已重置');
+  }
+
+  /// 打印调试信息
+  static void debugPrintThemeInfo(WidgetRef ref) {
+    final manager = ref.read(themeManagerProvider);
+    manager.debugPrintInfo();
+
+    // 打印提取颜色
+    final extractedColors = ref.read(extractedColorsProvider);
+    if (extractedColors != null) {
+      debugPrint('\n提取颜色:');
+      for (final entry in extractedColors.entries) {
+        debugPrint('  ${entry.key}: ${entry.value.toHex()}');
+      }
+    }
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\providers\theme_memory_manager.dart
+
+Size: 6004 bytes
+
+Modified: 02/15/2026 01:38:49
+
+========================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/theme_state.dart';
+import '../core/color_semantics.dart';
+import '../../services/storage_service.dart';
+
+/// ============ 【核心业务逻辑层】 ============
+/// 专门管理亮/暗两套记忆的独立性和同步
+
+/// 主题记忆管理器 - 追踪和保存两套独立的记忆
+class ThemeMemoryManager {
+  final StorageService _storage = StorageService();
+
+  /// 根据当前 brightness 更新对应的 memory
+  /// 参数 brightness：指定更新哪个 memory（light/dark）
+  /// 参数 newMemory：新的 memory 对象
+  Future<void> updateMemoryForBrightness({
+    required Brightness brightness,
+    required ThemeMemory newMemory,
+  }) async {
+    try {
+      final key = brightness == Brightness.dark
+          ? _StorageKeys.darkMemory
+          : _StorageKeys.lightMemory;
+
+      // 序列化后保存
+      final serialized = _serializeThemeMemory(newMemory);
+      await _storage.saveString(key, serialized);
+
+      debugPrint('✅ 已保存 ${brightness.name} 模式的记忆: $newMemory');
+    } catch (e) {
+      debugPrint('❌ 保存记忆失败: $e');
+    }
+  }
+
+  /// 加载指定 brightness 的记忆
+  Future<ThemeMemory> loadMemoryForBrightness(Brightness brightness) async {
+    try {
+      final key = brightness == Brightness.dark
+          ? _StorageKeys.darkMemory
+          : _StorageKeys.lightMemory;
+
+      final serialized = await _storage.getString(key);
+
+      if (serialized == null || serialized.isEmpty) {
+        debugPrint('ℹ️ ${brightness.name} 模式无保存记忆，使用初始值');
+        return ThemeMemory.initial();
+      }
+
+      final memory = _deserializeThemeMemory(serialized);
+      debugPrint('✅ 已加载 ${brightness.name} 模式的记忆: $memory');
+      return memory;
+    } catch (e) {
+      debugPrint('❌ 加载记忆失败: $e，使用初始值');
+      return ThemeMemory.initial();
+    }
+  }
+
+  /// 更新当前 brightness 对应的主题选择
+  /// 自动设置 lastOperationType = themeSwitch
+  ThemeMemory updateThemeSwitchInMemory(
+    ThemeMemory currentMemory,
+    UIThemeType newTheme,
+  ) {
+    return currentMemory.copyWith(
+      uiTheme: newTheme,
+      lastOperationType: ThemeMemoryOperationType.themeSwitch,
+    );
+  }
+
+  /// 更新当前 brightness 对应的提取色
+  /// 自动设置 lastOperationType = imageExtract
+  ThemeMemory updateImageExtractInMemory(
+    ThemeMemory currentMemory,
+    Map<ExtractedColorType, Color> extractedColors,
+  ) {
+    return currentMemory.copyWith(
+      extractedColors: extractedColors,
+      lastOperationType: ThemeMemoryOperationType.imageExtract,
+    );
+  }
+
+  /// 重置为默认主题（相当于"主动切回默认"）
+  ThemeMemory resetMemoryToDefault() {
+    return ThemeMemory.initial();
+  }
+
+  /// ========== 序列化/反序列化（用于存储） ==========
+
+  String _serializeThemeMemory(ThemeMemory memory) {
+    // 简化版本：用 JSON 字符串表示
+    // 生产环境应该用 json_serializable 或类似工具
+    final themeIdStr = memory.uiTheme.id;
+    final opTypeStr =
+        memory.lastOperationType == ThemeMemoryOperationType.themeSwitch
+            ? 'switch'
+            : 'extract';
+
+    // 提取色序列化（简化：只存 dominant 和 vibrant）
+    final extractStr = _serializeExtractedColors(memory.extractedColors);
+
+    return '$themeIdStr|$opTypeStr|$extractStr';
+  }
+
+  ThemeMemory _deserializeThemeMemory(String data) {
+    try {
+      final parts = data.split('|');
+      if (parts.length < 3) {
+        return ThemeMemory.initial();
+      }
+
+      final themeIdStr = parts[0];
+      final opTypeStr = parts[1];
+      final extractStr = parts[2];
+
+      final uiTheme = UIThemeTypeExtensions.fromString(themeIdStr);
+      final opType = opTypeStr == 'switch'
+          ? ThemeMemoryOperationType.themeSwitch
+          : ThemeMemoryOperationType.imageExtract;
+
+      final extracted = _deserializeExtractedColors(extractStr);
+
+      return ThemeMemory(
+        uiTheme: uiTheme,
+        extractedColors: extracted,
+        lastOperationType: opType,
+      );
+    } catch (e) {
+      debugPrint('反序列化失败: $e');
+      return ThemeMemory.initial();
+    }
+  }
+
+  String _serializeExtractedColors(Map<ExtractedColorType, Color>? colors) {
+    if (colors == null || colors.isEmpty) return '';
+
+    // 简化：只保存 dominant 和 vibrant
+    final dominant = colors[ExtractedColorType.dominant];
+    final vibrant = colors[ExtractedColorType.vibrant];
+
+    if (dominant == null || vibrant == null) return '';
+
+    return '${dominant.value.toRadixString(16)},${vibrant.value.toRadixString(16)}';
+  }
+
+  Map<ExtractedColorType, Color>? _deserializeExtractedColors(String data) {
+    if (data.isEmpty) return null;
+
+    try {
+      final parts = data.split(',');
+      if (parts.length < 2) return null;
+
+      final dominant = Color(int.parse(parts[0], radix: 16));
+      final vibrant = Color(int.parse(parts[1], radix: 16));
+
+      return {
+        ExtractedColorType.dominant: dominant,
+        ExtractedColorType.vibrant: vibrant,
+        ExtractedColorType.lightVibrant: vibrant.withOpacity(0.7),
+        ExtractedColorType.darkVibrant: vibrant.withOpacity(0.5),
+        ExtractedColorType.muted: dominant.withOpacity(0.6),
+      };
+    } catch (e) {
+      debugPrint('提取色反序列化失败: $e');
+      return null;
+    }
+  }
+}
+
+/// ========== 存储键常量 ==========
+class _StorageKeys {
+  static const String lightMemory = 'theme_light_memory';
+  static const String darkMemory = 'theme_dark_memory';
+  static const String themeMode = 'theme_mode';
+}
+
+/// ========== Provider ==========
+
+final themeMemoryManagerProvider = Provider<ThemeMemoryManager>((ref) {
+  return ThemeMemoryManager();
+});
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\tokens\base_tokens.dart
+
+Size: 11822 bytes
+
+Modified: 02/01/2026 12:42:24
+
+========================================
+
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart'; // 添加这行
+
+/// 基础颜色令牌 - 所有硬编码的颜色常量
+/// 这些是颜色的"原子"，主题定义会组合这些原子
+abstract class BaseColorTokens {
+  // ========== 粉色系 (默认主题) ==========
+  static const Color pink50 = Color(0xFFFCE4EC);
+  static const Color pink100 = Color(0xFFF8BBD0);
+  static const Color pink200 = Color(0xFFF48FB1);
+  static const Color pink300 = Color(0xFFF06292);
+  static const Color pink400 = Color(0xFFEC407A);
+  static const Color pink500 = Color(0xFFE91E63);
+  static const Color pink600 = Color(0xFFD81B60);
+  static const Color pink700 = Color(0xFFC2185B);
+  static const Color pink800 = Color(0xFFAD1457);
+  static const Color pink900 = Color(0xFF880E4F);
+
+  // 你的特定粉色
+  static const Color pinkPrimary = Color(0xFFFF5A7E); // 主粉色
+  static const Color pinkPrimaryDark = Color(0xFFF95685); // 暗色主粉色
+  static const Color pinkLight = Color(0xFFFFB6C1); // 浅粉色
+  static const Color pinkSoft = Color(0xFFFFEAEF); // 柔和粉色
+  static const Color pinkUserText = Color(0xFFA53A67); // 用户文字粉色
+  static const Color pinkUserBubble = Color(0xFFFEEBEF); // 用户气泡粉色
+
+  // ========== 绿色系 (酸菜牛奶) ==========
+  static const Color green50 = Color(0xFFE8F5E9);
+  static const Color green100 = Color(0xFFC8E6C9);
+  static const Color green200 = Color(0xFFA5D6A7);
+  static const Color green300 = Color(0xFF81C784);
+  static const Color green400 = Color(0xFF66BB6A);
+  static const Color green500 = Color(0xFF4CAF50);
+  static const Color green600 = Color(0xFF43A047);
+  static const Color green700 = Color(0xFF388E3C);
+  static const Color green800 = Color(0xFF2E7D32);
+  static const Color green900 = Color(0xFF1B5E20);
+
+  // 酸菜牛奶特定绿色
+  static const Color pickleUserBubble = Color(0xFFF6C7D9); // 用户气泡
+  static const Color pickleUserText = Color(0xFF372B2D); // 用户文字
+  static const Color pickleAiBubble = Color(0xFFF8EDF3); // AI气泡
+  static const Color pickleAiText = Color(0xFF855B40); // AI文字
+  static const Color pickleBorder = Color(0xFFEF9CC3); // 边框
+
+  // ========== 中性色 (灰度) ==========
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF000000);
+
+  static const Color gray50 = Color(0xFFFAFAFA);
+  static const Color gray100 = Color(0xFFF5F5F5);
+  static const Color gray200 = Color(0xFFEEEEEE);
+  static const Color gray300 = Color(0xFFE0E0E0);
+  static const Color gray400 = Color(0xFFBDBDBD);
+  static const Color gray500 = Color(0xFF9E9E9E);
+  static const Color gray600 = Color(0xFF757575);
+  static const Color gray700 = Color(0xFF616161);
+  static const Color gray800 = Color(0xFF424242);
+  static const Color gray900 = Color(0xFF212121);
+
+  // 应用特定中性色
+  static const Color backgroundLight = Color(0xFFFDF7F7);
+  static const Color backgroundDark = Color(0xFF060405);
+  static const Color surfaceLight = Color(0xFFFFFFFF);
+  static const Color surfaceDark = Color(0xFF1A1A1A);
+
+  // ========== 边框颜色 ==========
+  static const Color borderLightPink = Color(0xFFE8DADD);
+  static const Color borderLightGray = Color(0xFFE6E0E0);
+  static const Color borderDarkPink = Color(0xFF443339);
+  static const Color borderDarkGray = Color(0xFF333333);
+
+  // ========== 文字颜色 ==========
+  static const Color textPrimaryLight = Color(0xFF1D1D1F);
+  static const Color textSecondaryLight = Color(0xFF6D6D6F);
+  static const Color textHintLight = Color(0xFF9E9E9E);
+
+  static const Color textPrimaryDark = Color(0xFFFFFFFF);
+  static const Color textSecondaryDark = Color(0xFFAAAAAA);
+  static const Color textHintDark = Color(0xFF757575);
+
+  // ========== 状态颜色 ==========
+  static const Color successLight = Color(0xFF4CAF50);
+  static const Color successDark = Color(0xFF66BB6A);
+
+  static const Color warningLight = Color(0xFFFF9800);
+  static const Color warningDark = Color(0xFFFFB74D);
+
+  static const Color errorLight = Color(0xFFF44336);
+  static const Color errorDark = Color(0xFFEF5350);
+
+  static const Color infoLight = Color(0xFF2196F3);
+  static const Color infoDark = Color(0xFF42A5F5);
+
+  // ========== 其他功能色 ==========
+  static const Color overlayLight = Color(0x0A000000); // 4% 黑色
+  static const Color overlayDark = Color(0x0AFFFFFF); // 4% 白色
+
+  static const Color shadowLight = Color(0x1A000000); // 10% 黑色
+  static const Color shadowDark = Color(0x1A000000); // 10% 黑色
+
+  // ========== 透明度工具 ==========
+  static Color withOpacity(Color color, double opacity) {
+    return color.withOpacity(opacity);
+  }
+
+  /// 30% 透明度（用于气泡）
+  static Color withBubbleOpacity(Color color) {
+    return color.withOpacity(0.3);
+  }
+
+  /// 获取对比色（黑色或白色）
+  static Color getContrastColor(Color backgroundColor) {
+    final luminance = backgroundColor.computeLuminance();
+    return luminance > 0.5 ? black : white;
+  }
+
+  /// 获取安全文本颜色（确保可读性）
+  static Color getSafeTextColor(Color backgroundColor) {
+    final luminance = backgroundColor.computeLuminance();
+    if (luminance > 0.7) {
+      return textPrimaryLight; // 亮背景用深色文字
+    } else if (luminance < 0.3) {
+      return textPrimaryDark; // 暗背景用浅色文字
+    } else {
+      // 中等亮度，使用计算对比色
+      return getContrastColor(backgroundColor);
+    }
+  }
+}
+
+/// 颜色工具类
+class ColorUtils {
+  /// 混合两种颜色
+  static Color blend(Color color1, Color color2, double ratio) {
+    final r = (color1.red * (1 - ratio) + color2.red * ratio).round();
+    final g = (color1.green * (1 - ratio) + color2.green * ratio).round();
+    final b = (color1.blue * (1 - ratio) + color2.blue * ratio).round();
+    final a = (color1.alpha * (1 - ratio) + color2.alpha * ratio).round();
+
+    return Color.fromARGB(a, r, g, b);
+  }
+
+  /// 调整颜色亮度
+  static Color adjustBrightness(Color color, double delta) {
+    final hsl = HSLColor.fromColor(color);
+    final newLightness = (hsl.lightness + delta).clamp(0.0, 1.0);
+    return hsl.withLightness(newLightness).toColor();
+  }
+
+  /// 调整颜色饱和度
+  static Color adjustSaturation(Color color, double delta) {
+    final hsl = HSLColor.fromColor(color);
+    final newSaturation = (hsl.saturation + delta).clamp(0.0, 1.0);
+    return hsl.withSaturation(newSaturation).toColor();
+  }
+
+  /// 创建颜色阴影（用于暗色模式）
+  static Color createShadow(Color baseColor, {double opacity = 0.1}) {
+    return blend(baseColor, BaseColorTokens.black, opacity);
+  }
+
+  /// 创建颜色高光（用于亮色模式）
+  static Color createHighlight(Color baseColor, {double opacity = 0.1}) {
+    return blend(baseColor, BaseColorTokens.white, opacity);
+  }
+
+  /// 生成颜色渐变
+  static List<Color> generateGradient(Color start, Color end, int steps) {
+    final gradient = <Color>[];
+
+    for (var i = 0; i < steps; i++) {
+      final ratio = i / (steps - 1);
+      gradient.add(blend(start, end, ratio));
+    }
+
+    return gradient;
+  }
+
+  /// 判断颜色是否为亮色
+  static bool isLightColor(Color color) {
+    return color.computeLuminance() > 0.5;
+  }
+
+  /// 获取合适的文本颜色（基于背景色）
+  static Color getTextColorForBackground(Color backgroundColor) {
+    return isLightColor(backgroundColor)
+        ? BaseColorTokens.textPrimaryLight
+        : BaseColorTokens.textPrimaryDark;
+  }
+
+  /// 将颜色转换为16进制字符串
+  static String toHexString(Color color, {bool withAlpha = false}) {
+    final hex = color.value.toRadixString(16).padLeft(8, '0');
+    if (withAlpha) {
+      return '#$hex';
+    } else {
+      return '#${hex.substring(2)}'; // 去掉alpha通道
+    }
+  }
+
+  /// 从16进制字符串创建颜色
+  static Color fromHexString(String hexString) {
+    try {
+      var hex = hexString.replaceFirst('#', '');
+      if (hex.length == 6) {
+        hex = 'FF$hex'; // 添加全不透明alpha
+      }
+      final value = int.parse(hex, radix: 16);
+      return Color(value);
+    } catch (e) {
+      debugPrint('颜色解析失败: $hexString, 错误: $e');
+      return BaseColorTokens.pinkPrimary; // 返回默认颜色
+    }
+  }
+}
+
+/// 预定义的调色板
+class ColorPalettes {
+  /// 默认粉色调色板
+  static const List<Color> defaultPinkPalette = [
+    BaseColorTokens.pink50,
+    BaseColorTokens.pink100,
+    BaseColorTokens.pink200,
+    BaseColorTokens.pink300,
+    BaseColorTokens.pink400,
+    BaseColorTokens.pink500,
+    BaseColorTokens.pink600,
+    BaseColorTokens.pink700,
+    BaseColorTokens.pink800,
+    BaseColorTokens.pink900,
+  ];
+
+  /// 你的应用粉色调色板
+  static const List<Color> appPinkPalette = [
+    BaseColorTokens.pinkSoft,
+    BaseColorTokens.pinkLight,
+    BaseColorTokens.pinkPrimary,
+    BaseColorTokens.pinkUserText,
+    BaseColorTokens.pinkPrimaryDark,
+  ];
+
+  /// 绿色调色板（酸菜牛奶）
+  static const List<Color> greenPalette = [
+    BaseColorTokens.green50,
+    BaseColorTokens.green100,
+    BaseColorTokens.green200,
+    BaseColorTokens.green300,
+    BaseColorTokens.green400,
+    BaseColorTokens.green500,
+    BaseColorTokens.green600,
+    BaseColorTokens.green700,
+    BaseColorTokens.green800,
+    BaseColorTokens.green900,
+  ];
+
+  /// 灰度调色板
+  static const List<Color> grayPalette = [
+    BaseColorTokens.gray50,
+    BaseColorTokens.gray100,
+    BaseColorTokens.gray200,
+    BaseColorTokens.gray300,
+    BaseColorTokens.gray400,
+    BaseColorTokens.gray500,
+    BaseColorTokens.gray600,
+    BaseColorTokens.gray700,
+    BaseColorTokens.gray800,
+    BaseColorTokens.gray900,
+  ];
+
+  /// 获取所有可用的调色板
+  static Map<String, List<Color>> getAllPalettes() {
+    return {
+      'defaultPink': defaultPinkPalette,
+      'appPink': appPinkPalette,
+      'green': greenPalette,
+      'gray': grayPalette,
+    };
+  }
+
+  /// 从图片提取的颜色创建调色板
+  static List<Color> createPaletteFromExtracted(
+    Map<ExtractedColorType, Color> extractedColors,
+  ) {
+    return [
+      extractedColors[ExtractedColorType.dominant]!,
+      extractedColors[ExtractedColorType.vibrant]!,
+      extractedColors[ExtractedColorType.lightVibrant]!,
+      extractedColors[ExtractedColorType.darkVibrant]!,
+      extractedColors[ExtractedColorType.muted]!,
+    ];
+  }
+}
+
+/// 扩展方法：方便地使用颜色
+extension ColorExtensions on Color {
+  /// 转换为带透明度的颜色
+  Color withBubbleOpacity() {
+    return BaseColorTokens.withBubbleOpacity(this);
+  }
+
+  /// 获取对比色
+  Color get contrastColor {
+    return BaseColorTokens.getContrastColor(this);
+  }
+
+  /// 获取安全文本颜色
+  Color get safeTextColor {
+    return BaseColorTokens.getSafeTextColor(this);
+  }
+
+  /// 转换为16进制字符串
+  String toHex({bool withAlpha = false}) {
+    return ColorUtils.toHexString(this, withAlpha: withAlpha);
+  }
+
+  /// 判断是否为亮色
+  bool get isLight {
+    return ColorUtils.isLightColor(this);
+  }
+
+  /// 调整亮度
+  Color withBrightness(double delta) {
+    return ColorUtils.adjustBrightness(this, delta);
+  }
+
+  /// 创建深色版本
+  Color get darken {
+    return ColorUtils.adjustBrightness(this, -0.2);
+  }
+
+  /// 创建浅色版本
+  Color get lighten {
+    return ColorUtils.adjustBrightness(this, 0.2);
+  }
+
+  /// 降低饱和度
+  Color get desaturate {
+    return ColorUtils.adjustSaturation(this, -0.3);
+  }
+}
+
+
+
+
+========================================
+
+File: D:\D\my_new_app\lib\theme\tokens\semantic_mapper.dart
+
+Size: 26339 bytes
+
+Modified: 02/16/2026 22:36:33
+
+========================================
+
+import 'package:flutter/material.dart';
+import '../core/color_semantics.dart';
+import 'base_tokens.dart';
+
+/// 语义映射器 - 将基础颜色令牌映射到颜色语义
+/// 每个主题都会定义自己的映射关系
+class SemanticMapper {
+  /// 默认主题的亮色映射
+  static Map<ColorSemantic, Color> defaultLight() {
+    return {
+      // ========== 气泡颜色 ==========
+      ColorSemantic.userBubbleBackground: BaseColorTokens.pinkUserBubble,
+      ColorSemantic.userBubbleBorder: BaseColorTokens.borderLightPink,
+      ColorSemantic.userBubbleText: BaseColorTokens.pinkUserText,
+
+      ColorSemantic.aiBubbleBackground: BaseColorTokens.white,
+      ColorSemantic.aiBubbleBorder: BaseColorTokens.borderLightGray,
+      ColorSemantic.aiBubbleText: BaseColorTokens.textPrimaryLight,
+
+      // ========== 应用通用颜色 ==========
+      ColorSemantic.primary: BaseColorTokens.pinkPrimary,
+      ColorSemantic.secondary: BaseColorTokens.pinkLight,
+      ColorSemantic.accent: BaseColorTokens.pinkPrimary,
+
+      ColorSemantic.background: BaseColorTokens.backgroundLight,
+      ColorSemantic.surface: BaseColorTokens.surfaceLight,
+      ColorSemantic.surfaceVariant: BaseColorTokens.gray100,
+
+      ColorSemantic.textPrimary: BaseColorTokens.textPrimaryLight,
+      ColorSemantic.textSecondary: BaseColorTokens.textSecondaryLight,
+      ColorSemantic.textHint: BaseColorTokens.textHintLight,
+
+      ColorSemantic.border: BaseColorTokens.gray300,
+      ColorSemantic.divider: BaseColorTokens.gray200,
+
+      // ========== 按钮颜色 ==========
+      ColorSemantic.buttonPrimary: BaseColorTokens.pinkPrimary,
+      ColorSemantic.buttonPrimaryText: BaseColorTokens.white,
+      ColorSemantic.buttonSecondary: BaseColorTokens.gray100,
+      ColorSemantic.buttonSecondaryText: BaseColorTokens.textPrimaryLight,
+
+      // ========== 组件颜色 ==========
+      ColorSemantic.appBarBackground: BaseColorTokens.surfaceLight,
+      ColorSemantic.appBarText: BaseColorTokens.textPrimaryLight,
+      ColorSemantic.inputBackground: BaseColorTokens.white,
+      ColorSemantic.inputBorder: BaseColorTokens.gray300,
+      ColorSemantic.inputText: BaseColorTokens.textPrimaryLight,
+      ColorSemantic.switchActive: BaseColorTokens.pinkPrimary,
+      ColorSemantic.switchInactive: BaseColorTokens.gray500,
+
+      // ========== 状态颜色 ==========
+      ColorSemantic.success: BaseColorTokens.successLight,
+      ColorSemantic.warning: BaseColorTokens.warningLight,
+      ColorSemantic.error: BaseColorTokens.errorLight,
+      ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F5F5),
+      ColorSemantic.primaryContainer: const Color(0xFFFFE4E9),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF6D1F34),
+      ColorSemantic.onSurface: const Color(0xFF1C1B1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF666666),
+      ColorSemantic.cardBackground: BaseColorTokens.white,
+      ColorSemantic.cardBorder: BaseColorTokens.gray300,
+      ColorSemantic.textFieldFill: BaseColorTokens.white,
+      ColorSemantic.textFieldHint: BaseColorTokens.textHintLight,
+      ColorSemantic.buttonBackground: BaseColorTokens.pinkPrimary,
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: BaseColorTokens.backgroundLight,
+      ColorSemantic.messageInputBackground: BaseColorTokens.white,
+      ColorSemantic.messageInputBorder: BaseColorTokens.gray300,
+      ColorSemantic.messageInputText: BaseColorTokens.textPrimaryLight,
+      ColorSemantic.messageInputHint: BaseColorTokens.textHintLight,
+      ColorSemantic.scrollToBottomButton: BaseColorTokens.pinkPrimary,
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: BaseColorTokens.pinkPrimary,
+    };
+  }
+
+  /// 默认主题的暗色映射
+  static Map<ColorSemantic, Color> defaultDark() {
+    return {
+      // ========== 气泡颜色 ==========
+      ColorSemantic.userBubbleBackground: const Color(0xFF2A1A1F),
+      ColorSemantic.userBubbleBorder: const Color(0xFF443339),
+      ColorSemantic.userBubbleText: BaseColorTokens.pink100,
+
+      ColorSemantic.aiBubbleBackground: BaseColorTokens.surfaceDark,
+      ColorSemantic.aiBubbleBorder: BaseColorTokens.gray700,
+      ColorSemantic.aiBubbleText: BaseColorTokens.textPrimaryDark,
+
+      // ========== 应用通用颜色 ==========
+      ColorSemantic.primary: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.secondary: const Color(0xFF3A1F25),
+      ColorSemantic.accent: BaseColorTokens.pinkPrimaryDark,
+
+      ColorSemantic.background: BaseColorTokens.backgroundDark,
+      ColorSemantic.surface: BaseColorTokens.surfaceDark,
+      ColorSemantic.surfaceVariant: BaseColorTokens.gray800,
+
+      ColorSemantic.textPrimary: BaseColorTokens.textPrimaryDark,
+      ColorSemantic.textSecondary: BaseColorTokens.textSecondaryDark,
+      ColorSemantic.textHint: BaseColorTokens.textHintDark,
+
+      ColorSemantic.border: BaseColorTokens.gray700,
+      ColorSemantic.divider: BaseColorTokens.gray800,
+
+      // ========== 按钮颜色 ==========
+      ColorSemantic.buttonPrimary: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.buttonPrimaryText: BaseColorTokens.white,
+      ColorSemantic.buttonSecondary: BaseColorTokens.gray800,
+      ColorSemantic.buttonSecondaryText: BaseColorTokens.textPrimaryDark,
+
+      // ========== 组件颜色 ==========
+      ColorSemantic.appBarBackground: BaseColorTokens.surfaceDark,
+      ColorSemantic.appBarText: BaseColorTokens.textPrimaryDark,
+      ColorSemantic.inputBackground: const Color(0xFF252525),
+      ColorSemantic.inputBorder: const Color(0xFF444444),
+      ColorSemantic.inputText: BaseColorTokens.textPrimaryDark,
+      ColorSemantic.switchActive: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.switchInactive: BaseColorTokens.gray500,
+
+      // ========== 状态颜色 ==========
+      ColorSemantic.success: BaseColorTokens.successDark,
+      ColorSemantic.warning: BaseColorTokens.warningDark,
+      ColorSemantic.error: BaseColorTokens.errorDark,
+      ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF3A1F25),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFFFB6C1),
+      ColorSemantic.onSurface: const Color(0xFFF5F5F5),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBCB8B9),
+      ColorSemantic.cardBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.cardBorder: BaseColorTokens.gray700,
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: BaseColorTokens.textHintDark,
+      ColorSemantic.buttonBackground: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: BaseColorTokens.backgroundDark,
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF444444),
+      ColorSemantic.messageInputText: BaseColorTokens.textPrimaryDark,
+      ColorSemantic.messageInputHint: BaseColorTokens.textHintDark,
+      ColorSemantic.scrollToBottomButton: BaseColorTokens.pinkPrimaryDark,
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: BaseColorTokens.pinkPrimaryDark,
+    };
+  }
+
+  /// 草莓糖心主题的亮色映射
+  static Map<ColorSemantic, Color> strawberryCandyLight() {
+    return {
+      // ========== 气泡颜色 ==========
+      ColorSemantic.userBubbleBackground: BaseColorTokens.pinkUserBubble,
+      ColorSemantic.userBubbleBorder: BaseColorTokens.borderLightPink,
+      ColorSemantic.userBubbleText: BaseColorTokens.pinkUserText,
+
+      ColorSemantic.aiBubbleBackground: BaseColorTokens.white,
+      ColorSemantic.aiBubbleBorder: BaseColorTokens.borderLightGray,
+      ColorSemantic.aiBubbleText: BaseColorTokens.textPrimaryLight,
+
+      // ========== 应用通用颜色 ==========
+      ColorSemantic.primary: const Color(0xFFFF7B9C), // 更亮的草莓粉
+      ColorSemantic.secondary: const Color(0xFFFFD1DC), // 草莓奶油色
+      ColorSemantic.accent: const Color(0xFFFF7B9C),
+
+      ColorSemantic.background: const Color(0xFFFFF8FA), // 草莓牛奶背景
+      ColorSemantic.surface: BaseColorTokens.white,
+      ColorSemantic.surfaceVariant: const Color(0xFFFEF0F3),
+
+      ColorSemantic.textPrimary: const Color(0xFF2C1A1F), // 深草莓籽色
+      ColorSemantic.textSecondary: const Color(0xFF6D4F59),
+      ColorSemantic.textHint: const Color(0xFFA88B95),
+
+      ColorSemantic.border: const Color(0xFFF1DCDE), // 草莓茎色
+      ColorSemantic.divider: const Color(0xFFFAEFF2),
+
+      // ========== 按钮颜色 ==========
+      ColorSemantic.buttonPrimary: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonPrimaryText: BaseColorTokens.white,
+      ColorSemantic.buttonSecondary: const Color(0xFFFEF0F3),
+      ColorSemantic.buttonSecondaryText: const Color(0xFF2C1A1F),
+
+      // ========== 组件颜色 ==========
+      ColorSemantic.appBarBackground: BaseColorTokens.white,
+      ColorSemantic.appBarText: const Color(0xFF2C1A1F),
+      ColorSemantic.inputBackground: BaseColorTokens.white,
+      ColorSemantic.inputBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.inputText: const Color(0xFF2C1A1F),
+      ColorSemantic.switchActive: const Color(0xFFFF7B9C),
+      ColorSemantic.switchInactive: BaseColorTokens.gray500,
+
+      // ========== 状态颜色 ==========
+      ColorSemantic.success: BaseColorTokens.successLight,
+      ColorSemantic.warning: BaseColorTokens.warningLight,
+      ColorSemantic.error: BaseColorTokens.errorLight,
+      ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFFEF0F3),
+      ColorSemantic.primaryContainer: const Color(0xFFFFE4E9),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF6D1F34),
+      ColorSemantic.onSurface: const Color(0xFF2C1A1F),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF6D4F59),
+      ColorSemantic.cardBackground: BaseColorTokens.white,
+      ColorSemantic.cardBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.textFieldFill: BaseColorTokens.white,
+      ColorSemantic.textFieldHint: const Color(0xFFA88B95),
+      ColorSemantic.buttonBackground: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFFFFF8FA),
+      ColorSemantic.messageInputBackground: BaseColorTokens.white,
+      ColorSemantic.messageInputBorder: const Color(0xFFF1DCDE),
+      ColorSemantic.messageInputText: const Color(0xFF2C1A1F),
+      ColorSemantic.messageInputHint: const Color(0xFFA88B95),
+      ColorSemantic.scrollToBottomButton: const Color(0xFFFF7B9C),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFFFF7B9C),
+    };
+  }
+
+  /// 草莓糖心主题的暗色映射
+  static Map<ColorSemantic, Color> strawberryCandyDark() {
+    return {
+      // ========== 气泡颜色 ==========
+      ColorSemantic.userBubbleBackground: const Color(0xFF3A1F25),
+      ColorSemantic.userBubbleBorder: const Color(0xFF5A2F35),
+      ColorSemantic.userBubbleText: const Color(0xFFFFB6C1),
+
+      ColorSemantic.aiBubbleBackground: const Color(0xFF1E1E1E),
+      ColorSemantic.aiBubbleBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.aiBubbleText: const Color(0xFFF5F5F5),
+
+      // ========== 应用通用颜色 ==========
+      ColorSemantic.primary: const Color(0xFFFF7B9C),
+      ColorSemantic.secondary: const Color(0xFF4A2F35),
+      ColorSemantic.accent: const Color(0xFFFF7B9C),
+
+      ColorSemantic.background: const Color(0xFF0A0506),
+      ColorSemantic.surface: const Color(0xFF1F1F1F),
+      ColorSemantic.surfaceVariant: const Color(0xFF2A2A2A),
+
+      ColorSemantic.textPrimary: const Color(0xFFF5F5F5),
+      ColorSemantic.textSecondary: const Color(0xFFBBBBBB),
+      ColorSemantic.textHint: const Color(0xFF888888),
+
+      ColorSemantic.border: const Color(0xFF3A3A3A),
+      ColorSemantic.divider: const Color(0xFF2A2A2A),
+
+      // ========== 按钮颜色 ==========
+      ColorSemantic.buttonPrimary: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonPrimaryText: BaseColorTokens.white,
+      ColorSemantic.buttonSecondary: const Color(0xFF2A2A2A),
+      ColorSemantic.buttonSecondaryText: const Color(0xFFF5F5F5),
+
+      // ========== 组件颜色 ==========
+      ColorSemantic.appBarBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.appBarText: const Color(0xFFF5F5F5),
+      ColorSemantic.inputBackground: const Color(0xFF252525),
+      ColorSemantic.inputBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.inputText: const Color(0xFFF5F5F5),
+      ColorSemantic.switchActive: const Color(0xFFFF7B9C),
+      ColorSemantic.switchInactive: BaseColorTokens.gray500,
+
+      // ========== 状态颜色 ==========
+      ColorSemantic.success: BaseColorTokens.successDark,
+      ColorSemantic.warning: BaseColorTokens.warningDark,
+      ColorSemantic.error: BaseColorTokens.errorDark,
+      ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF3A1F25),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFFFB6C1),
+      ColorSemantic.onSurface: const Color(0xFFF5F5F5),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBBBBBB),
+      ColorSemantic.cardBackground: const Color(0xFF1F1F1F),
+      ColorSemantic.cardBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: const Color(0xFF888888),
+      ColorSemantic.buttonBackground: const Color(0xFFFF7B9C),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFF0A0506),
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF3A3A3A),
+      ColorSemantic.messageInputText: const Color(0xFFF5F5F5),
+      ColorSemantic.messageInputHint: const Color(0xFF888888),
+      ColorSemantic.scrollToBottomButton: const Color(0xFFFF7B9C),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFFFF7B9C),
+    };
+  }
+
+  /// 酸菜牛奶主题的亮色映射
+  static Map<ColorSemantic, Color> pickleMilkLight() {
+    return {
+      // ========== 气泡颜色 ==========
+      ColorSemantic.userBubbleBackground: BaseColorTokens.pickleUserBubble,
+      ColorSemantic.userBubbleBorder: BaseColorTokens.pickleBorder,
+      ColorSemantic.userBubbleText: BaseColorTokens.pickleUserText,
+
+      ColorSemantic.aiBubbleBackground: BaseColorTokens.pickleAiBubble,
+      ColorSemantic.aiBubbleBorder: BaseColorTokens.pickleBorder,
+      ColorSemantic.aiBubbleText: BaseColorTokens.pickleAiText,
+
+      // ========== 应用通用颜色 ==========
+      ColorSemantic.primary: const Color(0xFF8B5D3A), // 酸菜棕色
+      ColorSemantic.secondary: const Color(0xFFD4B996), // 牛奶米色
+      ColorSemantic.accent: const Color(0xFF8B5D3A),
+
+      ColorSemantic.background: const Color(0xFFFAF7F2), // 牛奶背景
+      ColorSemantic.surface: const Color(0xFFFFFEFB),
+      ColorSemantic.surfaceVariant: const Color(0xFFF5F1E8),
+
+      ColorSemantic.textPrimary: const Color(0xFF372B2D), // 酸菜深色
+      ColorSemantic.textSecondary: const Color(0xFF6D6359),
+      ColorSemantic.textHint: const Color(0xFFA0988F),
+
+      ColorSemantic.border: const Color(0xFFE8DECD), // 酸菜茎色
+      ColorSemantic.divider: const Color(0xFFF0ECE1),
+
+      // ========== 按钮颜色 ==========
+      ColorSemantic.buttonPrimary: const Color(0xFF8B5D3A),
+      ColorSemantic.buttonPrimaryText: BaseColorTokens.white,
+      ColorSemantic.buttonSecondary: const Color(0xFFF5F1E8),
+      ColorSemantic.buttonSecondaryText: const Color(0xFF372B2D),
+
+      // ========== 组件颜色 ==========
+      ColorSemantic.appBarBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.appBarText: const Color(0xFF372B2D),
+      ColorSemantic.inputBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.inputBorder: const Color(0xFFE8DECD),
+      ColorSemantic.inputText: const Color(0xFF372B2D),
+      ColorSemantic.switchActive: const Color(0xFF8B5D3A),
+      ColorSemantic.switchInactive: BaseColorTokens.gray500,
+
+      // ========== 状态颜色 ==========
+      ColorSemantic.success: BaseColorTokens.successLight,
+      ColorSemantic.warning: BaseColorTokens.warningLight,
+      ColorSemantic.error: BaseColorTokens.errorLight,
+      ColorSemantic.info: BaseColorTokens.infoLight,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFFF5F1E8),
+      ColorSemantic.primaryContainer: const Color(0xFFE8DECD),
+      ColorSemantic.onPrimaryContainer: const Color(0xFF372B2D),
+      ColorSemantic.onSurface: const Color(0xFF372B2D),
+      ColorSemantic.onSurfaceVariant: const Color(0xFF6D6359),
+      ColorSemantic.cardBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.cardBorder: const Color(0xFFE8DECD),
+      ColorSemantic.textFieldFill: const Color(0xFFFFFEFB),
+      ColorSemantic.textFieldHint: const Color(0xFFA0988F),
+      ColorSemantic.buttonBackground: const Color(0xFF8B5D3A),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFFFAF7F2),
+      ColorSemantic.messageInputBackground: const Color(0xFFFFFEFB),
+      ColorSemantic.messageInputBorder: const Color(0xFFE8DECD),
+      ColorSemantic.messageInputText: const Color(0xFF372B2D),
+      ColorSemantic.messageInputHint: const Color(0xFFA0988F),
+      ColorSemantic.scrollToBottomButton: const Color(0xFF8B5D3A),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFF8B5D3A),
+    };
+  }
+
+  /// 酸菜牛奶主题的暗色映射
+  static Map<ColorSemantic, Color> pickleMilkDark() {
+    return {
+      // ========== 气泡颜色 ==========
+      ColorSemantic.userBubbleBackground: const Color(0xFF1B3A2A),
+      ColorSemantic.userBubbleBorder: const Color(0xFF2D5A40),
+      ColorSemantic.userBubbleText: const Color(0xFFC8E6C9),
+
+      ColorSemantic.aiBubbleBackground: const Color(0xFF2D2D2D),
+      ColorSemantic.aiBubbleBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.aiBubbleText: const Color(0xFFE8F5E9),
+
+      // ========== 应用通用颜色 ==========
+      ColorSemantic.primary: const Color(0xFF4CAF50), // 亮酸菜绿
+      ColorSemantic.secondary: const Color(0xFF81C784), // 牛奶绿
+      ColorSemantic.accent: const Color(0xFF4CAF50),
+
+      ColorSemantic.background: const Color(0xFF121212),
+      ColorSemantic.surface: const Color(0xFF1E1E1E),
+      ColorSemantic.surfaceVariant: const Color(0xFF2A2A2A),
+
+      ColorSemantic.textPrimary: const Color(0xFFE8F5E9),
+      ColorSemantic.textSecondary: const Color(0xFFBDBDBD),
+      ColorSemantic.textHint: const Color(0xFF888888),
+
+      ColorSemantic.border: const Color(0xFF4A4A4A),
+      ColorSemantic.divider: const Color(0xFF333333),
+
+      // ========== 按钮颜色 ==========
+      ColorSemantic.buttonPrimary: const Color(0xFF4CAF50),
+      ColorSemantic.buttonPrimaryText: BaseColorTokens.white,
+      ColorSemantic.buttonSecondary: const Color(0xFF2A2A2A),
+      ColorSemantic.buttonSecondaryText: const Color(0xFFE8F5E9),
+
+      // ========== 组件颜色 ==========
+      ColorSemantic.appBarBackground: const Color(0xFF1E1E1E),
+      ColorSemantic.appBarText: const Color(0xFFE8F5E9),
+      ColorSemantic.inputBackground: const Color(0xFF252525),
+      ColorSemantic.inputBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.inputText: const Color(0xFFE8F5E9),
+      ColorSemantic.switchActive: const Color(0xFF4CAF50),
+      ColorSemantic.switchInactive: BaseColorTokens.gray500,
+
+      // ========== 状态颜色 ==========
+      ColorSemantic.success: BaseColorTokens.successDark,
+      ColorSemantic.warning: BaseColorTokens.warningDark,
+      ColorSemantic.error: BaseColorTokens.errorDark,
+      ColorSemantic.info: BaseColorTokens.infoDark,
+
+      // ========== Material 3 语义颜色 ==========
+      ColorSemantic.surfaceContainerHighest: const Color(0xFF2A2A2A),
+      ColorSemantic.primaryContainer: const Color(0xFF1B3A2A),
+      ColorSemantic.onPrimaryContainer: const Color(0xFFC8E6C9),
+      ColorSemantic.onSurface: const Color(0xFFE8F5E9),
+      ColorSemantic.onSurfaceVariant: const Color(0xFFBDBDBD),
+      ColorSemantic.cardBackground: const Color(0xFF1E1E1E),
+      ColorSemantic.cardBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.textFieldFill: const Color(0xFF252525),
+      ColorSemantic.textFieldHint: const Color(0xFF888888),
+      ColorSemantic.buttonBackground: const Color(0xFF4CAF50),
+      ColorSemantic.buttonText: BaseColorTokens.white,
+      ColorSemantic.chatRoomBackground: const Color(0xFF121212),
+      ColorSemantic.messageInputBackground: const Color(0xFF252525),
+      ColorSemantic.messageInputBorder: const Color(0xFF4A4A4A),
+      ColorSemantic.messageInputText: const Color(0xFFE8F5E9),
+      ColorSemantic.messageInputHint: const Color(0xFF888888),
+      ColorSemantic.scrollToBottomButton: const Color(0xFF4CAF50),
+      ColorSemantic.scrollToBottomIcon: BaseColorTokens.white,
+      ColorSemantic.loadingIndicator: const Color(0xFF4CAF50),
+    };
+  }
+
+  /// 根据主题类型和亮度获取映射
+  static Map<ColorSemantic, Color> getMapping({
+    required String themeId,
+    required bool isDark,
+  }) {
+    switch (themeId) {
+      case 'strawberryCandy':
+        return isDark ? strawberryCandyDark() : strawberryCandyLight();
+      case 'pickleMilk':
+        return isDark ? pickleMilkDark() : pickleMilkLight();
+      default: // 'default'
+        return isDark ? defaultDark() : defaultLight();
+    }
+  }
+
+  /// 获取所有可用的主题映射
+  static Map<String, Map<ColorSemantic, Color>> getAllMappings(bool isDark) {
+    return {
+      'default': isDark ? defaultDark() : defaultLight(),
+      'strawberryCandy':
+          isDark ? strawberryCandyDark() : strawberryCandyLight(),
+      'pickleMilk': isDark ? pickleMilkDark() : pickleMilkLight(),
+    };
+  }
+
+  /// 验证映射是否完整
+  static List<ColorSemantic> validateMapping(
+      Map<ColorSemantic, Color> mapping) {
+    final missingSemantics = <ColorSemantic>[];
+
+    for (final semantic in ColorSemantic.values) {
+      if (!mapping.containsKey(semantic)) {
+        missingSemantics.add(semantic);
+      }
+    }
+
+    return missingSemantics;
+  }
+
+  /// 打印映射信息（用于调试）
+  static void debugPrintMapping(
+    Map<ColorSemantic, Color> mapping, {
+    String? themeName,
+    bool isDark = false,
+  }) {
+    debugPrint(
+        '=== ${themeName ?? 'Unknown'} Theme (${isDark ? 'Dark' : 'Light'}) ===');
+
+    // 按类别分组打印
+    final categories = <String, List<ColorSemantic>>{
+      '气泡': [
+        ColorSemantic.userBubbleBackground,
+        ColorSemantic.userBubbleBorder,
+        ColorSemantic.userBubbleText,
+        ColorSemantic.aiBubbleBackground,
+        ColorSemantic.aiBubbleBorder,
+        ColorSemantic.aiBubbleText,
+      ],
+      '通用': [
+        ColorSemantic.primary,
+        ColorSemantic.secondary,
+        ColorSemantic.accent,
+        ColorSemantic.background,
+        ColorSemantic.surface,
+        ColorSemantic.textPrimary,
+        ColorSemantic.textSecondary,
+      ],
+      '按钮': [
+        ColorSemantic.buttonPrimary,
+        ColorSemantic.buttonPrimaryText,
+        ColorSemantic.buttonSecondary,
+        ColorSemantic.buttonSecondaryText,
+      ],
+      '组件': [
+        ColorSemantic.appBarBackground,
+        ColorSemantic.appBarText,
+        ColorSemantic.inputBackground,
+        ColorSemantic.inputText,
+        ColorSemantic.switchActive,
+      ],
+      '状态': [
+        ColorSemantic.success,
+        ColorSemantic.warning,
+        ColorSemantic.error,
+        ColorSemantic.info,
+      ],
+    };
+
+    for (final category in categories.entries) {
+      debugPrint('\n--- ${category.key} ---');
+      for (final semantic in category.value) {
+        final color = mapping[semantic];
+        if (color != null) {
+          final hex =
+              '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+          debugPrint('${semantic.name.padRight(25)}: $hex');
+        }
+      }
+    }
+  }
+
+  /// 创建自定义映射（用于图片提取色）
+  static Map<ColorSemantic, Color> createCustomMapping({
+    required Color primary,
+    required Color secondary,
+    required Color background,
+    required Color surface,
+    required Color textPrimary,
+    bool isDark = false,
+  }) {
+    final baseMapping = isDark ? defaultDark() : defaultLight();
+
+    // 用自定义颜色覆盖
+    return {
+      ...baseMapping,
+      ColorSemantic.primary: primary,
+      ColorSemantic.secondary: secondary,
+      ColorSemantic.accent: primary,
+      ColorSemantic.background: background,
+      ColorSemantic.surface: surface,
+      ColorSemantic.textPrimary: textPrimary,
+
+      // 气泡颜色也相应调整
+      ColorSemantic.userBubbleBackground: primary.withOpacity(0.15),
+      ColorSemantic.userBubbleText: textPrimary,
+      ColorSemantic.aiBubbleBackground: surface,
+      ColorSemantic.aiBubbleText: textPrimary,
+
+      // 按钮颜色
+      ColorSemantic.buttonPrimary: primary,
+      ColorSemantic.buttonSecondary: secondary,
+    };
+  }
+}
+
+
+
+

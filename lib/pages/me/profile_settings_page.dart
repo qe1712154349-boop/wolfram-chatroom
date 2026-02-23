@@ -321,30 +321,54 @@ class _ProfileSettingsPageState extends ConsumerState<ProfileSettingsPage> {
             title: '从图片提取主题色',
             subtitle: '选择图片让App变色',
             onTap: () async {
-              final asset =
-                  await AssetPickerUtil.pickSingleImageDirectly(context);
-              if (asset == null) return;
+              if (_isSaving) return;
+              setState(() => _isSaving = true);
 
-              final rawColors = await AssetPickerUtil.extractPalette(asset);
-              if (rawColors == null || rawColors.isEmpty) {
-                if (mounted) _showSnackBar('提取失败', isSuccess: false);
-                return;
+              try {
+                debugPrint('🎨 [主题色提取] 1. 打开选择器...');
+                final asset =
+                    await AssetPickerUtil.pickSingleImageDirectly(context);
+                if (asset == null) {
+                  if (mounted) _showSnackBar('未选择图片', isSuccess: false);
+                  return;
+                }
+
+                debugPrint('🎨 [主题色提取] 2. 开始提取调色板...');
+                final rawColors = await AssetPickerUtil.extractPalette(asset);
+                debugPrint('🎨 [主题色提取] 3. 原始颜色: $rawColors');
+
+                if (rawColors == null || rawColors.isEmpty) {
+                  if (mounted) _showSnackBar('提取失败：无法识别图片颜色', isSuccess: false);
+                  return;
+                }
+
+                debugPrint('🎨 [主题色提取] 4. 开始转换颜色类型...');
+                final convertedColors = ref
+                    .read(app_theme.extractedColorsUtilsProvider)
+                    .convertFromStringMap(rawColors);
+                debugPrint('🎨 [主题色提取] 5. 转换后颜色数: ${convertedColors.length}');
+
+                if (convertedColors.isEmpty) {
+                  if (mounted) _showSnackBar('提取颜色无效', isSuccess: false);
+                  return;
+                }
+
+                debugPrint('🎨 [主题色提取] 6. 应用主题色...');
+                await ref
+                    .read(app_theme.extractedColorsUtilsProvider)
+                    .updateColors(convertedColors);
+
+                debugPrint('🎨 [主题色提取] 7. 成功！');
+                if (mounted) _showSnackBar('主题色已提取', isSuccess: true);
+              } catch (e) {
+                debugPrint('❌ [主题色提取] 异常: $e');
+                if (mounted) _showSnackBar('提取异常: $e', isSuccess: false);
+              } finally {
+                if (mounted) setState(() => _isSaving = false);
               }
-
-              final convertedColors = ref
-                  .read(app_theme.extractedColorsUtilsProvider)
-                  .convertFromStringMap(rawColors);
-              if (convertedColors.isEmpty) {
-                if (mounted) _showSnackBar('提取颜色无效', isSuccess: false);
-                return;
-              }
-
-              await ref
-                  .read(app_theme.extractedColorsUtilsProvider)
-                  .updateColors(convertedColors);
-              if (mounted) _showSnackBar('主题色已提取', isSuccess: true);
             },
           ),
+
 // 重置主题色
           _buildSettingItem(
             icon: Icons.restart_alt,
