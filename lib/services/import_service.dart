@@ -144,17 +144,60 @@ class ImportService {
   /// 获取导入预览（不实际导入，只预览数据）
   static Future<ImportResult> getImportPreview(File file) async {
     try {
-      final importData = await readJsonFile(file);
+      debugPrint('=== 开始导入预览 ===');
+      debugPrint('文件路径: ${file.path}');
+      debugPrint('文件存在: ${await file.exists()}');
+      debugPrint('文件大小: ${await file.length()} bytes');
 
-      if (importData == null) {
-        return ImportResult(
-          success: false,
-          message: '无法读取文件，请确保是有效的 JSON 格式',
-        );
+      // ---- 读取原始内容 ----
+      String content;
+      try {
+        content = await file.readAsString();
+        debugPrint('读取内容成功，长度: ${content.length}');
+        debugPrint(
+            '内容前100字符: ${content.substring(0, content.length.clamp(0, 100))}');
+      } catch (e) {
+        debugPrint('❌ 读取文件内容失败: $e');
+        return ImportResult(success: false, message: '读取文件失败: $e');
       }
 
-      // 验证数据合法性
-      final validation = importData.validate();
+      // ---- jsonDecode ----
+      Map<String, dynamic> jsonMap;
+      try {
+        jsonMap = jsonDecode(content) as Map<String, dynamic>;
+        debugPrint('✅ jsonDecode 成功');
+        debugPrint('顶层 keys: ${jsonMap.keys.toList()}');
+      } catch (e) {
+        debugPrint('❌ jsonDecode 失败: $e');
+        return ImportResult(success: false, message: 'JSON 解析失败: $e');
+      }
+
+      // ---- ImportData.fromJson ----
+      ImportData importData;
+      try {
+        importData = ImportData.fromJson(jsonMap);
+        debugPrint('✅ fromJson 成功');
+        debugPrint('  version: ${importData.version}');
+        debugPrint('  nickname: ${importData.nickname}');
+        debugPrint('  roomId: ${importData.roomId}');
+        debugPrint('  character keys: ${importData.character.keys.toList()}');
+        debugPrint('  messagesJson count: ${importData.messagesJson.length}');
+      } catch (e) {
+        debugPrint('❌ fromJson 失败: $e');
+        return ImportResult(success: false, message: '数据解析失败: $e');
+      }
+
+      // ---- validate ----
+      ImportValidationResult validation;
+      try {
+        validation = importData.validate();
+        debugPrint(
+            'validate 结果: isValid=${validation.isValid}, error=${validation.errorMessage}');
+      } catch (e) {
+        debugPrint('❌ validate 抛出异常: $e');
+        return ImportResult(success: false, message: '验证异常: $e');
+      }
+
       if (!validation.isValid) {
         return ImportResult(
           success: false,
@@ -169,17 +212,11 @@ class ImportService {
         characterData: importData.character,
       );
 
-      return ImportResult(
-        success: true,
-        message: '文件验证成功',
-        preview: preview,
-      );
+      debugPrint('=== 预览成功 ===');
+      return ImportResult(success: true, message: '文件验证成功', preview: preview);
     } catch (e) {
-      debugPrint('预览导入失败: $e');
-      return ImportResult(
-        success: false,
-        message: '预览失败: $e',
-      );
+      debugPrint('❌ 顶层 catch: $e');
+      return ImportResult(success: false, message: '预览失败: $e');
     }
   }
 
@@ -233,6 +270,9 @@ class ImportService {
           roomId: roomId,
         );
         debugPrint('✅ 聊天记录已导入，共 ${messages.length} 条');
+        debugPrint(
+            '✅ 导入完成: nickname=${importData.nickname}, messages=${messages.length}');
+        debugPrint('✅ character: ${importData.character}');
       }
 
       return ImportResult(

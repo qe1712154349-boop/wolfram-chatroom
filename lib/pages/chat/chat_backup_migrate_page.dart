@@ -1,4 +1,3 @@
-// lib/pages/chat/chat_backup_migrate_page.dart
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,8 +7,10 @@ import '../../services/export_service.dart';
 import '../../services/import_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/theme.dart' as app_theme;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/chat_provider.dart';
 
-class ChatBackupMigratePage extends StatefulWidget {
+class ChatBackupMigratePage extends ConsumerStatefulWidget {
   final String characterName;
 
   const ChatBackupMigratePage({
@@ -18,10 +19,11 @@ class ChatBackupMigratePage extends StatefulWidget {
   });
 
   @override
-  State<ChatBackupMigratePage> createState() => _ChatBackupMigratePageState();
+  ConsumerState<ChatBackupMigratePage> createState() =>
+      _ChatBackupMigratePageState();
 }
 
-class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
+class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
   bool _isImporting = false;
 
   @override
@@ -99,7 +101,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             ),
           ),
 
-          // 导入卡片（现已激活）
+          // 导入卡片
           GestureDetector(
             onTap: _isImporting ? null : () => _showImportOptions(context),
             child: Opacity(
@@ -233,7 +235,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             ),
           ),
           CupertinoActionSheetAction(
-            // 【新增】分享选项
             isDestructiveAction: false,
             onPressed: () =>
                 _startExport(context, includeCharacter: true, share: true),
@@ -243,7 +244,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
             ),
           ),
           CupertinoActionSheetAction(
-            // 【新增】分享选项
             isDestructiveAction: false,
             onPressed: () =>
                 _startExport(context, includeCharacter: false, share: true),
@@ -316,7 +316,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
         characterName: widget.characterName,
         roomId: StorageService.kDefaultRoomId,
         overwrite: overwrite,
-        shareAfterExport: share, // 【新增】传递分享标记
+        shareAfterExport: share,
       );
 
       if (result.success && context.mounted) {
@@ -482,7 +482,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
                         height: 28,
                         child: TextButton(
                           onPressed: () {
-                            // 分享文件
                             final file = result.file;
                             if (file != null) {
                               final type = result.filePath!.contains('全部配置')
@@ -584,48 +583,48 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
   Future<void> _pickFileAndImport(BuildContext context) async {
     Navigator.pop(context);
 
+    FilePickerResult? result;
     try {
-      // 使用 file_picker 选择文件
-      final result = await FilePicker.platform.pickFiles(
+      result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
         dialogTitle: '选择备份文件',
       );
-
-      if (result == null || result.files.isEmpty) {
-        if (context.mounted) {
-          _showErrorSnackBar(context, '未选择文件');
-        }
-        return;
-      }
-
-      final filePath = result.files.first.path;
-      if (filePath == null) {
-        if (context.mounted) {
-          _showErrorSnackBar(context, '无法获取文件路径');
-        }
-        return;
-      }
-
-      final file = File(filePath);
-
-      // 获取导入预览
-      if (!context.mounted) return;
-      await _showImportPreview(context, file);
     } catch (e) {
       if (context.mounted) {
         _showErrorSnackBar(context, '选择文件失败: $e');
       }
+      return;
     }
+
+    if (result == null || result.files.isEmpty) {
+      if (context.mounted) {
+        _showErrorSnackBar(context, '未选择文件');
+      }
+      return;
+    }
+
+    final filePath = result.files.first.path;
+    if (filePath == null) {
+      if (context.mounted) {
+        _showErrorSnackBar(context, '无法获取文件路径');
+      }
+      return;
+    }
+
+    final file = File(filePath);
+
+    await _showImportPreview(context, file);
   }
 
   Future<void> _showImportPreview(BuildContext context, File file) async {
     try {
+      if (!mounted) return;
       setState(() => _isImporting = true);
 
       final previewResult = await ImportService.getImportPreview(file);
 
-      if (!context.mounted) {
+      if (!mounted) {
         setState(() => _isImporting = false);
         return;
       }
@@ -643,7 +642,6 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
         return;
       }
 
-      // 显示预览对话框
       final sem = context.sem;
       final shouldImport = await showDialog<bool>(
             context: context,
@@ -799,7 +797,7 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
         roomId: StorageService.kDefaultRoomId,
       );
 
-      if (!context.mounted) {
+      if (!mounted) {
         setState(() => _isImporting = false);
         return;
       }
@@ -807,12 +805,20 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
       setState(() => _isImporting = false);
 
       if (result.success) {
+        ref.invalidate(chatMessagesProvider);
+        ref.invalidate(chatCharacterProvider);
+
         _showImportSuccessSnackBar(context, result);
+
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (!mounted) return;
+          Navigator.of(context).pop(true);
+        });
       } else {
         _showErrorSnackBar(context, result.message);
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         setState(() => _isImporting = false);
         _showErrorSnackBar(context, '导入失败: $e');
       }
@@ -901,17 +907,5 @@ class _ChatBackupMigratePageState extends State<ChatBackupMigratePage> {
         ),
       ),
     );
-
-    // 【新增】导入成功后，延迟 2 秒自动返回聊天室
-    Future.delayed(const Duration(seconds: 2), () {
-      if (context.mounted) {
-        Navigator.of(context).popUntil((route) {
-          // 返回到聊天室页面（ChatRoomPage）
-          return route.settings.name == null ||
-              route.isFirst ||
-              route.toString().contains('ChatRoomPage');
-        });
-      }
-    });
   }
 }

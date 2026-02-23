@@ -2,50 +2,69 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/storage_service.dart';
 import '../models/message.dart';
-import '../utils/logger.dart'; // ← 加这一行导入（你已有 logger.dart）
+import '../utils/logger.dart';
 
-/// 聊天角色数据模型
 class ChatCharacter {
   final String name;
   final String? avatarPath;
 
-  ChatCharacter({
-    required this.name,
-    this.avatarPath,
-  });
+  ChatCharacter({required this.name, this.avatarPath});
 
   @override
   String toString() => 'ChatCharacter(name: $name, avatarPath: $avatarPath)';
 }
 
-/// 聊天角色数据 Provider
-final chatCharacterProvider = FutureProvider<ChatCharacter>((ref) async {
-  final storage = StorageService();
-  final name = await storage.getCharacterNickname();
-  final avatarPath = await storage.getCharacterAvatarPath();
+// ── 聊天角色 Notifier ──
+class ChatCharacterNotifier extends AsyncNotifier<ChatCharacter> {
+  @override
+  Future<ChatCharacter> build() async {
+    final storage = StorageService();
+    final name = await storage.getCharacterNickname();
+    final avatarPath = await storage.getCharacterAvatarPath();
+    return ChatCharacter(name: name, avatarPath: avatarPath);
+  }
 
-  return ChatCharacter(
-    name: name,
-    avatarPath: avatarPath,
-  );
-});
+  /// 强制重新加载
+  Future<void> reload() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+}
 
-/// 最后一条消息 Provider
+final chatCharacterProvider =
+    AsyncNotifierProvider<ChatCharacterNotifier, ChatCharacter>(
+  ChatCharacterNotifier.new,
+);
+
+// ── 聊天消息 Notifier ──
+class ChatMessagesNotifier extends AsyncNotifier<List<Message>> {
+  @override
+  Future<List<Message>> build() async {
+    return await StorageService().loadChatHistory();
+  }
+
+  /// 强制重新加载
+  Future<void> reload() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+}
+
+final chatMessagesProvider =
+    AsyncNotifierProvider<ChatMessagesNotifier, List<Message>>(
+  ChatMessagesNotifier.new,
+);
+
+// ── 最后一条消息 ──
 final lastMessageProvider = FutureProvider<Message?>((ref) async {
-  final messages = await StorageService().loadChatHistory();
+  final messages = ref.watch(chatMessagesProvider).value ?? [];
   return messages.isNotEmpty ? messages.last : null;
 });
 
-/// 所有聊天消息 Provider
-final chatMessagesProvider = FutureProvider<List<Message>>((ref) async {
-  return await StorageService().loadChatHistory();
-});
-
-// 未读消息数量 Provider（临时使用 messages.length 让它被使用，未来换成 !isRead 逻辑）
+// ── 未读消息数 ──
 final unreadCountProvider = Provider<int>((ref) {
   final messages = ref.watch(chatMessagesProvider).value ?? [];
-  // 这里可以根据消息的已读状态来统计（未来替换）
-  final unreadCount = messages.length; // ← 临时用 length（合法使用变量）
-  log.t('计算未读消息计数（临时）: $unreadCount'); // ← 改成 t()，trace 级别
-  return unreadCount; // 未来改成 where(!m.isRead).length
+  final unreadCount = messages.length;
+  log.t('计算未读消息计数（临时）: $unreadCount');
+  return unreadCount;
 });

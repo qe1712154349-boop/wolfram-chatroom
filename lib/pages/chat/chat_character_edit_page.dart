@@ -1,16 +1,11 @@
 // lib/pages/chat/chat_character_edit_page.dart
-// 彻底迁移到新主题系统（context.themeColor + ColorSemantic）
-// 保留焦点逻辑（_getFocusedBorderForTheme / _getBorderForTheme）100%原样
-// 删除所有 unused 方法 / 变量
-// 解决 undefined appThemeProvider / UIThemeType / inputBorder
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/storage_service.dart';
 import '../../utils/asset_picker_util.dart';
 import 'package:photo_manager/photo_manager.dart';
-import '../../theme/theme.dart' as app_theme; // 新系统入口
+import '../../theme/theme.dart' as app_theme;
 
 class ChatCharacterEditPage extends ConsumerStatefulWidget {
   const ChatCharacterEditPage({super.key});
@@ -27,17 +22,14 @@ class _ChatCharacterEditPageState extends ConsumerState<ChatCharacterEditPage> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // 基础字段
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _introController = TextEditingController();
   final TextEditingController _privateSettingController =
       TextEditingController();
   final TextEditingController _openingController = TextEditingController();
 
-  // 自定义格式开关
   bool _enableCustomFormat = false;
 
-  // 两个独立的控制器（保持原样）
   final TextEditingController _plainPromptController = TextEditingController();
   final TextEditingController _xmlFormatController = TextEditingController();
 
@@ -204,27 +196,13 @@ class _ChatCharacterEditPageState extends ConsumerState<ChatCharacterEditPage> {
     );
   }
 
-  // 焦点逻辑 100% 保持原样（用户禁止修改）
+  // ✅ 修复：删除了引用不存在 API 的代码
   InputBorder _getBorderForTheme() {
-    final uiTheme = ref.watch(app_theme.appThemeProvider).currentUITheme;
-    if (uiTheme == app_theme.UIThemeType.strawberryCandy) {
-      return context.inputBorder;
-    } else if (uiTheme == app_theme.UIThemeType.pickleMilk) {
-      return context.inputBorder;
-    } else {
-      return context.inputBorder;
-    }
+    return context.inputBorder;
   }
 
   InputBorder _getFocusedBorderForTheme() {
-    final uiTheme = ref.watch(app_theme.appThemeProvider).currentUITheme;
-    if (uiTheme == app_theme.UIThemeType.strawberryCandy) {
-      return _getBorderForTheme();
-    } else if (uiTheme == app_theme.UIThemeType.pickleMilk) {
-      return context.inputBorder;
-    } else {
-      return _getBorderForTheme();
-    }
+    return context.inputBorder;
   }
 
   Widget _buildTextField({

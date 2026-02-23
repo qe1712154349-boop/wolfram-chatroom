@@ -33,7 +33,6 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
 
   Future<FileImage?> _loadAvatarImage() async {
     if (widget.avatarPath == null) return null;
-
     try {
       final file = File(widget.avatarPath!);
       final exists = await file.exists();
@@ -55,22 +54,17 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
 
     if (confirm == true) {
       await _storage.clearChatHistory();
-
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, 'cleared'); // ← 返回 'cleared' 标记
       }
     }
   }
 
   Widget _buildConfirmationDialog(BuildContext context) {
     final sem = context.sem;
-
     return AlertDialog(
       backgroundColor: sem.surface,
-      title: Text(
-        "清空聊天记录",
-        style: TextStyle(color: sem.textPrimary),
-      ),
+      title: Text("清空聊天记录", style: TextStyle(color: sem.textPrimary)),
       content: Text(
         "确定要清空所有聊天记录吗？此操作不可恢复。",
         style: TextStyle(color: sem.textSecondary),
@@ -78,16 +72,11 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: Text(
-            "取消",
-            style: TextStyle(color: sem.textSecondary),
-          ),
+          child: Text("取消", style: TextStyle(color: sem.textSecondary)),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          style: TextButton.styleFrom(
-            foregroundColor: sem.error,
-          ),
+          style: TextButton.styleFrom(foregroundColor: sem.error),
           child: const Text("清空"),
         ),
       ],
@@ -97,7 +86,6 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final sem = context.sem;
-
     return Scaffold(
       backgroundColor: sem.background,
       appBar: AppBar(
@@ -110,10 +98,7 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
         ),
         title: Text(
           "${widget.characterName} 设置",
-          style: TextStyle(
-            color: sem.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: sem.textPrimary, fontWeight: FontWeight.bold),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -124,12 +109,10 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
 
   Widget _buildBody(BuildContext context) {
     final sem = context.sem;
-
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 16),
       cacheExtent: 500,
       children: [
-        // 头像和名称展示
         Container(
           padding: const EdgeInsets.all(20),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -154,10 +137,12 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
                                 AlwaysStoppedAnimation<Color>(sem.primary),
                           )
                         : widget.avatarPath == null
-                            ? Icon(Icons.person,
+                            ? Icon(
+                                Icons.person,
                                 size: 36,
                                 color: context.themeColor(
-                                    app_theme.ColorSemantic.onPrimaryContainer))
+                                    app_theme.ColorSemantic.onPrimaryContainer),
+                              )
                             : null,
                   );
                 },
@@ -178,10 +163,7 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      "AI角色设置",
-                      style: TextStyle(color: sem.textSecondary),
-                    ),
+                    Text("AI角色设置", style: TextStyle(color: sem.textSecondary)),
                   ],
                 ),
               ),
@@ -192,7 +174,6 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
             ],
           ),
         ),
-
         const SizedBox(height: 8),
         _buildSettingItem(
           icon: Icons.delete_outline,
@@ -234,7 +215,6 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
     required VoidCallback onTap,
   }) {
     final sem = context.sem;
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -253,15 +233,10 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
         ),
         title: Text(
           title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: sem.textPrimary,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w500, color: sem.textPrimary),
         ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(fontSize: 12, color: sem.textSecondary),
-        ),
+        subtitle: Text(subtitle,
+            style: TextStyle(fontSize: 12, color: sem.textSecondary)),
         trailing:
             Icon(Icons.arrow_forward_ios, size: 16, color: sem.textSecondary),
         onTap: () {
@@ -272,13 +247,11 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   }
 
   void _editCharacter() {}
-
   void _blockCharacter() {}
-
   void _reportCharacter() {}
 
-  void _navigateToBackup() {
-    Navigator.push(
+  Future<void> _navigateToBackup() async {
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => ChatBackupMigratePage(
@@ -286,5 +259,10 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
         ),
       ),
     );
+
+    // 导入成功，向 ChatRoomPage 传递刷新信号
+    if (result == true && mounted) {
+      Navigator.pop(context, 'imported');
+    }
   }
 }

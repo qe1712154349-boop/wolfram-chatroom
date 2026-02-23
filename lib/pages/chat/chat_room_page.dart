@@ -906,7 +906,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
           IconButton(
             icon: const Icon(Icons.more_horiz, size: 24),
             onPressed: () async {
-              final result = await Navigator.push(
+              final result = await Navigator.push<String>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatRoomSettingsPage(
@@ -916,8 +916,13 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                 ),
               );
 
-              if (result == true) {
+              if (result == 'cleared') {
+                // 原有逻辑：清空消息
                 await _clearAllMessages();
+              } else if (result == 'imported') {
+                // 新增：导入成功，重新加载数据
+                await _loadCharacterData();
+                await _loadHistory();
               }
             },
           ),
