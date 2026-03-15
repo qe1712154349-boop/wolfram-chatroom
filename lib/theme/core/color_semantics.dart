@@ -120,9 +120,9 @@ class ExtractedColorMapper {
 
       // 边框和分割线使用柔和色
       ColorSemantic.border:
-          extractedColors[ExtractedColorType.muted]!.withOpacity(0.3),
+          extractedColors[ExtractedColorType.muted]!.withValues(alpha: 0.3),
       ColorSemantic.divider:
-          extractedColors[ExtractedColorType.muted]!.withOpacity(0.2),
+          extractedColors[ExtractedColorType.muted]!.withValues(alpha: 0.2),
 
       // 按钮颜色
       ColorSemantic.buttonPrimary: extractedColors[ExtractedColorType.vibrant]!,
@@ -157,8 +157,8 @@ class ExtractedColorMapper {
     if (lighter) {
       // 返回更浅的颜色
       return luminance > 0.5
-          ? Colors.black.withOpacity(0.6)
-          : Colors.white.withOpacity(0.8);
+          ? Colors.black.withValues(alpha: 0.6)
+          : Colors.white.withValues(alpha: 0.8);
     }
 
     // 返回高对比度颜色

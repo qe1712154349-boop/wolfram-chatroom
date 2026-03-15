@@ -560,7 +560,7 @@ class SemanticMapper {
       ColorSemantic.textPrimary: textPrimary,
 
       // 气泡颜色也相应调整
-      ColorSemantic.userBubbleBackground: primary.withOpacity(0.15),
+      ColorSemantic.userBubbleBackground: primary.withValues(alpha: 0.15),
       ColorSemantic.userBubbleText: textPrimary,
       ColorSemantic.aiBubbleBackground: surface,
       ColorSemantic.aiBubbleText: textPrimary,

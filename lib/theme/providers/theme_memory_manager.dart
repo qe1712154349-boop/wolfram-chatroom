@@ -156,9 +156,9 @@ class ThemeMemoryManager {
       return {
         ExtractedColorType.dominant: dominant,
         ExtractedColorType.vibrant: vibrant,
-        ExtractedColorType.lightVibrant: vibrant.withOpacity(0.7),
-        ExtractedColorType.darkVibrant: vibrant.withOpacity(0.5),
-        ExtractedColorType.muted: dominant.withOpacity(0.6),
+        ExtractedColorType.lightVibrant: vibrant.withValues(alpha: 0.7),
+        ExtractedColorType.darkVibrant: vibrant.withValues(alpha: 0.5),
+        ExtractedColorType.muted: dominant.withValues(alpha: 0.6),
       };
     } catch (e) {
       debugPrint('提取色反序列化失败: $e');

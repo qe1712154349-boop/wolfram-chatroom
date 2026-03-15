@@ -251,7 +251,7 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
   void _reportCharacter() {}
 
   Future<void> _navigateToBackup() async {
-    final result = await Navigator.push<bool>(
+    final result = await Navigator.push<dynamic>(
       context,
       MaterialPageRoute(
         builder: (context) => ChatBackupMigratePage(
@@ -261,7 +261,7 @@ class _ChatRoomSettingsPageState extends ConsumerState<ChatRoomSettingsPage> {
     );
 
     // 导入成功，向 ChatRoomPage 传递刷新信号
-    if (result == true && mounted) {
+    if (result == 'imported' && mounted) {
       Navigator.pop(context, 'imported');
     }
   }

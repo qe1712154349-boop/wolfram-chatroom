@@ -1151,7 +1151,7 @@ class _ChatRoomPageState extends State<ChatRoomPage>
                                   .themeColor(app_theme.ColorSemantic.primary),
                               context
                                   .themeColor(app_theme.ColorSemantic.primary)
-                                  .withOpacity(0.8),
+                                  .withValues(alpha: 0.8),
                             ],
                           ),
                         ),

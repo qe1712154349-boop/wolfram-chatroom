@@ -412,10 +412,10 @@ class ColorResolver {
 
       if (userBubbleBg != null) {
         colors[ColorSemantic.userBubbleBackground] =
-            userBubbleBg.withOpacity(0.3);
+            userBubbleBg.withValues(alpha: 0.3);
       }
       if (aiBubbleBg != null) {
-        colors[ColorSemantic.aiBubbleBackground] = aiBubbleBg.withOpacity(0.3);
+        colors[ColorSemantic.aiBubbleBackground] = aiBubbleBg.withValues(alpha: 0.3);
       }
     }
 
@@ -488,8 +488,8 @@ class ColorResolverNotifier {
       );
 
   /// 获取带透明度的气泡背景
-  Color get userBubbleBgWithOpacity => userBubbleBg.withOpacity(0.3);
-  Color get aiBubbleBgWithOpacity => aiBubbleBg.withOpacity(0.3);
+  Color get userBubbleBgWithOpacity => userBubbleBg.withValues(alpha: 0.3);
+  Color get aiBubbleBgWithOpacity => aiBubbleBg.withValues(alpha: 0.3);
 
   /// 获取气泡装饰
   BoxDecoration get userBubbleDecoration => BoxDecoration(
@@ -651,9 +651,9 @@ class ExtractedColorMapper {
 
       // 边框和分割线使用柔和色
       ColorSemantic.border:
-          extractedColors[ExtractedColorType.muted]!.withOpacity(0.3),
+          extractedColors[ExtractedColorType.muted]!.withValues(alpha: 0.3),
       ColorSemantic.divider:
-          extractedColors[ExtractedColorType.muted]!.withOpacity(0.2),
+          extractedColors[ExtractedColorType.muted]!.withValues(alpha: 0.2),
 
       // 按钮颜色
       ColorSemantic.buttonPrimary: extractedColors[ExtractedColorType.vibrant]!,
@@ -688,8 +688,8 @@ class ExtractedColorMapper {
     if (lighter) {
       // 返回更浅的颜色
       return luminance > 0.5
-          ? Colors.black.withOpacity(0.6)
-          : Colors.white.withOpacity(0.8);
+          ? Colors.black.withValues(alpha: 0.6)
+          : Colors.white.withValues(alpha: 0.8);
     }
 
     // 返回高对比度颜色
@@ -1203,10 +1203,10 @@ class DefaultTheme {
   static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
     final colors = getBubbleColors(isDark);
     return {
-      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBackground': colors['userBubbleBackground']!.withValues(alpha: 0.3),
       'userBubbleBorder': colors['userBubbleBorder']!,
       'userBubbleText': colors['userBubbleText']!,
-      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withValues(alpha: 0.3),
       'aiBubbleBorder': colors['aiBubbleBorder']!,
       'aiBubbleText': colors['aiBubbleText']!,
     };
@@ -1318,10 +1318,10 @@ class PickleMilkTheme {
   static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
     final colors = getBubbleColors(isDark);
     return {
-      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBackground': colors['userBubbleBackground']!.withValues(alpha: 0.3),
       'userBubbleBorder': colors['userBubbleBorder']!,
       'userBubbleText': colors['userBubbleText']!,
-      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withValues(alpha: 0.3),
       'aiBubbleBorder': colors['aiBubbleBorder']!,
       'aiBubbleText': colors['aiBubbleText']!,
     };
@@ -1479,10 +1479,10 @@ class StrawberryCandyTheme {
   static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
     final colors = getBubbleColors(isDark);
     return {
-      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBackground': colors['userBubbleBackground']!.withValues(alpha: 0.3),
       'userBubbleBorder': colors['userBubbleBorder']!,
       'userBubbleText': colors['userBubbleText']!,
-      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withValues(alpha: 0.3),
       'aiBubbleBorder': colors['aiBubbleBorder']!,
       'aiBubbleText': colors['aiBubbleText']!,
     };
@@ -1600,10 +1600,10 @@ abstract class BaseThemeDefinition implements ThemeDefinition {
   Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
     final colors = getBubbleColors(isDark);
     return {
-      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBackground': colors['userBubbleBackground']!.withValues(alpha: 0.3),
       'userBubbleBorder': colors['userBubbleBorder']!,
       'userBubbleText': colors['userBubbleText']!,
-      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBackground': colors['aiBubbleBackground']!.withValues(alpha: 0.3),
       'aiBubbleBorder': colors['aiBubbleBorder']!,
       'aiBubbleText': colors['aiBubbleText']!,
     };
@@ -2064,7 +2064,7 @@ extension ThemeColors on BuildContext {
 
   /// 获取带透明度的颜色
   Color withBubbleOpacity(Color color) {
-    return color.withOpacity(0.3);
+    return color.withValues(alpha: 0.3);
   }
 
   /// 创建气泡装饰
@@ -2076,7 +2076,7 @@ extension ThemeColors on BuildContext {
     bool withOpacity = true,
   }) {
     return BoxDecoration(
-      color: withOpacity ? backgroundColor.withOpacity(0.3) : backgroundColor,
+      color: withOpacity ? backgroundColor.withValues(alpha: 0.3) : backgroundColor,
       border: Border.all(
         color: borderColor,
         width: borderWidth,
@@ -3135,7 +3135,7 @@ class ExtractedColorsUtils {
           red: color.red - 30,
           green: color.green - 30,
           blue: color.blue - 30),
-      ExtractedColorType.muted: color.withOpacity(0.5),
+      ExtractedColorType.muted: color.withValues(alpha: 0.5),
     };
 
     await updateColors(testColors);
@@ -3686,9 +3686,9 @@ class ThemeMemoryManager {
       return {
         ExtractedColorType.dominant: dominant,
         ExtractedColorType.vibrant: vibrant,
-        ExtractedColorType.lightVibrant: vibrant.withOpacity(0.7),
-        ExtractedColorType.darkVibrant: vibrant.withOpacity(0.5),
-        ExtractedColorType.muted: dominant.withOpacity(0.6),
+        ExtractedColorType.lightVibrant: vibrant.withValues(alpha: 0.7),
+        ExtractedColorType.darkVibrant: vibrant.withValues(alpha: 0.5),
+        ExtractedColorType.muted: dominant.withValues(alpha: 0.6),
       };
     } catch (e) {
       debugPrint('提取色反序列化失败: $e');
@@ -3831,7 +3831,7 @@ abstract class BaseColorTokens {
 
   /// 30% 透明度（用于气泡）
   static Color withBubbleOpacity(Color color) {
-    return color.withOpacity(0.3);
+    return color.withValues(alpha: 0.3);
   }
 
   /// 获取对比色（黑色或白色）
@@ -4640,7 +4640,7 @@ class SemanticMapper {
       ColorSemantic.textPrimary: textPrimary,
 
       // 气泡颜色也相应调整
-      ColorSemantic.userBubbleBackground: primary.withOpacity(0.15),
+      ColorSemantic.userBubbleBackground: primary.withValues(alpha: 0.15),
       ColorSemantic.userBubbleText: textPrimary,
       ColorSemantic.aiBubbleBackground: surface,
       ColorSemantic.aiBubbleText: textPrimary,

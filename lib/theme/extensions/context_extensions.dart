@@ -150,7 +150,7 @@ extension ThemeColors on BuildContext {
 
   /// 获取带透明度的颜色
   Color withBubbleOpacity(Color color) {
-    return color.withOpacity(0.3);
+    return color.withValues(alpha: 0.3);
   }
 
   /// 创建气泡装饰
@@ -162,7 +162,9 @@ extension ThemeColors on BuildContext {
     bool withOpacity = true,
   }) {
     return BoxDecoration(
-      color: withOpacity ? backgroundColor.withOpacity(0.3) : backgroundColor,
+      color: withOpacity
+          ? backgroundColor.withValues(alpha: 0.3)
+          : backgroundColor,
       border: Border.all(
         color: borderColor,
         width: borderWidth,

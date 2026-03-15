@@ -16,7 +16,7 @@ class EntranceMainPage extends StatelessWidget {
         children: [
           Container(
             height: MediaQuery.of(context).padding.top + 100,
-            color: sem.primary.withOpacity(0.15),
+            color: sem.primary.withValues(alpha: 0.15),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

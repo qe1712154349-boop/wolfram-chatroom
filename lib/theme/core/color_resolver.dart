@@ -304,10 +304,11 @@ class ColorResolver {
 
       if (userBubbleBg != null) {
         colors[ColorSemantic.userBubbleBackground] =
-            userBubbleBg.withOpacity(0.3);
+            userBubbleBg.withValues(alpha: 0.3);
       }
       if (aiBubbleBg != null) {
-        colors[ColorSemantic.aiBubbleBackground] = aiBubbleBg.withOpacity(0.3);
+        colors[ColorSemantic.aiBubbleBackground] =
+            aiBubbleBg.withValues(alpha: 0.3);
       }
     }
 
@@ -380,8 +381,8 @@ class ColorResolverNotifier {
       );
 
   /// 获取带透明度的气泡背景
-  Color get userBubbleBgWithOpacity => userBubbleBg.withOpacity(0.3);
-  Color get aiBubbleBgWithOpacity => aiBubbleBg.withOpacity(0.3);
+  Color get userBubbleBgWithOpacity => userBubbleBg.withValues(alpha: 0.3);
+  Color get aiBubbleBgWithOpacity => aiBubbleBg.withValues(alpha: 0.3);
 
   /// 获取气泡装饰
   BoxDecoration get userBubbleDecoration => BoxDecoration(

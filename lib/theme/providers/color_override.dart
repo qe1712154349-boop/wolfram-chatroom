@@ -55,7 +55,7 @@ class ExtractedColorsUtils {
           red: color.red - 30,
           green: color.green - 30,
           blue: color.blue - 30),
-      ExtractedColorType.muted: color.withOpacity(0.5),
+      ExtractedColorType.muted: color.withValues(alpha: 0.5),
     };
 
     await updateColors(testColors);

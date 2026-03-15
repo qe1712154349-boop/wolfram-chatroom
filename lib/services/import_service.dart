@@ -5,6 +5,15 @@ import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import 'storage_service.dart';
 
+/// 导入模式
+enum ImportMode {
+  /// 仅导入聊天记录（跳过人设验证，忽略character数据）
+  onlyMessages,
+
+  /// 导入完整配置（人设 + 聊天记录，严格验证）
+  fullConfig,
+}
+
 class ImportData {
   final String version;
   final String exportedAt;
@@ -27,7 +36,7 @@ class ImportData {
       version: json['version'] as String? ?? '1.0',
       exportedAt: json['exported_at'] as String? ?? '',
       roomId: json['room_id'] as String? ?? StorageService.kDefaultRoomId,
-      nickname: json['nickname'] as String? ?? '未命名角色',
+      nickname: json['nickname'] as String? ?? '',
       character: Map<String, String>.from(
         (json['character'] as Map<dynamic, dynamic>?) ?? {},
       ),
@@ -36,7 +45,8 @@ class ImportData {
   }
 
   /// 验证导入数据的合法性
-  ImportValidationResult validate() {
+  /// [mode] 控制验证严格程度
+  ImportValidationResult validate({ImportMode mode = ImportMode.fullConfig}) {
     // 检查版本
     if (version.isEmpty) {
       return ImportValidationResult(
@@ -45,12 +55,14 @@ class ImportData {
       );
     }
 
-    // 检查必要字段
-    if (nickname.isEmpty) {
-      return ImportValidationResult(
-        isValid: false,
-        errorMessage: '人设名称缺失',
-      );
+    // 仅在"导入完整配置"模式下检查人设名称
+    if (mode == ImportMode.fullConfig) {
+      if (nickname.isEmpty) {
+        return ImportValidationResult(
+          isValid: false,
+          errorMessage: '人设名称缺失',
+        );
+      }
     }
 
     // 检查消息数据
@@ -142,9 +154,14 @@ class ImportService {
   }
 
   /// 获取导入预览（不实际导入，只预览数据）
-  static Future<ImportResult> getImportPreview(File file) async {
+  /// [mode] 控制验证模式
+  static Future<ImportResult> getImportPreview(
+    File file, {
+    ImportMode mode = ImportMode.fullConfig,
+  }) async {
     try {
       debugPrint('=== 开始导入预览 ===');
+      debugPrint('导入模式: ${mode.name}');
       debugPrint('文件路径: ${file.path}');
       debugPrint('文件存在: ${await file.exists()}');
       debugPrint('文件大小: ${await file.length()} bytes');
@@ -187,10 +204,10 @@ class ImportService {
         return ImportResult(success: false, message: '数据解析失败: $e');
       }
 
-      // ---- validate ----
+      // ---- validate（传入模式） ----
       ImportValidationResult validation;
       try {
-        validation = importData.validate();
+        validation = importData.validate(mode: mode);
         debugPrint(
             'validate 结果: isValid=${validation.isValid}, error=${validation.errorMessage}');
       } catch (e) {
@@ -205,8 +222,12 @@ class ImportService {
         );
       }
 
+      final characterName = mode == ImportMode.onlyMessages
+          ? '（仅聊天记录）'
+          : (importData.nickname.isEmpty ? '未命名角色' : importData.nickname);
+
       final preview = ImportPreview(
-        characterName: importData.nickname,
+        characterName: characterName,
         messageCount: importData.messagesJson.length,
         exportedAt: importData.exportedAt,
         characterData: importData.character,
@@ -221,9 +242,11 @@ class ImportService {
   }
 
   /// 执行实际导入（覆盖现有数据）
+  /// [mode] 控制导入行为
   static Future<ImportResult> executeImport(
     File file, {
     String roomId = kDefaultRoomId,
+    ImportMode mode = ImportMode.fullConfig,
   }) async {
     try {
       final importData = await readJsonFile(file);
@@ -235,8 +258,8 @@ class ImportService {
         );
       }
 
-      // 再次验证
-      final validation = importData.validate();
+      // 再次验证（传入模式）
+      final validation = importData.validate(mode: mode);
       if (!validation.isValid) {
         return ImportResult(
           success: false,
@@ -246,13 +269,15 @@ class ImportService {
 
       final storage = StorageService();
 
-      // 1. 导入人设信息
-      if (importData.character.isNotEmpty) {
+      // 1. 仅在"导入完整配置"模式下导入人设信息
+      if (mode == ImportMode.fullConfig && importData.character.isNotEmpty) {
         await storage.saveCharacterData(importData.character);
         debugPrint('✅ 人设信息已导入');
+      } else if (mode == ImportMode.onlyMessages) {
+        debugPrint('ℹ️ 仅导入聊天记录模式，跳过人设导入');
       }
 
-      // 2. 导入聊天记录
+      // 2. 导入聊天记录（两种模式都执行）
       final messages = <Message>[];
       for (var msgJson in importData.messagesJson) {
         try {
@@ -270,16 +295,21 @@ class ImportService {
           roomId: roomId,
         );
         debugPrint('✅ 聊天记录已导入，共 ${messages.length} 条');
-        debugPrint(
-            '✅ 导入完成: nickname=${importData.nickname}, messages=${messages.length}');
-        debugPrint('✅ character: ${importData.character}');
       }
+
+      final characterName = mode == ImportMode.onlyMessages
+          ? '（仅聊天记录）'
+          : (importData.nickname.isEmpty ? '未命名角色' : importData.nickname);
+
+      final resultMessage = mode == ImportMode.onlyMessages
+          ? '导入成功！${messages.length} 条聊天记录已恢复'
+          : '导入成功！人设和 ${messages.length} 条聊天记录已恢复';
 
       return ImportResult(
         success: true,
-        message: '导入成功！人设和 ${messages.length} 条聊天记录已恢复',
+        message: resultMessage,
         preview: ImportPreview(
-          characterName: importData.nickname,
+          characterName: characterName,
           messageCount: messages.length,
           exportedAt: importData.exportedAt,
           characterData: importData.character,

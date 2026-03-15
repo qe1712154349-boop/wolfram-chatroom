@@ -1,3 +1,4 @@
+// lib/pages/chat/chat_backup_migrate_page.dart
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,10 +14,7 @@ import '../../providers/chat_provider.dart';
 class ChatBackupMigratePage extends ConsumerStatefulWidget {
   final String characterName;
 
-  const ChatBackupMigratePage({
-    super.key,
-    required this.characterName,
-  });
+  const ChatBackupMigratePage({super.key, required this.characterName});
 
   @override
   ConsumerState<ChatBackupMigratePage> createState() =>
@@ -33,8 +31,9 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
     return Scaffold(
       backgroundColor: sem.background,
       appBar: AppBar(
-        backgroundColor:
-            context.themeColor(app_theme.ColorSemantic.appBarBackground),
+        backgroundColor: context.themeColor(
+          app_theme.ColorSemantic.appBarBackground,
+        ),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new, color: sem.textPrimary),
@@ -63,7 +62,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: sem.primary.withOpacity(0.08),
+                    color: sem.primary.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -74,11 +73,14 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: sem.primary.withOpacity(0.12),
+                    color: sem.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.cloud_upload_rounded,
-                      color: sem.primary, size: 28),
+                  child: Icon(
+                    Icons.cloud_upload_rounded,
+                    color: sem.primary,
+                    size: 28,
+                  ),
                 ),
                 title: Text(
                   '导出全部配置',
@@ -90,13 +92,13 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                 ),
                 subtitle: Text(
                   '人设 + 聊天记录（.json）',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: sem.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: sem.textSecondary),
                 ),
-                trailing: Icon(Icons.arrow_forward_ios_rounded,
-                    size: 16, color: sem.textSecondary),
+                trailing: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: sem.textSecondary,
+                ),
               ),
             ),
           ),
@@ -113,7 +115,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: sem.border.withOpacity(0.1),
+                      color: sem.border.withValues(alpha: 0.1),
                       blurRadius: 8,
                     ),
                   ],
@@ -123,7 +125,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: sem.primary.withOpacity(0.12),
+                      color: sem.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: _isImporting
@@ -132,12 +134,16 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                             height: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(sem.primary),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                sem.primary,
+                              ),
                             ),
                           )
-                        : Icon(Icons.cloud_download_rounded,
-                            color: sem.primary, size: 28),
+                        : Icon(
+                            Icons.cloud_download_rounded,
+                            color: sem.primary,
+                            size: 28,
+                          ),
                   ),
                   title: Text(
                     '导入配置',
@@ -151,8 +157,11 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                     '从备份文件恢复人设与聊天记录',
                     style: TextStyle(fontSize: 13, color: sem.textSecondary),
                   ),
-                  trailing: Icon(Icons.arrow_forward_ios_rounded,
-                      size: 16, color: sem.textSecondary),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: sem.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -166,7 +175,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: sem.border.withOpacity(0.12),
+                  color: sem.border.withValues(alpha: 0.12),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -209,30 +218,18 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
-        title: const Text(
-          '导出选项',
-          style: TextStyle(fontSize: 16),
-        ),
-        message: const Text(
-          '请选择要导出的内容',
-          style: TextStyle(fontSize: 14),
-        ),
+        title: const Text('导出选项', style: TextStyle(fontSize: 16)),
+        message: const Text('请选择要导出的内容', style: TextStyle(fontSize: 14)),
         actions: [
           CupertinoActionSheetAction(
             onPressed: () =>
                 _startExport(context, includeCharacter: true, share: false),
-            child: const Text(
-              '导出全部配置（人设+消息）',
-              style: TextStyle(fontSize: 16),
-            ),
+            child: const Text('导出全部配置（人设+消息）', style: TextStyle(fontSize: 16)),
           ),
           CupertinoActionSheetAction(
             onPressed: () =>
                 _startExport(context, includeCharacter: false, share: false),
-            child: const Text(
-              '仅导出聊天记录',
-              style: TextStyle(fontSize: 16),
-            ),
+            child: const Text('仅导出聊天记录', style: TextStyle(fontSize: 16)),
           ),
           CupertinoActionSheetAction(
             isDestructiveAction: false,
@@ -255,18 +252,18 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
           CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              '取消',
-              style: TextStyle(fontSize: 16),
-            ),
+            child: const Text('取消', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _startExport(BuildContext context,
-      {required bool includeCharacter, required bool share}) async {
+  Future<void> _startExport(
+    BuildContext context, {
+    required bool includeCharacter,
+    required bool share,
+  }) async {
     Navigator.pop(context);
 
     final fileExists = await ExportService.checkFileExists(
@@ -332,22 +329,27 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
   }
 
   Future<bool> _showOverwriteDialog(
-      BuildContext context, String fileName) async {
+    BuildContext context,
+    String fileName,
+  ) async {
     final sem = context.sem;
 
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: sem.surface,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             icon: Icon(Icons.warning_rounded, color: sem.warning),
             title: Text(
               '文件已存在',
               style: TextStyle(fontSize: 16, color: sem.textPrimary),
             ),
-            content: Text('已存在同名备份：$fileName\n是否覆盖？',
-                style: TextStyle(color: sem.textSecondary)),
+            content: Text(
+              '已存在同名备份：$fileName\n是否覆盖？',
+              style: TextStyle(color: sem.textSecondary),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -370,7 +372,10 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
   }
 
   void _showSuccessSnackBar(
-      BuildContext context, ExportResult result, bool shared) {
+    BuildContext context,
+    ExportResult result,
+    bool shared,
+  ) {
     if (!result.success || result.filePath == null) return;
 
     final sem = context.sem;
@@ -394,7 +399,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -407,11 +412,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: sem.primary,
-                    size: 20,
-                  ),
+                  Icon(Icons.check_circle, color: sem.primary, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     shared ? '✅ 已分享文件' : '✅ 已保存文件',
@@ -426,18 +427,12 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
               const SizedBox(height: 8),
               Text(
                 '文件: $fileName',
-                style: TextStyle(
-                  color: sem.textSecondary,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: sem.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 4),
               Text(
                 '保存到: $displayPath',
-                style: TextStyle(
-                  color: sem.textHint,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: sem.textHint, fontSize: 12),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,
               ),
@@ -450,7 +445,8 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                       child: TextButton(
                         onPressed: () {
                           Clipboard.setData(
-                              ClipboardData(text: result.filePath!));
+                            ClipboardData(text: result.filePath!),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('路径已复制到剪贴板'),
@@ -467,10 +463,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                         ),
                         child: Text(
                           '复制路径',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: sem.info,
-                          ),
+                          style: TextStyle(fontSize: 12, color: sem.info),
                         ),
                       ),
                     ),
@@ -496,17 +489,14 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
                           },
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            backgroundColor: sem.primary.withOpacity(0.2),
+                            backgroundColor: sem.primary.withValues(alpha: 0.2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(6),
                             ),
                           ),
                           child: Text(
                             '分享文件',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: sem.primary,
-                            ),
+                            style: TextStyle(fontSize: 12, color: sem.primary),
                           ),
                         ),
                       ),
@@ -523,9 +513,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
         padding: EdgeInsets.zero,
         margin: const EdgeInsets.all(16),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -535,10 +523,7 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(fontSize: 14),
-        ),
+        content: Text(message, style: const TextStyle(fontSize: 14)),
         backgroundColor: sem.error,
         duration: const Duration(seconds: 4),
       ),
@@ -551,36 +536,36 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
-        title: const Text(
-          '导入选项',
-          style: TextStyle(fontSize: 16),
-        ),
-        message: const Text(
-          '请选择导入来源',
-          style: TextStyle(fontSize: 14),
-        ),
+        title: const Text('导入选项', style: TextStyle(fontSize: 16)),
+        message: const Text('请选择导入内容', style: TextStyle(fontSize: 14)),
         actions: [
           CupertinoActionSheetAction(
-            onPressed: () => _pickFileAndImport(context),
+            onPressed: () =>
+                _pickFileAndImport(context, mode: ImportMode.onlyMessages),
+            child: const Text('仅导入聊天记录', style: TextStyle(fontSize: 16)),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () =>
+                _pickFileAndImport(context, mode: ImportMode.fullConfig),
             child: const Text(
-              '从文件管理器选择',
+              '导入完整配置（人设+聊天消息）',
               style: TextStyle(fontSize: 16),
             ),
           ),
           CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              '取消',
-              style: TextStyle(fontSize: 16),
-            ),
+            child: const Text('取消', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _pickFileAndImport(BuildContext context) async {
+  Future<void> _pickFileAndImport(
+    BuildContext context, {
+    required ImportMode mode,
+  }) async {
     Navigator.pop(context);
 
     FilePickerResult? result;
@@ -591,210 +576,37 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
         dialogTitle: '选择备份文件',
       );
     } catch (e) {
-      if (context.mounted) {
-        _showErrorSnackBar(context, '选择文件失败: $e');
-      }
       return;
     }
 
     if (result == null || result.files.isEmpty) {
-      if (context.mounted) {
-        _showErrorSnackBar(context, '未选择文件');
-      }
       return;
     }
 
     final filePath = result.files.first.path;
     if (filePath == null) {
-      if (context.mounted) {
-        _showErrorSnackBar(context, '无法获取文件路径');
-      }
       return;
     }
 
     final file = File(filePath);
 
-    await _showImportPreview(context, file);
+    // 直接开始导入，不显示预览
+    await _performImport(context, file, mode: mode);
   }
 
-  Future<void> _showImportPreview(BuildContext context, File file) async {
+  Future<void> _performImport(
+    BuildContext context,
+    File file, {
+    required ImportMode mode,
+  }) async {
     try {
       if (!mounted) return;
-      setState(() => _isImporting = true);
-
-      final previewResult = await ImportService.getImportPreview(file);
-
-      if (!mounted) {
-        setState(() => _isImporting = false);
-        return;
-      }
-
-      setState(() => _isImporting = false);
-
-      if (!previewResult.success) {
-        _showErrorSnackBar(context, previewResult.message);
-        return;
-      }
-
-      final preview = previewResult.preview;
-      if (preview == null) {
-        _showErrorSnackBar(context, '无法读取文件');
-        return;
-      }
-
-      final sem = context.sem;
-      final shouldImport = await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              backgroundColor: sem.surface,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              title: Text(
-                '导入预览',
-                style: TextStyle(fontSize: 18, color: sem.textPrimary),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPreviewItem(
-                      context,
-                      icon: Icons.person,
-                      label: '人设名称',
-                      value: preview.characterName,
-                      sem: sem,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPreviewItem(
-                      context,
-                      icon: Icons.message,
-                      label: '聊天记录',
-                      value: '${preview.messageCount} 条消息',
-                      sem: sem,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPreviewItem(
-                      context,
-                      icon: Icons.schedule,
-                      label: '导出时间',
-                      value: preview.exportedAt,
-                      sem: sem,
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: sem.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: sem.error.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning_rounded,
-                              color: sem.error, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '导入将覆盖现有人设和聊天记录',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: sem.error,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(
-                    '取消',
-                    style: TextStyle(fontSize: 14, color: sem.textSecondary),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: TextButton.styleFrom(
-                    foregroundColor: sem.error,
-                  ),
-                  child: const Text(
-                    '确认导入',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-          ) ??
-          false;
-
-      if (shouldImport) {
-        if (!context.mounted) return;
-        await _performImport(context, file);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        setState(() => _isImporting = false);
-        _showErrorSnackBar(context, '预览失败: $e');
-      }
-    }
-  }
-
-  Widget _buildPreviewItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    required dynamic sem,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: sem.primary, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: sem.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: sem.textPrimary,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _performImport(BuildContext context, File file) async {
-    try {
       setState(() => _isImporting = true);
 
       final result = await ImportService.executeImport(
         file,
         roomId: StorageService.kDefaultRoomId,
+        mode: mode,
       );
 
       if (!mounted) {
@@ -806,16 +618,29 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
 
       if (result.success) {
         ref.invalidate(chatMessagesProvider);
-        ref.invalidate(chatCharacterProvider);
+        if (mode == ImportMode.fullConfig) {
+          ref.invalidate(chatCharacterProvider);
+        }
 
-        _showImportSuccessSnackBar(context, result);
+        // 显示成功提示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('✅ 导入成功！正在返回...'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
 
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (!mounted) return;
-          Navigator.of(context).pop(true);
-        });
+        // 延迟后返回
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) {
+          Navigator.of(context).pop('imported');
+        }
       } else {
-        _showErrorSnackBar(context, result.message);
+        if (mounted) {
+          _showErrorSnackBar(context, result.message);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -823,89 +648,5 @@ class _ChatBackupMigratePageState extends ConsumerState<ChatBackupMigratePage> {
         _showErrorSnackBar(context, '导入失败: $e');
       }
     }
-  }
-
-  void _showImportSuccessSnackBar(BuildContext context, ImportResult result) {
-    final sem = context.sem;
-    final preview = result.preview;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Container(
-          decoration: BoxDecoration(
-            color: sem.surface,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: sem.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '✅ 导入成功',
-                    style: TextStyle(
-                      color: sem.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (preview != null) ...[
-                Text(
-                  '人设: ${preview.characterName}',
-                  style: TextStyle(
-                    color: sem.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '聊天记录: ${preview.messageCount} 条',
-                  style: TextStyle(
-                    color: sem.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                '已自动返回聊天室，请刷新页面查看',
-                style: TextStyle(
-                  color: sem.textHint,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        duration: const Duration(seconds: 5),
-        padding: EdgeInsets.zero,
-        margin: const EdgeInsets.all(16),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
   }
 }

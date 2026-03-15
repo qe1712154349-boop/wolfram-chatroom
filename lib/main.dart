@@ -173,7 +173,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
           ? ColorScheme.light(
               primary: primaryColor,
               onPrimary: Colors.white,
-              secondary: primaryColor.withOpacity(0.7),
+              secondary: primaryColor.withValues(alpha: 0.7),
               onSecondary: Colors.white,
               surface: surfaceColor,
               onSurface: textPrimaryColor,
@@ -183,7 +183,7 @@ class _MyBunnyAppState extends ConsumerState<MyBunnyApp>
           : ColorScheme.dark(
               primary: primaryColor,
               onPrimary: Colors.white,
-              secondary: primaryColor.withOpacity(0.7),
+              secondary: primaryColor.withValues(alpha: 0.7),
               onSecondary: Colors.white,
               surface: surfaceColor,
               onSurface: textPrimaryColor,

@@ -23,7 +23,7 @@ class OrderCard extends StatelessWidget {
             ? context.themeColor(app_theme.ColorSemantic.surface)
             : context
                 .themeColor(app_theme.ColorSemantic.surface)
-                .withOpacity(0.5),
+                .withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: context.themeColor(app_theme.ColorSemantic.border),

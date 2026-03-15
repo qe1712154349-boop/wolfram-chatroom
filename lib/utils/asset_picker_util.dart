@@ -1,5 +1,4 @@
 // lib/utils/asset_picker_util.dart
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import 'package:palette_generator/palette_generator.dart';
@@ -165,7 +164,8 @@ class AssetPickerUtil {
             dominantColor.withAlpha((0.2 * 255).round()),
         'darkVibrant': palette.darkVibrantColor?.color ??
             dominantColor.withAlpha((0.95 * 255).round()),
-        'muted': palette.mutedColor?.color ?? dominantColor.withOpacity(0.5),
+        'muted':
+            palette.mutedColor?.color ?? dominantColor.withValues(alpha: 0.5),
       };
     } catch (e) {
       debugPrint('❌ 提取失败: $e');

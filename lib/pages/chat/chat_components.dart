@@ -32,7 +32,7 @@ class ReceivedMessage extends StatelessWidget {
               border: Border.all(
                 color: context
                     .themeColor(app_theme.ColorSemantic.border)
-                    .withOpacity(0.3),
+                    .withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -154,7 +154,7 @@ class SentMessage extends StatelessWidget {
                 border: Border.all(
                   color: context
                       .themeColor(app_theme.ColorSemantic.border)
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -254,7 +254,7 @@ class NarrationMessage extends StatelessWidget {
             border: Border.all(
               color: context
                   .themeColor(app_theme.ColorSemantic.border)
-                  .withOpacity(0.3),
+                  .withValues(alpha: 0.3),
               width: 1,
             ),
           ),

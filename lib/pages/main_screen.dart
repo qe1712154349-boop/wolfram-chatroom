@@ -138,7 +138,7 @@ class _MainScreenState extends State<MainScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      sem.primary.withOpacity(0.6), // ✅ 改用主题主色
+                      sem.primary.withValues(alpha: 0.6), // ✅ 改用主题主色
                       sem.primary,
                     ],
                   ),

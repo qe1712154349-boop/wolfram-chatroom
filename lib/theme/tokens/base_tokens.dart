@@ -106,7 +106,7 @@ abstract class BaseColorTokens {
 
   /// 30% 透明度（用于气泡）
   static Color withBubbleOpacity(Color color) {
-    return color.withOpacity(0.3);
+    return color.withValues(alpha: 0.3);
   }
 
   /// 获取对比色（黑色或白色）

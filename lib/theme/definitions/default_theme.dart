@@ -46,10 +46,12 @@ class DefaultTheme {
   static Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
     final colors = getBubbleColors(isDark);
     return {
-      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBackground':
+          colors['userBubbleBackground']!.withValues(alpha: 0.3),
       'userBubbleBorder': colors['userBubbleBorder']!,
       'userBubbleText': colors['userBubbleText']!,
-      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBackground':
+          colors['aiBubbleBackground']!.withValues(alpha: 0.3),
       'aiBubbleBorder': colors['aiBubbleBorder']!,
       'aiBubbleText': colors['aiBubbleText']!,
     };

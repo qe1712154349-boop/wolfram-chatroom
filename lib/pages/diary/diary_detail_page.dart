@@ -190,7 +190,7 @@ class DiaryDetailPage extends ConsumerWidget {
               BoxShadow(
                 color: context
                     .themeColor(app_theme.ColorSemantic.border)
-                    .withOpacity(0.3),
+                    .withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),

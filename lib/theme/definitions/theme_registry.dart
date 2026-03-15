@@ -1,5 +1,6 @@
 /// theme_registry.dart - 结构化版本
 library;
+
 import 'package:flutter/material.dart';
 import '../core/color_semantics.dart';
 import '../tokens/semantic_mapper.dart';
@@ -40,10 +41,12 @@ abstract class BaseThemeDefinition implements ThemeDefinition {
   Map<String, Color> getBubbleColorsWithOpacity(bool isDark) {
     final colors = getBubbleColors(isDark);
     return {
-      'userBubbleBackground': colors['userBubbleBackground']!.withOpacity(0.3),
+      'userBubbleBackground':
+          colors['userBubbleBackground']!.withValues(alpha: 0.3),
       'userBubbleBorder': colors['userBubbleBorder']!,
       'userBubbleText': colors['userBubbleText']!,
-      'aiBubbleBackground': colors['aiBubbleBackground']!.withOpacity(0.3),
+      'aiBubbleBackground':
+          colors['aiBubbleBackground']!.withValues(alpha: 0.3),
       'aiBubbleBorder': colors['aiBubbleBorder']!,
       'aiBubbleText': colors['aiBubbleText']!,
     };
@@ -69,8 +72,7 @@ abstract class BaseThemeDefinition implements ThemeDefinition {
     final lightMapping = getColors(false);
     final lightMissing = SemanticMapper.validateMapping(lightMapping);
     if (lightMissing.isNotEmpty) {
-      errors
-          .add('$name亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
+      errors.add('$name亮色模式缺少: ${lightMissing.map((e) => e.name).join(', ')}');
     }
 
     // 检查暗色模式
