@@ -109,14 +109,14 @@ flutter:
   uses-material-design: true
 
 # =============== 🎯 应用图标配置 ===============
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/splash.png"          # 源图片路径（必须）
-  min_sdk_android: 21                      # 最低安卓版本
+#flutter_launcher_icons:
+ # android: true
+ # ios: true
+  #image_path: "assets/splash.png"          # 源图片路径（必须）
+ # min_sdk_android: 21                      # 最低安卓版本
   
   # 可选优化配置
-  remove_alpha_ios: true                   # iOS 移除透明背景
+  #remove_alpha_ios: true                   # iOS 移除透明背景
 
 # =============== 📝 迁移说明 ===============
 # 
