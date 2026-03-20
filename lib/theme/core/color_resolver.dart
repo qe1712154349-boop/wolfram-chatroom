@@ -224,7 +224,7 @@ class ColorResolver {
   static Map<ColorSemantic, Color> _getMaterial3DarkColors() {
     return {
       ColorSemantic.primary: const Color.fromARGB(255, 234, 107, 158),
-      ColorSemantic.secondary: const Color.fromARGB(255, 255, 255, 255),
+      ColorSemantic.secondary: const Color.fromARGB(255, 249, 149, 176),
       ColorSemantic.background: const Color(0xFF1C1B1F),
       ColorSemantic.surface: const Color(0xFF1C1B1F),
       ColorSemantic.surfaceVariant: const Color.fromARGB(255, 79, 69, 73),
